@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VanishX</string>
+    <string name="error_generic">Đã xảy ra lỗi không mong muốn</string>
+    <string name="home_tagline">Chat tạm · ẩn danh · tự hết hạn</string>
+    <string name="home_create_room">Tạo hộp thư / phòng tạm</string>
+    <string name="home_join_room">Vào bằng link / QR / mã</string>
+    <string name="home_arrow_hint">Tin như mũi tên — phóng đi không thu hồi (Free).</string>
+    <string name="home_action_placeholder">Sẽ có ở story sau</string>
+</resources>

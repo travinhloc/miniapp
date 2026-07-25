@@ -21,6 +21,7 @@ rootProject.name = "miniapp"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":apps:sample")
+include(":apps:vanishx")
 include(":core:common")
 include(":core:mvvm")
 include(":core:ui")

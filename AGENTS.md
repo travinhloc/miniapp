@@ -86,3 +86,13 @@ One logical change per commit. Present tense. If the message needs “and”, sp
 ⚠️ Ask before: new Gradle module · new third-party dependency · changing flavors/Detekt/CI  
 
 🚫 Don't: put product features in `core/*` · Android deps in `domain` · LiveData · hardcode user-facing text · commit secrets (`signing.properties`, keystores)
+
+## VanishX product context
+
+Specs and stories are **outside** this repo. Before VanishX work, read:
+
+- `docs/VANISHX.md` (pointer)
+- `../project-note-cursor/vanishx-docs/vanishx-engine-vi.md`
+- Active file under `../project-note-cursor/vanishx-docs/stories/`
+
+Prefer attaching those paths in chat (`@vanishx-docs`) or open a multi-root workspace with `project-note-cursor`.

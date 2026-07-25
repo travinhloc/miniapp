@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VanishX</string>
+    <string name="error_generic">Unexpected error</string>
+    <string name="home_tagline">Temporary chat · anonymous · auto-expires</string>
+    <string name="home_create_room">Create temporary mailbox</string>
+    <string name="home_join_room">Join with link / QR / code</string>
+    <string name="home_arrow_hint">Messages are arrows — once sent, Free cannot recall them.</string>
+    <string name="home_action_placeholder">Coming in a later story</string>
+</resources>
