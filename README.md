@@ -1,34 +1,40 @@
 # miniapp
 
-Android monorepo (`app` / `domain` / `data`) with Jetpack Compose.
+Android **monorepo**: multiple product apps + shared MVVM / UI core.
+
+## Layout
+
+| Path | Gradle | Role |
+|------|--------|------|
+| `apps/sample` | `:apps:sample` | First host application |
+| `core/common` | `:core:common` | Shared utilities / dispatchers |
+| `core/mvvm` | `:core:mvvm` | Base ViewModel / screen / navigation types |
+| `core/ui` | `:core:ui` | Shared Compose theme |
+| `domain` | `:domain` | Shared domain layer |
+| `data` | `:data` | Shared data layer |
 
 ## Setup
 
-- Open in Android Studio
-- JDK 17+ (Android Studio JBR works)
-
 ```bash
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew assembleStagingDebug
+./gradlew :apps:sample:assembleStagingDebug
 ```
 
-## Lint / static analysis
+## i18n
 
-```bash
-./gradlew lint
-./gradlew detekt
-```
+- Default (English): `**/res/values/strings.xml`
+- Vietnamese: `**/res/values-vi/strings.xml`
+- Never hardcode user-facing copy in Kotlin/Compose
 
-## Tests
+## Agent skills
 
-```bash
-./gradlew app:testStagingDebugUnitTest
-./gradlew data:testDebugUnitTest
-./gradlew domain:test
-./gradlew koverHtmlReportCustom
-```
+Project skills live under `.cursor/skills/`:
 
-## Release signing
+- `monorepo-role` — roles & ownership
+- `monorepo-feature` — feature delivery
+- `monorepo-code-review` — review checklist
 
-- Put `release.keystore` in `config/`
-- Fill `signing.properties` (do not commit secrets)
+## Commits
+
+`feat|fix|refactor|test|docs|chore|ci(<scope>): summary`  
+Scopes: `apps/sample`, `core/mvvm`, `i18n`, …

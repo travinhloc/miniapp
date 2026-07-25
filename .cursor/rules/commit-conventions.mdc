@@ -1,0 +1,20 @@
+---
+description: Conventional commits with monorepo scopes
+alwaysApply: true
+---
+
+# Commit convention
+
+Format: `<type>(<scope>): <summary>`
+
+Types: `feat` · `fix` · `refactor` · `test` · `docs` · `chore` · `ci`
+
+Scopes: `apps/<name>` · `core/mvvm` · `core/ui` · `core/common` · `domain` · `data` · `i18n` · `agents`
+
+```
+feat(apps/sample): show offline banner on home
+fix(core/mvvm): hide loading when count hits zero
+chore(i18n): translate error_generic to vi
+```
+
+One concern per commit. No secrets in commits.
