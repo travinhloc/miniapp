@@ -1,9 +1,14 @@
 package com.vault.vanishx.domain.model
 
-/**
- * Placeholder domain model for a temporary mailbox/room.
- * Wired fully in stories 2.x.
- */
 data class MailboxRoom(
     val id: String,
-)
+    val createdAt: Long = 0L,
+    val expiresAt: Long = 0L,
+    val title: String? = null,
+    val status: String = STATUS_ACTIVE,
+) {
+    companion object {
+        const val STATUS_ACTIVE = "active"
+        const val STATUS_EXPIRED = "expired"
+    }
+}

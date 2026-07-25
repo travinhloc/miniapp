@@ -133,10 +133,19 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.tink.android)
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.sqlite)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.timber)
 
     testImplementation(libs.bundles.unitTest)
     testImplementation(libs.test.turbine)
+    testImplementation(libs.test.core.ktx)
+    testImplementation(libs.androidx.room.runtime)
+    testImplementation(libs.androidx.room.ktx)
 
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.bundles.uiTest)

@@ -1,0 +1,36 @@
+package com.vault.vanishx.data.local.db
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+
+@Dao
+interface MetaDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: MetaEntity)
+
+    @Query("SELECT * FROM meta WHERE `key` = :key LIMIT 1")
+    suspend fun get(key: String): MetaEntity?
+}
+
+@Dao
+interface MailboxRoomDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: MailboxRoomEntity)
+
+    @Query("SELECT * FROM rooms WHERE status = :status ORDER BY createdAt DESC")
+    suspend fun getByStatus(status: String): List<MailboxRoomEntity>
+
+    @Query("SELECT * FROM rooms WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): MailboxRoomEntity?
+}
+
+@Dao
+interface MessageDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: MessageEntity)
+
+    @Query("SELECT * FROM messages WHERE roomId = :roomId ORDER BY sentAt ASC")
+    suspend fun getByRoom(roomId: String): List<MessageEntity>
+}

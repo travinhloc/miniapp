@@ -2,5 +2,7 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="vanishx_identity_prefs.xml" />
+        <exclude domain="sharedpref" path="vanishx_db_passphrase_prefs.xml" />
+        <exclude domain="database" path="vanishx.db" />
     </cloud-backup>
 </data-extraction-rules>

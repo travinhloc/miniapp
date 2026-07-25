@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Exclude identity key material from cloud backup. -->
+<!-- Exclude identity key material and DB passphrase from cloud backup. -->
 <full-backup-content>
     <exclude domain="sharedpref" path="vanishx_identity_prefs.xml" />
+    <exclude domain="sharedpref" path="vanishx_db_passphrase_prefs.xml" />
+    <exclude domain="database" path="vanishx.db" />
 </full-backup-content>
