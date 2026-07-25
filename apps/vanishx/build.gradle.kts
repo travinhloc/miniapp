@@ -132,6 +132,7 @@ dependencies {
     implementation(libs.bundles.hilt)
     ksp(libs.hilt.compiler)
 
+    implementation(libs.tink.android)
     implementation(libs.timber)
 
     testImplementation(libs.bundles.unitTest)

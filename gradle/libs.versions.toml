@@ -34,6 +34,7 @@ robolectric = "4.13"
 security = "1.0.0"
 testCore = "1.6.1"
 timber = "5.0.1"
+tink = "1.16.0"
 turbine = "0.13.0"
 
 [libraries]
@@ -63,6 +64,9 @@ javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "j
 # Kotlin
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+
+# Crypto
+tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 
 # Log
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
