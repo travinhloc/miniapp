@@ -25,6 +25,7 @@ detekt {
 
     source = files(
         "apps/sample/src/main/java",
+        "apps/vanishx/src/main/java",
         "core/common/src/main/java",
         "core/mvvm/src/main/java",
         "core/ui/src/main/java",
