@@ -43,6 +43,7 @@ Xem `.cursor/rules/vanishx-docs.mdc` trong repo này.
 - App product: `apps/vanishx/` · `applicationId` = `com.vault.vanishx` · `minSdk` 26
 - Package: `presentation` / `domain` / `data` / `di` (app-local; reuse `core/*`)
 - Crypto scheme: [`apps/vanishx/CRYPTO.md`](../apps/vanishx/CRYPTO.md)
+- Mailbox (RTDB): [`apps/vanishx/MAILBOX.md`](../apps/vanishx/MAILBOX.md)
 - Build: `./gradlew :apps:vanishx:assembleStagingDebug`
 - Reuse `core/*` · không nhét feature VanishX vào `core`
 - Cập nhật docs: sửa bên `project-note-cursor/vanishx-docs`, rồi sync ghi chú ở đây nếu path đổi

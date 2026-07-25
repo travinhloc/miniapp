@@ -5,6 +5,7 @@ import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
+import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
 import com.vault.vanishx.test.CoroutineTestRule
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -23,6 +24,7 @@ class HomeViewModelTest {
 
     private val mailboxRepository: MailboxRepository = mockk()
     private val ensureIdentity: EnsureIdentityUseCase = mockk()
+    private val smokeMailboxRemote: SmokeMailboxRemoteUseCase = mockk()
 
     private lateinit var viewModel: HomeViewModel
 
@@ -36,6 +38,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mailboxRepository = mailboxRepository,
             ensureIdentity = ensureIdentity,
+            smokeMailboxRemote = smokeMailboxRemote,
             dispatchersProvider = coroutinesRule.testDispatcherProvider,
         )
     }
@@ -76,6 +79,7 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             mailboxRepository = mailboxRepository,
             ensureIdentity = ensureIdentity,
+            smokeMailboxRemote = smokeMailboxRemote,
             dispatchersProvider = coroutinesRule.testDispatcherProvider,
         )
 

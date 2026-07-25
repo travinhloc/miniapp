@@ -8,4 +8,11 @@
     <string name="home_arrow_hint">Tin như mũi tên — phóng đi không thu hồi (Free).</string>
     <string name="home_action_placeholder">Sẽ có ở story sau</string>
     <string name="home_anonymous_id">ID: %1$s</string>
+    <string name="home_rtdb_smoke">Thử RTDB</string>
+    <string name="home_rtdb_smoke_ok">Smoke mailbox OK: %1$s</string>
+    <string name="home_rtdb_smoke_fail">Smoke mailbox lỗi: %1$s</string>
+    <string name="home_rtdb_smoke_log_ok">Smoke mailbox OK (giữ để copy)</string>
+    <string name="home_rtdb_smoke_log_error">Smoke mailbox LỖI (giữ để copy)</string>
+    <string name="home_rtdb_smoke_clear_log">Xóa log</string>
+    <string name="home_rtdb_smoke_running">Đang chạy RTDB smoke… (tối đa ~25s)</string>
 </resources>

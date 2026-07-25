@@ -1,4 +1,6 @@
 /build
 
-# Google services
+# Real Firebase client configs (staging / local). Production ships a committed
+# placeholder so non-staging variants still assemble until a real project exists.
 google-services.json
+!src/production/google-services.json
