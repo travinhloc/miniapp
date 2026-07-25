@@ -7,4 +7,5 @@
     <string name="home_join_room">Join with link / QR / code</string>
     <string name="home_arrow_hint">Messages are arrows — once sent, Free cannot recall them.</string>
     <string name="home_action_placeholder">Coming in a later story</string>
+    <string name="home_anonymous_id">ID: %1$s</string>
 </resources>

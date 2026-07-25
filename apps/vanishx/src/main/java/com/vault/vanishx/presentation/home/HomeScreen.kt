@@ -50,12 +50,14 @@ fun HomeScreen(
     }
 
     HomeScreenContent(
+        anonymousId = uiState.anonymousId,
         onAction = viewModel::onAction,
     )
 }
 
 @Composable
 private fun HomeScreenContent(
+    anonymousId: String?,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -79,6 +81,15 @@ private fun HomeScreenContent(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (anonymousId != null) {
+            Spacer(modifier = Modifier.height(dimensions.spacingSmall))
+            Text(
+                text = stringResource(id = R.string.home_anonymous_id, anonymousId),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         Spacer(modifier = Modifier.height(dimensions.spacingLarge))
         Button(
             onClick = { onAction(HomeAction.CreateRoom) },
@@ -107,6 +118,9 @@ private fun HomeScreenContent(
 @Composable
 private fun HomeScreenPreview() {
     ComposeTheme {
-        HomeScreenContent(onAction = {})
+        HomeScreenContent(
+            anonymousId = "vx_AbCdEfGhIjKlMnOpQrStUv",
+            onAction = {},
+        )
     }
 }

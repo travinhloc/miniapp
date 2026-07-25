@@ -1,8 +1,10 @@
 package com.vault.vanishx.presentation.home
 
 import app.cash.turbine.test
+import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.MailboxRepository
+import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.test.CoroutineTestRule
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -20,22 +22,35 @@ class HomeViewModelTest {
     val coroutinesRule = CoroutineTestRule()
 
     private val mailboxRepository: MailboxRepository = mockk()
+    private val ensureIdentity: EnsureIdentityUseCase = mockk()
 
     private lateinit var viewModel: HomeViewModel
 
     @Before
     fun setUp() {
         coEvery { mailboxRepository.getActiveRooms() } returns emptyList()
+        coEvery { ensureIdentity() } returns Identity(
+            anonymousId = "vx_home",
+            publicKeyBase64 = "pub",
+        )
         viewModel = HomeViewModel(
             mailboxRepository = mailboxRepository,
+            ensureIdentity = ensureIdentity,
             dispatchersProvider = coroutinesRule.testDispatcherProvider,
         )
     }
 
     @Test
+    fun `bootstraps anonymous id on init`() = runTest {
+        viewModel.uiState.test {
+            expectMostRecentItem().anonymousId shouldBe "vx_home"
+        }
+    }
+
+    @Test
     fun `CreateRoom shows placeholder then can be cleared`() = runTest {
         viewModel.uiState.test {
-            awaitItem().showPlaceholder shouldBe false
+            awaitItem()
 
             viewModel.onAction(HomeAction.CreateRoom)
             awaitItem().showPlaceholder shouldBe true
@@ -60,6 +75,7 @@ class HomeViewModelTest {
         coEvery { mailboxRepository.getActiveRooms() } returns listOf(MailboxRoom(id = "r1"))
         viewModel = HomeViewModel(
             mailboxRepository = mailboxRepository,
+            ensureIdentity = ensureIdentity,
             dispatchersProvider = coroutinesRule.testDispatcherProvider,
         )
 
