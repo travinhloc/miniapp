@@ -1,0 +1,14 @@
+---
+description: Multi-language (i18n) rules for Android resources
+globs: "**/res/**/*,**/*Screen*.kt,**/*Composable*.kt"
+alwaysApply: false
+---
+
+# i18n
+
+- User-facing text → `strings.xml` (and locale variants). Never hardcode in Compose/Kotlin.
+- Default English: `values/strings.xml`
+- Vietnamese: `values-vi/strings.xml` (keep keys identical)
+- Naming: `<feature>_<element>` or `general_*` for shared copy
+- When adding a key, add **all** supported locales in the same change
+- Prefer `stringResource(R.string.*)` in Compose

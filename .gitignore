@@ -2,6 +2,7 @@
 
 .tmp-template/
 local.properties
+miniapp/
 
 # Built application files
 *.apk

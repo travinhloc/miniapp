@@ -1,0 +1,12 @@
+---
+description: Monorepo architecture — apps vs core, dependency rules
+alwaysApply: true
+---
+
+# Monorepo architecture
+
+- Product apps live under `apps/<name>` (`:apps:<name>`).
+- Shared MVVM/UI/utils live under `core/*`. **No product features in `core`.**
+- Dependency flow: `apps/*` → `core/*` and `apps/*` → `data`/`domain`. Never `core` → `apps`.
+- `domain` is pure Kotlin. UI is Compose-only. State via StateFlow; ViewModels extend `core:mvvm` `BaseViewModel`.
+- New app: create `apps/<name>`, `include(":apps:<name>")`, depend on needed `core` modules.

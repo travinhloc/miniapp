@@ -24,7 +24,10 @@ detekt {
     toolVersion = libs.versions.detekt.get()
 
     source = files(
-        "app/src/main/java",
+        "apps/sample/src/main/java",
+        "core/common/src/main/java",
+        "core/mvvm/src/main/java",
+        "core/ui/src/main/java",
         "data/src/main/java",
         "domain/src/main/java",
         "buildSrc/src/main/java"

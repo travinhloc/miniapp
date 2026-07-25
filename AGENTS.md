@@ -1,287 +1,88 @@
 # AGENTS.md
 
-You are an experienced Android app developer. Follow official Android architecture recommendations and this project's conventions.
+You are an experienced Android engineer working in the **miniapp monorepo**.
 
-## Project Overview
+## Mission
 
-**miniapp** — Android monorepo with Clean Architecture + Jetpack Compose. Package root: `com.miniapp`.
+Build multiple Android product apps that share a common **MVVM / UDF** base, Compose UI kit, and networking primitives. Prefer reuse through `core/*` over copying code between apps.
 
-## Technology Stack
-
-| Category | Technology |
-|----------|------------|
-| **Language** | Kotlin |
-| **UI Framework** | Jetpack Compose with Material 3 |
-| **Architecture** | MVVM / Clean Architecture |
-| **State Management** | Unidirectional Data Flow (UDF) with StateFlow |
-| **Dependency Injection** | Hilt |
-| **Navigation** | Jetpack Navigation Compose |
-| **Async** | Kotlin Coroutines + Flow |
-| **Networking** | Retrofit + OkHttp + Moshi |
-| **Local Storage** | DataStore, Room (when needed) |
-| **Build System** | Gradle (Kotlin DSL) |
-| **Min SDK** | 24 |
-| **Target SDK** | 34 |
-| **JVM** | Java 17 |
-
-## Architecture
-
-This project follows Google's official architecture guidance with a layered, modular structure:
-
-- **UI Layer (`app/`):** Built entirely with Jetpack Compose. ViewModels act as state holders, exposing UI state as StateFlow streams.
-- **Domain Layer (`domain/`):** Pure Kotlin module with business logic, models, and repository interfaces. No Android dependencies.
-- **Data Layer (`data/`):** Repository implementations, API clients, and local storage. Depends on domain.
-
-**Dependency Flow:** `app` → `domain` ← `data`
+## Monorepo layout
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  app/                                               │
-│  ├── di/          → Hilt modules                   │
-│  ├── extensions/  → Kotlin extensions              │
-│  ├── ui/                                            │
-│  │   ├── base/    → BaseViewModel, BaseScreen      │
-│  │   ├── screens/ → Feature screens & ViewModels   │
-│  │   └── theme/   → AppColors, AppTypography, etc. │
-│  └── MainApplication.kt                            │
-├─────────────────────────────────────────────────────┤
-│  domain/                                            │
-│  ├── exceptions/  → Custom exceptions              │
-│  ├── models/      → Domain entities                │
-│  ├── repositories/→ Repository interfaces          │
-│  └── usecases/    → Business logic                 │
-├─────────────────────────────────────────────────────┤
-│  data/                                              │
-│  ├── local/       → DataStore, Room                │
-│  ├── remote/      → API services, models, clients  │
-│  └── repositories/→ Repository implementations     │
-└─────────────────────────────────────────────────────┘
+miniapp/
+├── apps/                 # Product applications (one module per app)
+│   └── sample/           # First host app (:apps:sample)
+├── core/                 # Shared libraries (no product-specific features)
+│   ├── common/           # Dispatchers, tiny utilities
+│   ├── mvvm/             # BaseViewModel, BaseScreen, BaseDestination
+│   └── ui/               # Design system / theme
+├── domain/               # Shared domain contracts (evolve per-app if needed)
+├── data/                 # Shared data implementations
+├── .cursor/
+│   ├── rules/            # Always-on / file-scoped agent rules
+│   └── skills/           # Workflows: role · feature · code-review
+└── AGENTS.md
 ```
 
-## Prerequisites
+**Dependency direction (never invert):**
 
-- Android Studio (Latest Stable or Preview for new features)
-- JDK 17+
-- API keys configured in `local.properties` (see README.md)
+`apps/*` → `core/*` + (`domain` ← `data`)
 
-## Build Variants
+- `core/*` must not depend on any `apps/*`
+- `domain` stays pure Kotlin (no Android)
+- New product apps: `apps/<name>/` + `include(":apps:<name>")` in `settings.gradle.kts`
 
-The app has two product flavors and three build types:
+## Stack
 
-| Flavor | Purpose |
-|--------|---------|
-| `staging` | Development/QA environment |
-| `production` | Production environment |
+| Area | Choice |
+|------|--------|
+| UI | Jetpack Compose + Material 3 |
+| Architecture | MVVM + UDF, StateFlow |
+| DI | Hilt |
+| Async | Coroutines + Flow |
+| Network | Retrofit + OkHttp + Moshi |
+| Languages | Android resources (`values`, `values-vi`, …) — no hardcoded user-facing copy |
+| Min / compile SDK | See `gradle/libs.versions.toml` |
 
-| Build Type | Purpose |
-|------------|---------|
-| `debug` | Development with debug tools |
-| `preRelease` | Release-like build with debug certificate |
-| `release` | Optimized, ProGuard-enabled |
+## Agent workflows (skills)
 
-**Default development:** `assembleStagingDebug`
+| Skill | When to use |
+|-------|-------------|
+| `monorepo-role` | Define/adjust agent roles, rules, or ownership boundaries |
+| `monorepo-feature` | Implement a feature across apps/core |
+| `monorepo-code-review` | Review a PR/diff against monorepo standards |
 
-## Commands
+## Commit convention
 
-### Build
-```bash
-./gradlew assembleStagingDebug
+```
+<type>(<scope>): <summary>
 ```
 
-### Static Analysis
-```bash
-./gradlew detekt lint
+**Types:** `feat` · `fix` · `refactor` · `test` · `docs` · `chore` · `ci`
+
+**Scopes (examples):** `apps/sample` · `core/mvvm` · `core/ui` · `core/common` · `domain` · `data` · `i18n` · `agents`
+
+Examples:
+
+```
+feat(apps/sample): add home empty state
+fix(core/mvvm): prevent loading counter underflow
+chore(i18n): add Vietnamese strings for errors
+docs(agents): clarify feature skill checklist
 ```
 
-### Tests
-```bash
-# All unit tests
-./gradlew app:testStagingDebugUnitTest data:testDebugUnitTest domain:test
+One logical change per commit. Present tense. If the message needs “and”, split the commit.
 
-# Single test class
-./gradlew app:testStagingDebugUnitTest --tests "com.miniapp.ui.screens.main.home.HomeViewModelTest"
-```
+## Defaults
 
-### Coverage
-```bash
-./gradlew koverXmlReportCustom
-```
-
-## Testing
-
-**Before commit:** `./gradlew detekt lint`
-
-**Before PR:** `./gradlew detekt lint app:testStagingDebugUnitTest data:testDebugUnitTest domain:test koverXmlReportCustom`
-
-### Test Frameworks
-
-| Purpose | Library |
-|---------|---------|
-| **Mocking** | MockK |
-| **Assertions** | Kotest matchers |
-| **Flow testing** | Turbine |
-| **Android testing** | Robolectric |
-| **UI testing** | ComposeTestRule |
-
-### Coverage Requirements
-- **Project:** 80% minimum
-- **Per-file:** 95% minimum
-
-### Test Naming Convention
-```kotlin
-@Test
-fun `When user taps login, it shows loading`() { }
-```
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `app/.../MainActivity.kt` | Single activity entry point |
-| `app/.../ui/AppNavGraph.kt` | Navigation graph |
-| `app/.../ui/base/BaseViewModel.kt` | ViewModel base class |
-| `data/.../remote/services/` | API service definitions |
-| `detekt-config.yml` | Detekt rules |
-
-## Configuration Files
-
-| File | Purpose |
-|------|---------|
-| `detekt-config.yml` | Static analysis rules |
-| `app/proguard-rules.pro` | ProGuard configuration |
-| `local.properties` | API keys (gitignored) |
-
-## Code Style
-
-### Kotlin
-- **Indent:** 4 spaces (no tabs)
-- **Line length:** 120 characters max
-- **Class size:** 150 lines max
-- **Method size:** 60 lines max
-- **Parameters:** 5 max
-- **Nested blocks:** 3 max
-- **Boolean naming:** `is`/`has`/`can` prefix (e.g., `isValid`, `hasError`)
-- **Trailing commas:** Enabled for cleaner diffs
-- **Method chaining:** Each call on separate line, break before dot
-
-### Compose
-
-Composables use PascalCase. Modifier is always the first optional parameter.
-
-```kotlin
-@Composable
-fun MyButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) { }
-```
-
-**Screen pattern** — public wrapper with ViewModel, private stateless content:
-
-```kotlin
-@Composable
-fun FeatureScreen(
-    viewModel: FeatureViewModel = hiltViewModel(),
-    navigator: (BaseDestination) -> Unit,
-) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    FeatureScreenContent(state = state, onAction = viewModel::onAction)
-}
-
-@Composable
-private fun FeatureScreenContent(
-    state: FeatureUiState,
-    onAction: (FeatureAction) -> Unit,
-    modifier: Modifier = Modifier,
-) { }
-```
-
-## Code Organization
-
-| Type | Location |
-|------|----------|
-| Domain models | `domain/src/main/java/.../domain/models/` |
-| Repository interfaces | `domain/src/main/java/.../domain/repositories/` |
-| UseCases | `domain/src/main/java/.../domain/usecases/` |
-| API models | `data/src/main/java/.../data/remote/models/` |
-| Repository impls | `data/src/main/java/.../data/repositories/` |
-| Screens/ViewModels | `app/src/main/java/.../ui/screens/{feature}/` |
-| DI modules | `app/src/main/java/.../di/modules/` |
-| Tests | Mirror source path in `src/test/` |
-
-## Git Workflow
-
-**Branches:**
-- `main` — Production (protected)
-- `develop` — Staging (protected)
-- Feature branches: `feature/add-login`, `bug/fix-crash` (lowercase, kebab-case)
-
-**Commits:**
-- Format: `[#123] Add feature`
-- Capitalize first word, use present tense
-- One logical change per commit
-- If message contains "and", consider splitting
-
-**Pull Requests:**
-- Title: `[#ticket] Description`
-- 2 approvals required (include Team Lead or senior)
-- Target <500 lines changed
-- Respond to reviews within 1 business day
-- Target merge within 2-3 days
-
-## Security
-
-- API keys in `.properties` files (gitignored)
-- Sensitive data → `EncryptedSharedPreferences`
-- Never log tokens, passwords, or PII
-- HTTPS only
-- WebView JavaScript disabled by default
-- Components `exported="false"` by default
-
-## Key Guidelines for Agents
-
-1. **Compose Only:** Build all UI with Jetpack Compose. Never suggest XML layouts.
-2. **Architecture:** Respect module boundaries. Domain must have zero Android dependencies.
-3. **State Management:** Use StateFlow exclusively. Never use LiveData.
-4. **ViewModels:** Always extend `BaseViewModel`. Always inject with `hiltViewModel()`.
-5. **Static Analysis:** Run `./gradlew detekt lint` on all modified files.
-6. **Testing:** Write tests for new code. Use MockK, not Mockito.
-7. **Code Style:** Follow project Kotlin conventions (4-space indent, trailing commas).
-8. **Screen Pattern:** Public composable with ViewModel, private stateless content composable.
-
-## Detekt Limits
-
-| Rule | Limit |
-|------|-------|
-| Line length | 120 chars |
-| Class size | 150 lines |
-| Method size | 60 lines |
-| Parameters | 5 max |
-| Nested blocks | 3 max |
-| Magic numbers | Only -1, 0, 1, 2 allowed |
+- Dev build: `./gradlew :apps:sample:assembleStagingDebug`
+- Static analysis: `./gradlew detekt lint`
+- Unit tests: `./gradlew :apps:sample:testStagingDebugUnitTest :data:testDebugUnitTest :domain:test`
 
 ## Boundaries
 
-✅ **Required:**
-- Follow app/data/domain layered architecture
-- Use Hilt for DI, StateFlow for UI state
-- Extend `BaseViewModel` for all ViewModels
-- Write tests for new code (80% coverage)
-- Use Jetpack Compose for all UI
-- Follow project Kotlin / Compose conventions
+✅ Required: Compose-only UI · StateFlow · Hilt · extend shared `BaseViewModel` · localized strings · tests for new logic  
 
-⚠️ **Ask before:**
-- Adding dependencies or modules
-- Changing Detekt/ProGuard/CI config
-- Modifying build variants
+⚠️ Ask before: new Gradle module · new third-party dependency · changing flavors/Detekt/CI  
 
-🚫 **Don't:**
-- Commit secrets or credentials
-- Push to `main`/`develop` directly
-- Skip tests or static analysis
-- Use LiveData (use StateFlow)
-- Create ViewModels directly (use `hiltViewModel()`)
-- Pass ViewModels to child composables
-- Suggest XML-based layouts
-- Add Android dependencies to domain module
+🚫 Don't: put product features in `core/*` · Android deps in `domain` · LiveData · hardcode user-facing text · commit secrets (`signing.properties`, keystores)
