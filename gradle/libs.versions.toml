@@ -31,7 +31,10 @@ moshi = "1.15.1"
 okhttp = "4.12.0"
 retrofit = "2.11.0"
 robolectric = "4.13"
+room = "2.6.1"
 security = "1.0.0"
+sqlcipher = "4.17.0"
+sqlite = "2.4.0"
 testCore = "1.6.1"
 timber = "5.0.1"
 tink = "1.16.0"
@@ -45,6 +48,10 @@ androidx-lifecycle-compose = { group = "androidx.lifecycle", name = "lifecycle-r
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "security" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "sqlite" }
 
 # Compose
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -67,6 +74,7 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 
 # Crypto
 tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
+sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 
 # Log
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }

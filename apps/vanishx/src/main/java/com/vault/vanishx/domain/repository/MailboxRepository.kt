@@ -7,4 +7,5 @@ import com.vault.vanishx.domain.model.MailboxRoom
  */
 interface MailboxRepository {
     suspend fun getActiveRooms(): List<MailboxRoom>
+    suspend fun upsertRoom(room: MailboxRoom)
 }

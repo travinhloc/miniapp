@@ -1,36 +1,48 @@
-# VanishX crypto scheme (story 1.2)
+# VanishX crypto scheme
 
 **Scheme version:** `1`  
-**Scope:** Device identity bootstrap only. Room message E2EE / Firebase mailbox arrive in later stories.  
 **Do not invent Signal / X3DH here.**
 
-## Algorithms
+## 1. Device identity (story 1.2)
 
 | Purpose | Choice |
 |---------|--------|
 | Identity keypair | **Ed25519** via [Google Tink](https://developers.google.com/tink) (`KeyTemplates.get("ED25519")`) |
-| Keyset at rest | Tink `AndroidKeysetManager` encrypted with Android Keystore master key (`android-keystore://vanishx_identity_master_key`) |
+| Keyset at rest | Tink `AndroidKeysetManager` + Android Keystore master key (`android-keystore://vanishx_identity_master_key`) |
 | Pref file | `vanishx_identity_prefs` (excluded from Auto Backup) |
 | Anonymous User ID | `vx_` + first 22 chars of URL-safe Base64(SHA-256(Ed25519 public key bytes)) |
 
-## What is stored
+Private key never logged. No phone / email / advertising ID / `ANDROID_ID`.
 
-- **Private key:** only inside Tink encrypted keyset (Keystore-wrapped). Never logged.
-- **Public key:** derived for display / future QR share (Base64).
-- **Anonymous ID:** deterministic from public key — no phone, email, advertising ID, or `ANDROID_ID`.
+## 2. Local database (story 1.3)
 
-## Idempotency
+| Purpose | Choice |
+|---------|--------|
+| Engine | **SQLCipher** via `net.zetetic:sqlcipher-android` + Room |
+| Passphrase | Random 32 bytes in EncryptedSharedPreferences (`vanishx_db_passphrase_prefs`) via AndroidX `MasterKeys` |
+| DB file | `vanishx.db` (excluded from Auto Backup) |
+| Schema | `meta`, `rooms`, `messages` |
 
-First app open creates the keyset. Later opens load the same keyset → same anonymous ID.
+Passphrase is **independent** of the Ed25519 identity keyset.
 
-## Out of scope (later stories)
+### Wipe hook (Panic later)
 
-- SQLCipher DB password (1.3)
-- Room keys / mailbox ciphertext (2.x)
-- Panic wipe clearing this keyset (post-MVP)
+`LocalDatabaseWiper.wipe()` / `VanishxLocalDatabase.wipe()`:
+
+1. Close Room  
+2. Delete DB (+ wal/shm)  
+3. Clear passphrase prefs  
+
+Identity keyset wipe stays for story 3.2.
+
+## 3. Out of scope (later)
+
+- Room message E2EE / Firebase mailbox (2.x)
+- App lock / FLAG_SECURE / Panic UI (3.2+)
 
 ## Code map
 
-- `data/crypto/TinkIdentityKeyStore.kt` — generate / load
-- `data/crypto/AnonymousIdDeriver.kt` — ID derivation
-- `domain/usecase/EnsureIdentityUseCase.kt` — app entry bootstrap
+- `data/crypto/TinkIdentityKeyStore.kt` — identity  
+- `data/local/db/VanishxLocalDatabase.kt` — SQLCipher Room + wipe  
+- `data/local/db/DatabasePassphraseStore.kt` — DB passphrase  
+- `domain/usecase/EnsureIdentityUseCase.kt` — identity bootstrap  
