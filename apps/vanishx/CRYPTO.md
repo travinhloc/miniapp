@@ -53,18 +53,34 @@ See [`MAILBOX.md`](MAILBOX.md) — RTDB schema, rules, Anonymous Auth, remote da
 
 Local `rooms` row stores `roomKey` + `role` (`creator` \| `member`) in SQLCipher.
 
-## 5. Out of scope (later)
+## 5. Room message E2EE (story 2.3)
 
-- Room message E2EE payload (2.3)
+| Purpose | Choice |
+|---------|--------|
+| AEAD | **AES-256-GCM** via Tink `AesGcmJce` |
+| Key | Invite `roomKey` (32 raw bytes, URL-safe Base64) |
+| AAD | UTF-8 `roomId` |
+| Wire | `vx1.` + URL-safe Base64(IV ‖ ciphertext ‖ tag) |
+| Message TTL | Same as room `expiresAt` |
+| Receive | Sync on room open + RTDB listener while screen visible |
+| After ingest | `remove()` remote node (transient mailbox) |
+
+Plaintext never leaves the device. Free has **no recall**. Pro recall = 4.2.
+
+## 6. Out of scope (later)
+
 - App lock / FLAG_SECURE / Panic UI (3.2+)
+- FCM (3.1) · Pro recall (4.2)
 
 ## Code map
 
 - `data/crypto/TinkIdentityKeyStore.kt` — identity  
 - `data/crypto/RoomSecretsGenerator.kt` — room id/key  
+- `data/crypto/RoomMessageCipher.kt` — AES-GCM room messages  
 - `domain/model/InviteUriCodec.kt` — invite URI  
 - `data/local/db/VanishxLocalDatabase.kt` — SQLCipher Room + wipe  
 - `data/local/db/DatabasePassphraseStore.kt` — DB passphrase  
 - `data/remote/FirebaseMailboxRemoteDataSource.kt` — RTDB mailbox  
 - `domain/usecase/EnsureIdentityUseCase.kt` — identity bootstrap  
 - `domain/usecase/CreateRoomUseCase.kt` / `JoinRoomUseCase.kt` — invite flow  
+- `domain/usecase/SendRoomMessageUseCase.kt` / `SyncRoomMailboxUseCase.kt` — mũi tên  

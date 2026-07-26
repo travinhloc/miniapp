@@ -46,7 +46,12 @@
     <string name="room_loading">Đang tải phòng…</string>
     <string name="room_title">Phòng ···%1$s</string>
     <string name="room_ttl_remaining">Còn hạn: %1$s</string>
-    <string name="room_empty_hint">Hộp thư trống. Gửi tin mã hóa sẽ có ở story sau.</string>
+    <string name="room_empty_hint">Chưa có tin. Hãy phóng một mũi tên đã mã hóa.</string>
     <string name="room_expired_title">Hộp thư đã hết hạn</string>
     <string name="room_expired_body">TTL phòng đã kết thúc. Không còn mở tin tại đây.</string>
+    <string name="room_composer_hint">Nhập tin text…</string>
+    <string name="room_send">Gửi</string>
+    <string name="room_sent_tag">Đã phóng · không thu hồi</string>
+    <string name="room_syncing">Đang đồng bộ hộp thư…</string>
+    <string name="room_retry_sync">Thử đồng bộ lại</string>
 </resources>
