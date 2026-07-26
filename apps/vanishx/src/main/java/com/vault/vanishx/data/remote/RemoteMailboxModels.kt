@@ -14,8 +14,6 @@ data class RemoteMailboxMessage(
     val expiresAt: Long,
 ) {
     companion object {
-        /** Base64("test") — staging smoke payload only. */
-        const val SMOKE_CIPHERTEXT = "dGVzdA=="
         const val MAX_CIPHERTEXT_LENGTH = 16_384
     }
 }

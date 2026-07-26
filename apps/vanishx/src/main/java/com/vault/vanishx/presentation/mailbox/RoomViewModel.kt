@@ -8,9 +8,11 @@ import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.BlockPeerUseCase
 import com.vault.vanishx.domain.usecase.GetRoomUseCase
 import com.vault.vanishx.domain.usecase.PurgeExpiredRoomUseCase
+import com.vault.vanishx.domain.usecase.RecallRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.ReportRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
@@ -38,6 +40,8 @@ data class RoomUiState(
     val isPurging: Boolean = false,
     val isBlocking: Boolean = false,
     val isReporting: Boolean = false,
+    val isRecalling: Boolean = false,
+    val isPro: Boolean = false,
     val room: MailboxRoom? = null,
     val isExpired: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
@@ -62,6 +66,7 @@ sealed interface RoomAction {
     data object DismissReport : RoomAction
     data class ReportReasonChanged(val value: String) : RoomAction
     data object SubmitReport : RoomAction
+    data class RecallMessage(val messageId: String) : RoomAction
 }
 
 @HiltViewModel
@@ -74,19 +79,29 @@ class RoomViewModel @Inject constructor(
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
     private val blockPeer: BlockPeerUseCase,
     private val reportRoom: ReportRoomUseCase,
+    private val recallRoomMessage: RecallRoomMessageUseCase,
+    private val proEntitlement: ProEntitlementRepository,
     private val remote: MailboxRemoteDataSource,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
 
     private val roomId: String = checkNotNull(savedStateHandle["roomId"])
 
-    private val _uiState = MutableStateFlow(RoomUiState(roomId = roomId))
+    private val _uiState = MutableStateFlow(
+        RoomUiState(
+            roomId = roomId,
+            isPro = proEntitlement.isProNow(),
+        ),
+    )
     val uiState: StateFlow<RoomUiState> = _uiState.asStateFlow()
 
     private var observeJob: Job? = null
     private var expiryJob: Job? = null
 
     init {
+        proEntitlement.isPro
+            .onEach { pro -> _uiState.update { it.copy(isPro = pro) } }
+            .launchIn(viewModelScope)
         bootstrap()
     }
 
@@ -130,8 +145,41 @@ class RoomViewModel @Inject constructor(
                 it.copy(reportReason = action.value)
             }
             RoomAction.SubmitReport -> submitReport()
+            is RoomAction.RecallMessage -> recall(action.messageId)
             else -> Unit
         }
+    }
+
+    private fun recall(messageId: String) {
+        if (!_uiState.value.isPro || _uiState.value.isRecalling || _uiState.value.isExpired) return
+        _uiState.update { it.copy(isRecalling = true, errorMessage = null) }
+        flow { emit(recallRoomMessage(roomId, messageId)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { result ->
+                _uiState.update { state ->
+                    state.copy(
+                        isRecalling = false,
+                        messages = state.messages.map {
+                            if (it.id == result.message.id) result.message else it
+                        },
+                        infoMessage = if (result.remoteRemoved) {
+                            "Message recalled from mailbox (best-effort if already downloaded)."
+                        } else {
+                            "Recalled locally; remote mailbox may need retry when online."
+                        },
+                    )
+                }
+            }
+            .catch { e ->
+                Timber.e(e, "Recall failed")
+                _uiState.update {
+                    it.copy(
+                        isRecalling = false,
+                        errorMessage = friendlyError(e),
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun bootstrap() {
@@ -426,6 +474,9 @@ class RoomViewModel @Inject constructor(
             "Peer not known yet. Wait until you receive a message, then try Block again."
         message.contains("Peer is blocked", ignoreCase = true) -> "This peer is blocked"
         message.contains("Reason too long", ignoreCase = true) -> "Report reason is too long"
+        message.contains("Pro required", ignoreCase = true) ->
+            "Recall is a Pro feature (enable Pro stub on Home in staging debug)."
+        message.contains("Only your own", ignoreCase = true) -> "You can only recall your own messages"
         else -> null
     }
 

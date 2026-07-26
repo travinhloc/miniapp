@@ -21,7 +21,7 @@ Private key never logged. No phone / email / advertising ID / `ANDROID_ID`.
 | Engine | **SQLCipher** via `net.zetetic:sqlcipher-android` + Room |
 | Passphrase | Random 32 bytes in EncryptedSharedPreferences (`vanishx_db_passphrase_prefs`) via AndroidX `MasterKeys` |
 | DB file | `vanishx.db` (excluded from Auto Backup) |
-| Schema | `meta`, `rooms` (+ `peerPub`), `messages`, `blocked_peers` |
+| Schema | `meta`, `rooms` (+ `peerPub`), `messages` (+ `recalled`), `blocked_peers` |
 
 Passphrase is **independent** of the Ed25519 identity keyset.
 
@@ -68,11 +68,11 @@ Local `rooms` row stores `roomKey` + `role` (`creator` \| `member`) in SQLCipher
 | Receive | Sync on room open + RTDB listener while screen visible |
 | After ingest | `remove()` remote node (transient mailbox) |
 
-Plaintext never leaves the device. Free has **no recall**. Pro recall = 4.2.
+Plaintext never leaves the device. Free has **no recall**. Pro recall (4.2) = stub entitlement + delete mailbox node (IAP deferred).
 
 ## 6. Out of scope (later)
 
-- Biometric unlock · Pro recall (4.2)
+- Biometric unlock · RevenueCat / real IAP paywall
 
 ## 7. Block & Report (story 3.3)
 
@@ -85,6 +85,15 @@ Plaintext never leaves the device. Free has **no recall**. Pro recall = 4.2.
 | Sync | Drop remote messages from blocked `senderPub` |
 | Report | RTDB `/reports/{id}` write-once (`MAILBOX.md`) |
 
+## 8. Pro recall stub (story 4.2)
+
+| Purpose | Choice |
+|---------|--------|
+| Entitlement | Local stub prefs (`StubProEntitlementRepository`) — IAP later |
+| Gate UI | Staging debug Home toggle · Room shows Recall only if Pro |
+| Recall | Delete RTDB message if present · mark local `recalled` + clear body |
+| Peer already synced | Best-effort only (no `recalls/` fan-out in MVP) |
+
 ## Code map
 
 - `data/crypto/TinkIdentityKeyStore.kt` — identity  
@@ -94,6 +103,8 @@ Plaintext never leaves the device. Free has **no recall**. Pro recall = 4.2.
 - `data/local/db/VanishxLocalDatabase.kt` — SQLCipher Room + wipe  
 - `data/local/db/DatabasePassphraseStore.kt` — DB passphrase  
 - `data/remote/FirebaseMailboxRemoteDataSource.kt` — RTDB mailbox  
+- `data/billing/StubProEntitlementRepository.kt` — Pro stub  
 - `domain/usecase/EnsureIdentityUseCase.kt` — identity bootstrap  
 - `domain/usecase/CreateRoomUseCase.kt` / `JoinRoomUseCase.kt` — invite flow  
 - `domain/usecase/SendRoomMessageUseCase.kt` / `SyncRoomMailboxUseCase.kt` — mũi tên  
+- `domain/usecase/RecallRoomMessageUseCase.kt` — Pro recall  

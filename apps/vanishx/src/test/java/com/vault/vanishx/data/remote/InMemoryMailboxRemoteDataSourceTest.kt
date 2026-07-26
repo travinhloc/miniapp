@@ -1,9 +1,6 @@
 package com.vault.vanishx.data.remote
 
-import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.string.shouldStartWith
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -17,7 +14,7 @@ class InMemoryMailboxRemoteDataSourceTest {
             "room1",
             RemoteMailboxMessage(
                 messageId = "m1",
-                ciphertext = RemoteMailboxMessage.SMOKE_CIPHERTEXT,
+                ciphertext = SAMPLE_CIPHERTEXT,
                 senderPub = "pub",
                 createdAt = now,
                 expiresAt = now + 60_000,
@@ -27,7 +24,7 @@ class InMemoryMailboxRemoteDataSourceTest {
             "room1",
             RemoteMailboxMessage(
                 messageId = "m2",
-                ciphertext = RemoteMailboxMessage.SMOKE_CIPHERTEXT,
+                ciphertext = SAMPLE_CIPHERTEXT,
                 senderPub = "pub",
                 createdAt = now,
                 expiresAt = now + 60_000,
@@ -44,7 +41,7 @@ class InMemoryMailboxRemoteDataSourceTest {
         val now = 1_700_000_000_000L
         val message = RemoteMailboxMessage(
             messageId = "m1",
-            ciphertext = RemoteMailboxMessage.SMOKE_CIPHERTEXT,
+            ciphertext = SAMPLE_CIPHERTEXT,
             senderPub = "pub",
             createdAt = now,
             expiresAt = now + 60_000,
@@ -77,13 +74,7 @@ class InMemoryMailboxRemoteDataSourceTest {
         }.isFailure shouldBe true
     }
 
-    @Test
-    fun `smoke use case succeeds against in-memory remote`() = runTest {
-        val remote = InMemoryMailboxRemoteDataSource()
-        val result = SmokeMailboxRemoteUseCase(remote)()
-
-        result shouldStartWith "ok "
-        remote.isAuthenticated() shouldBe true
-        remote.metaFor(result.substringAfter("ok ").substringBefore("/")) shouldNotBe null
+    private companion object {
+        const val SAMPLE_CIPHERTEXT = "dGVzdA=="
     }
 }

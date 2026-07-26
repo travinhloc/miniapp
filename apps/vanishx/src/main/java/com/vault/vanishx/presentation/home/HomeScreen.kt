@@ -2,20 +2,16 @@ package com.vault.vanishx.presentation.home
 
 import android.Manifest
 import android.os.Build
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -25,11 +21,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -50,11 +44,9 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     navigator: (destination: BaseDestination) -> Unit,
 ) = BaseScreen {
-    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val placeholderMessage = stringResource(id = R.string.home_action_placeholder)
 
-    viewModel.error.collectAsEffect { /* reserved for later stories */ }
+    viewModel.error.collectAsEffect { /* reserved */ }
     viewModel.navigator.collectAsEffect { destination -> navigator(destination) }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -70,19 +62,10 @@ fun HomeScreen(
         viewModel.onAction(HomeAction.Resume)
     }
 
-    LaunchedEffect(uiState.showPlaceholder) {
-        if (uiState.showPlaceholder) {
-            Toast.makeText(context, placeholderMessage, Toast.LENGTH_SHORT).show()
-            viewModel.onAction(HomeAction.ClearPlaceholder)
-        }
-    }
-
     HomeScreenContent(
         anonymousId = uiState.anonymousId,
-        showMailboxSmoke = uiState.showMailboxSmoke,
-        isMailboxSmokeRunning = uiState.isMailboxSmokeRunning,
-        mailboxSmokeResult = uiState.mailboxSmokeResult,
-        mailboxSmokeError = uiState.mailboxSmokeError,
+        showProStubToggle = uiState.showProStubToggle,
+        isProStub = uiState.isProStub,
         onAction = viewModel::onAction,
     )
 }
@@ -90,10 +73,8 @@ fun HomeScreen(
 @Composable
 private fun HomeScreenContent(
     anonymousId: String?,
-    showMailboxSmoke: Boolean,
-    isMailboxSmokeRunning: Boolean,
-    mailboxSmokeResult: String?,
-    mailboxSmokeError: String?,
+    showProStubToggle: Boolean,
+    isProStub: Boolean,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -148,71 +129,24 @@ private fun HomeScreenContent(
         ) {
             Text(text = stringResource(id = R.string.home_security))
         }
-        if (showMailboxSmoke) {
+        if (showProStubToggle) {
             Spacer(modifier = Modifier.height(dimensions.spacingSmall))
             TextButton(
-                onClick = { onAction(HomeAction.RunMailboxSmoke) },
-                enabled = !isMailboxSmokeRunning,
+                onClick = { onAction(HomeAction.ToggleProStub) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = stringResource(id = R.string.home_rtdb_smoke))
+                Text(
+                    text = stringResource(
+                        id = if (isProStub) R.string.home_pro_stub_on else R.string.home_pro_stub_off,
+                    ),
+                )
             }
-        }
-        if (isMailboxSmokeRunning) {
-            Spacer(modifier = Modifier.height(dimensions.spacingMedium))
-            CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(dimensions.spacingSmall))
             Text(
-                text = stringResource(id = R.string.home_rtdb_smoke_running),
-                style = MaterialTheme.typography.bodyMedium,
+                text = stringResource(id = R.string.home_pro_stub_hint),
+                style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
-        }
-        when {
-            mailboxSmokeError != null -> {
-                Spacer(modifier = Modifier.height(dimensions.spacingMedium))
-                Text(
-                    text = stringResource(id = R.string.home_rtdb_smoke_log_error),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(modifier = Modifier.height(dimensions.spacingSmall))
-                SelectionContainer {
-                    Text(
-                        text = mailboxSmokeError,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 280.dp),
-                    )
-                }
-                TextButton(onClick = { onAction(HomeAction.ClearMailboxSmokeFeedback) }) {
-                    Text(text = stringResource(id = R.string.home_rtdb_smoke_clear_log))
-                }
-            }
-            mailboxSmokeResult != null -> {
-                Spacer(modifier = Modifier.height(dimensions.spacingMedium))
-                Text(
-                    text = stringResource(id = R.string.home_rtdb_smoke_log_ok),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(modifier = Modifier.height(dimensions.spacingSmall))
-                SelectionContainer {
-                    Text(
-                        text = mailboxSmokeResult,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                TextButton(onClick = { onAction(HomeAction.ClearMailboxSmokeFeedback) }) {
-                    Text(text = stringResource(id = R.string.home_rtdb_smoke_clear_log))
-                }
-            }
         }
         Spacer(modifier = Modifier.height(dimensions.spacingLarge))
         Text(
@@ -230,10 +164,8 @@ private fun HomeScreenPreview() {
     ComposeTheme {
         HomeScreenContent(
             anonymousId = "vx_AbCdEfGhIjKlMnOpQrStUv",
-            showMailboxSmoke = true,
-            isMailboxSmokeRunning = false,
-            mailboxSmokeResult = null,
-            mailboxSmokeError = "FirebaseDatabaseException: Permission denied",
+            showProStubToggle = true,
+            isProStub = false,
             onAction = {},
         )
     }

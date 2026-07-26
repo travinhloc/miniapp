@@ -8,15 +8,7 @@
     <string name="home_join_room">Vào bằng link / QR / mã</string>
     <string name="home_security">Bảo mật · PIN / Panic</string>
     <string name="home_arrow_hint">Tin như mũi tên — phóng đi không thu hồi (Free).</string>
-    <string name="home_action_placeholder">Sẽ có ở story sau</string>
     <string name="home_anonymous_id">ID: %1$s</string>
-    <string name="home_rtdb_smoke">Thử RTDB</string>
-    <string name="home_rtdb_smoke_ok">Smoke mailbox OK: %1$s</string>
-    <string name="home_rtdb_smoke_fail">Smoke mailbox lỗi: %1$s</string>
-    <string name="home_rtdb_smoke_log_ok">Smoke mailbox OK (giữ để copy)</string>
-    <string name="home_rtdb_smoke_log_error">Smoke mailbox LỖI (giữ để copy)</string>
-    <string name="home_rtdb_smoke_clear_log">Xóa log</string>
-    <string name="home_rtdb_smoke_running">Đang chạy RTDB smoke… (tối đa ~25s)</string>
 
     <string name="ttl_1h">1 giờ</string>
     <string name="ttl_6h">6 giờ</string>
@@ -67,6 +59,11 @@
     <string name="room_report_submit">Gửi báo cáo</string>
     <string name="room_left_title">Bạn đã rời phòng</string>
     <string name="room_left_body">Đối phương đã bị chặn. Tin local của phòng này đã xóa.</string>
+    <string name="room_recall">Thu hồi</string>
+    <string name="room_recalled_tag">Đã thu hồi · best-effort nếu đã tải máy nhận</string>
+    <string name="home_pro_stub_on">Pro stub: BẬT (có thu hồi)</string>
+    <string name="home_pro_stub_off">Pro stub: TẮT (Free)</string>
+    <string name="home_pro_stub_hint">Stub MVP — IAP thật sau. Chỉ staging debug.</string>
 
     <string name="fcm_channel_id">vanishx_mailbox</string>
     <string name="fcm_channel_name">Hộp thư</string>
