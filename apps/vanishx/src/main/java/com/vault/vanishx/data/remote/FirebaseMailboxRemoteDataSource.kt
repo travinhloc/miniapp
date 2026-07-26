@@ -110,6 +110,13 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         }
     }
 
+    override suspend fun deleteAllMessages(roomId: String) {
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            roomRef(roomId).child(PATH_MESSAGES).removeValue().await()
+        }
+    }
+
     override fun observeMessages(roomId: String): Flow<List<RemoteMailboxMessage>> = callbackFlow {
         ensureAuthenticated()
         val ref = roomRef(roomId).child(PATH_MESSAGES)

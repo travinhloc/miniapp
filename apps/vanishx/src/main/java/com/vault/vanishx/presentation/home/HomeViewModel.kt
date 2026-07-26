@@ -4,10 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.BuildConfig
-import com.vault.vanishx.presentation.mailbox.MailboxDestination
-import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
+import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
+import com.vault.vanishx.presentation.mailbox.MailboxDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +24,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val mailboxRepository: MailboxRepository,
     private val ensureIdentity: EnsureIdentityUseCase,
+    private val syncActiveMailboxes: SyncActiveMailboxesUseCase,
     private val smokeMailboxRemote: SmokeMailboxRemoteUseCase,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
@@ -37,7 +37,6 @@ class HomeViewModel @Inject constructor(
 
     init {
         bootstrapIdentity()
-        loadRooms()
     }
 
     private fun bootstrapIdentity() {
@@ -59,13 +58,24 @@ class HomeViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun loadRooms() {
-        flow { emit(mailboxRepository.getActiveRooms()) }
-            .onEach { rooms ->
-                _uiState.update { it.copy(activeRoomCount = rooms.size) }
-            }
+    private fun syncOnOpen() {
+        if (_uiState.value.isMailboxSyncing) return
+        _uiState.update { it.copy(isMailboxSyncing = true) }
+        flow { emit(syncActiveMailboxes()) }
             .flowOn(dispatchersProvider.io)
-            .catch { e -> _error.emit(e) }
+            .onEach { result ->
+                _uiState.update {
+                    it.copy(
+                        isMailboxSyncing = false,
+                        activeRoomCount = result.activeCount,
+                    )
+                }
+            }
+            .catch { e ->
+                Timber.w(e, "Sync active mailboxes on open failed")
+                _uiState.update { it.copy(isMailboxSyncing = false) }
+                // Soft-fail: Home still usable; room open will retry sync.
+            }
             .launchIn(viewModelScope)
     }
 
@@ -80,6 +90,7 @@ class HomeViewModel @Inject constructor(
             HomeAction.ClearPlaceholder -> {
                 _uiState.update { it.copy(showPlaceholder = false) }
             }
+            HomeAction.Resume -> syncOnOpen()
             HomeAction.RunMailboxSmoke -> runMailboxSmoke()
             HomeAction.ClearMailboxSmokeFeedback -> {
                 _uiState.update {

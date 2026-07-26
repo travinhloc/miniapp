@@ -48,7 +48,7 @@
     <string name="room_ttl_remaining">Còn hạn: %1$s</string>
     <string name="room_empty_hint">Chưa có tin. Hãy phóng một mũi tên đã mã hóa.</string>
     <string name="room_expired_title">Hộp thư đã hết hạn</string>
-    <string name="room_expired_body">TTL phòng đã kết thúc. Không còn mở tin tại đây.</string>
+    <string name="room_expired_body">TTL phòng đã kết thúc. Tin local đã xóa và mailbox relay đã purge. Không còn mở tin tại đây.</string>
     <string name="room_composer_hint">Nhập tin text…</string>
     <string name="room_send">Gửi</string>
     <string name="room_sent_tag">Đã phóng · không thu hồi</string>

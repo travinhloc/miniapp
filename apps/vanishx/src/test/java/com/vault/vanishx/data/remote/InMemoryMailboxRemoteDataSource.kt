@@ -55,6 +55,13 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
         revisions.value = revisions.value + 1
     }
 
+    override suspend fun deleteAllMessages(roomId: String) {
+        ensureAuthenticated()
+        val prefix = "$roomId/"
+        messages.keys.filter { it.startsWith(prefix) }.forEach { messages.remove(it) }
+        revisions.value = revisions.value + 1
+    }
+
     override fun observeMessages(roomId: String): Flow<List<RemoteMailboxMessage>> =
         revisions.map { listMessagesBlocking(roomId) }
 

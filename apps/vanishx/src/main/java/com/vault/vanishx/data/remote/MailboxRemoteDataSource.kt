@@ -18,6 +18,9 @@ interface MailboxRemoteDataSource {
 
     suspend fun deleteMessage(roomId: String, messageId: String)
 
+    /** Removes all message children for [roomId]; room meta is left intact. */
+    suspend fun deleteAllMessages(roomId: String)
+
     /**
      * Emits the full message list whenever children change. Caller must cancel the collection
      * to detach the listener.
