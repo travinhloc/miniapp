@@ -8,6 +8,7 @@ import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesResult
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
 import com.vault.vanishx.presentation.mailbox.MailboxDestination
+import com.vault.vanishx.presentation.security.SecurityDestination
 import com.vault.vanishx.test.CoroutineTestRule
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -100,5 +101,13 @@ class HomeViewModelTest {
     fun `bootstraps consumes pending invite`() = runTest {
         advanceUntilIdle()
         coVerify(exactly = 1) { consumePendingInvite() }
+    }
+
+    @Test
+    fun `OpenSecurity navigates to settings`() = runTest {
+        viewModel.navigator.test {
+            viewModel.onAction(HomeAction.OpenSecurity)
+            awaitItem() shouldBe SecurityDestination.Settings
+        }
     }
 }

@@ -32,6 +32,13 @@ class TinkIdentityKeyStore @Inject constructor(
         }
     }
 
+    override fun clear() {
+        synchronized(this) {
+            cached = null
+            context.deleteSharedPreferences(PREF_FILE)
+        }
+    }
+
     private fun loadOrCreate(): Identity {
         try {
             SignatureConfig.register()

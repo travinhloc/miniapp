@@ -6,6 +6,7 @@
     <string name="home_tagline">Temporary chat · anonymous · auto-expires</string>
     <string name="home_create_room">Create temporary mailbox</string>
     <string name="home_join_room">Join with link / QR / code</string>
+    <string name="home_security">Security · PIN / Panic</string>
     <string name="home_arrow_hint">Messages are arrows — once sent, Free cannot recall them.</string>
     <string name="home_action_placeholder">Coming in a later story</string>
     <string name="home_anonymous_id">ID: %1$s</string>
@@ -60,4 +61,26 @@
     <string name="fcm_channel_description">Alerts when a temporary room may have new messages</string>
     <string name="fcm_notification_title">New mailbox activity</string>
     <string name="fcm_notification_body">Open the room to sync encrypted messages.</string>
+
+    <string name="lock_title">VanishX is locked</string>
+    <string name="lock_subtitle">Enter unlock PIN. Panic PIN wipes all local data instantly.</string>
+    <string name="lock_pin_label">PIN</string>
+    <string name="lock_unlock">Unlock</string>
+    <string name="lock_wiping">Wiping…</string>
+
+    <string name="security_title">Security</string>
+    <string name="security_subtitle">App lock PIN and Panic PIN. Panic looks like unlock but erases everything.</string>
+    <string name="security_unlock_status_on">Unlock PIN: on</string>
+    <string name="security_unlock_status_off">Unlock PIN: off</string>
+    <string name="security_panic_status_on">Panic PIN: on</string>
+    <string name="security_panic_status_off">Panic PIN: off</string>
+    <string name="security_unlock_pin">New unlock PIN</string>
+    <string name="security_unlock_pin_confirm">Confirm unlock PIN</string>
+    <string name="security_panic_pin">New Panic PIN</string>
+    <string name="security_panic_pin_confirm">Confirm Panic PIN</string>
+    <string name="security_panic_hint">Must differ from unlock PIN. Use under coercion — resets the app like a fresh install.</string>
+    <string name="security_save_unlock">Save unlock PIN</string>
+    <string name="security_save_panic">Save Panic PIN</string>
+    <string name="security_clear_unlock">Remove unlock PIN</string>
+    <string name="security_clear_panic">Remove Panic PIN</string>
 </resources>

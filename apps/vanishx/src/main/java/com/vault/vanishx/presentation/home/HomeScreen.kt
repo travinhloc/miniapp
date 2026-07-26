@@ -141,6 +141,13 @@ private fun HomeScreenContent(
         ) {
             Text(text = stringResource(id = R.string.home_join_room))
         }
+        Spacer(modifier = Modifier.height(dimensions.spacingSmall))
+        TextButton(
+            onClick = { onAction(HomeAction.OpenSecurity) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(text = stringResource(id = R.string.home_security))
+        }
         if (showMailboxSmoke) {
             Spacer(modifier = Modifier.height(dimensions.spacingSmall))
             TextButton(

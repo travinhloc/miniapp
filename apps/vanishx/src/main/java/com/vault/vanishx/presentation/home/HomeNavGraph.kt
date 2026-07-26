@@ -7,6 +7,8 @@ import com.vault.vanishx.presentation.AppDestination
 import com.vault.vanishx.presentation.composable
 import com.vault.vanishx.presentation.mailbox.mailboxNavGraph
 import com.vault.vanishx.presentation.navigate
+import com.vault.vanishx.presentation.security.SecurityDestination
+import com.vault.vanishx.presentation.security.SecuritySettingsScreen
 
 fun NavGraphBuilder.homeNavGraph(
     navController: NavHostController,
@@ -17,6 +19,11 @@ fun NavGraphBuilder.homeNavGraph(
     ) {
         composable(HomeDestination.Home) {
             HomeScreen(
+                navigator = { destination -> navController.navigate(destination) },
+            )
+        }
+        composable(SecurityDestination.Settings) {
+            SecuritySettingsScreen(
                 navigator = { destination -> navController.navigate(destination) },
             )
         }
