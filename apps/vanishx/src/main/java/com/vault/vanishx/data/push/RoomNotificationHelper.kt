@@ -1,14 +1,17 @@
 package com.vault.vanishx.data.push
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.vault.vanishx.R
 import com.vault.vanishx.presentation.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,6 +37,15 @@ class RoomNotificationHelper @Inject constructor(
     }
 
     fun showRoomMessageNotification(roomId: String) {
+        val notifications = NotificationManagerCompat.from(context)
+        if (!notifications.areNotificationsEnabled()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) return
+        }
         ensureChannel()
         val openUri = Uri.parse("vanishx://open/$roomId")
         val intent = Intent(Intent.ACTION_VIEW, openUri, context, MainActivity::class.java).apply {
@@ -57,8 +69,6 @@ class RoomNotificationHelper @Inject constructor(
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
-        runCatching {
-            NotificationManagerCompat.from(context).notify(roomId.hashCode(), notification)
-        }
+        notifications.notify(roomId.hashCode(), notification)
     }
 }
