@@ -26,27 +26,38 @@ object InviteUriCodec {
     fun parse(raw: String): RoomInvite? {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return null
+        return parseNormalized(normalize(trimmed))
+    }
 
-        val normalized = when {
+    private fun normalize(trimmed: String): String =
+        when {
             trimmed.startsWith(PREFIX) -> trimmed
             trimmed.startsWith("$SCHEME://") -> trimmed
             else -> "$PREFIX$trimmed"
         }
+
+    private fun parseNormalized(normalized: String): RoomInvite? {
         if (!normalized.startsWith(PREFIX)) return null
 
         val afterHost = normalized.removePrefix(PREFIX)
         val pathAndQuery = afterHost.split("?", limit = 2)
-        val roomId = pathAndQuery[0].substringBefore('/').takeIf { it.isNotBlank() } ?: return null
-        val query = pathAndQuery.getOrNull(1).orEmpty()
-        val params = query.split("&")
+        val roomId = pathAndQuery[0].substringBefore('/').takeIf { it.isNotBlank() }
+        val params = parseQuery(pathAndQuery.getOrNull(1).orEmpty())
+        val roomKey = params[QUERY_KEY]?.takeIf { it.isNotBlank() }
+        val expiresAt = params[QUERY_EXPIRES]?.toLongOrNull()?.takeIf { it > 0L }
+
+        return if (roomId != null && roomKey != null) {
+            RoomInvite(roomId = roomId, roomKey = roomKey, expiresAt = expiresAt)
+        } else {
+            null
+        }
+    }
+
+    private fun parseQuery(query: String): Map<String, String> =
+        query.split("&")
             .mapNotNull { part ->
                 val kv = part.split("=", limit = 2)
                 if (kv.size == 2 && kv[0].isNotBlank()) kv[0] to kv[1] else null
             }
             .toMap()
-
-        val roomKey = params[QUERY_KEY]?.takeIf { it.isNotBlank() } ?: return null
-        val expiresAt = params[QUERY_EXPIRES]?.toLongOrNull()?.takeIf { it > 0L }
-        return RoomInvite(roomId = roomId, roomKey = roomKey, expiresAt = expiresAt)
-    }
 }

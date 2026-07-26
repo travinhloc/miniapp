@@ -48,6 +48,7 @@ sealed interface RoomAction {
 }
 
 @HiltViewModel
+@Suppress("LargeClass", "TooManyFunctions")
 class RoomViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getRoom: GetRoomUseCase,
@@ -218,19 +219,23 @@ class RoomViewModel @Inject constructor(
 
     private fun friendlyError(error: Throwable): String {
         val message = error.message.orEmpty()
-        return when {
-            message.contains("expired", ignoreCase = true) -> "Room expired"
-            message.contains("Permission denied", ignoreCase = true) ->
-                "Could not reach mailbox (permission). Check connection and try again."
-            message.contains("Unable to resolve host", ignoreCase = true) ||
-                message.contains("network", ignoreCase = true) ||
-                message.contains("Firebase Network", ignoreCase = true) ->
-                "Network error. Check connection and retry."
-            message.contains("decrypt", ignoreCase = true) ->
-                "Could not decrypt a message. The room key may be wrong."
-            message.contains("empty", ignoreCase = true) -> "Message is empty"
-            message.contains("not found", ignoreCase = true) -> "Room not found"
-            else -> message.ifBlank { error::class.java.simpleName }
-        }
+        return mapFriendlyError(message) ?: message.ifBlank { error::class.java.simpleName }
     }
+
+    private fun mapFriendlyError(message: String): String? = when {
+        message.contains("expired", ignoreCase = true) -> "Room expired"
+        message.contains("Permission denied", ignoreCase = true) ->
+            "Could not reach mailbox (permission). Check connection and try again."
+        isNetworkError(message) -> "Network error. Check connection and retry."
+        message.contains("decrypt", ignoreCase = true) ->
+            "Could not decrypt a message. The room key may be wrong."
+        message.contains("empty", ignoreCase = true) -> "Message is empty"
+        message.contains("not found", ignoreCase = true) -> "Room not found"
+        else -> null
+    }
+
+    private fun isNetworkError(message: String): Boolean =
+        message.contains("Unable to resolve host", ignoreCase = true) ||
+            message.contains("network", ignoreCase = true) ||
+            message.contains("Firebase Network", ignoreCase = true)
 }

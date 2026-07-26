@@ -110,28 +110,49 @@ class SyncRoomMailboxUseCase @Inject constructor(
         myPub: String,
         now: Long,
     ): ProcessResult {
-        val roomId = room.id
-        if (remoteMessage.expiresAt > 0L && remoteMessage.expiresAt <= now) {
-            runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
-            return ProcessResult.REMOVED_ONLY
-        }
+        val early = processExpiredOrDuplicate(room.id, remoteMessage, now)
+        if (early != null) return early
 
+        val plaintext = decryptRemote(room, remoteMessage)
+        return if (plaintext == null) {
+            ProcessResult.DECRYPT_FAIL
+        } else {
+            ingestRemote(room, remoteMessage, myPub, plaintext)
+            ProcessResult.INGESTED
+        }
+    }
+
+    private suspend fun processExpiredOrDuplicate(
+        roomId: String,
+        remoteMessage: RemoteMailboxMessage,
+        now: Long,
+    ): ProcessResult? {
+        val expired = remoteMessage.expiresAt > 0L && remoteMessage.expiresAt <= now
         val existing = mailboxRepository.getMessage(remoteMessage.messageId) != null
-        if (existing) {
-            runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
-            return ProcessResult.REMOVED_ONLY
-        }
+        if (!expired && !existing) return null
+        runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
+        return ProcessResult.REMOVED_ONLY
+    }
 
-        val plaintext = try {
-            cipher.decrypt(roomId, room.roomKey, remoteMessage.ciphertext)
-        } catch (e: RoomCryptoException) {
-            Timber.w(e, "Decrypt failed for %s", remoteMessage.messageId)
-            return ProcessResult.DECRYPT_FAIL
-        } catch (e: IllegalArgumentException) {
-            Timber.w(e, "Decrypt rejected for %s", remoteMessage.messageId)
-            return ProcessResult.DECRYPT_FAIL
-        }
+    private fun decryptRemote(
+        room: MailboxRoom,
+        remoteMessage: RemoteMailboxMessage,
+    ): String? = try {
+        cipher.decrypt(room.id, room.roomKey, remoteMessage.ciphertext)
+    } catch (e: RoomCryptoException) {
+        Timber.w(e, "Decrypt failed for %s", remoteMessage.messageId)
+        null
+    } catch (e: IllegalArgumentException) {
+        Timber.w(e, "Decrypt rejected for %s", remoteMessage.messageId)
+        null
+    }
 
+    private suspend fun ingestRemote(
+        room: MailboxRoom,
+        remoteMessage: RemoteMailboxMessage,
+        myPub: String,
+        plaintext: String,
+    ) {
         val direction = if (remoteMessage.senderPub == myPub) {
             ChatMessage.DIRECTION_OUT
         } else {
@@ -140,15 +161,14 @@ class SyncRoomMailboxUseCase @Inject constructor(
         mailboxRepository.upsertMessage(
             ChatMessage(
                 id = remoteMessage.messageId,
-                roomId = roomId,
+                roomId = room.id,
                 body = plaintext,
                 sentAt = remoteMessage.createdAt,
                 expiresAt = remoteMessage.expiresAt,
                 direction = direction,
             ),
         )
-        runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
-        return ProcessResult.INGESTED
+        runCatching { remote.deleteMessage(room.id, remoteMessage.messageId) }
     }
 
     private enum class ProcessResult {

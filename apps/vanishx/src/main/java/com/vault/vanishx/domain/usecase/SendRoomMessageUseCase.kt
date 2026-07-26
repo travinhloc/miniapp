@@ -30,7 +30,7 @@ class SendRoomMessageUseCase @Inject constructor(
 
         val identity = identityRepository.ensureIdentity()
         val now = System.currentTimeMillis()
-        val messageId = "m_${UUID.randomUUID().toString().replace("-", "").take(16)}"
+        val messageId = "m_${UUID.randomUUID().toString().replace("-", "").take(MESSAGE_ID_CHARS)}"
         val ciphertext = cipher.encrypt(roomId, room.roomKey, text)
         val remoteMessage = RemoteMailboxMessage(
             messageId = messageId,
@@ -51,5 +51,9 @@ class SendRoomMessageUseCase @Inject constructor(
         )
         mailboxRepository.upsertMessage(local)
         return local
+    }
+
+    private companion object {
+        const val MESSAGE_ID_CHARS = 16
     }
 }

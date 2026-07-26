@@ -14,8 +14,8 @@ class SmokeMailboxRemoteUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(): String {
         val now = System.currentTimeMillis()
-        val roomId = "smoke_${UUID.randomUUID().toString().take(8)}"
-        val messageId = "msg_${UUID.randomUUID().toString().take(8)}"
+        val roomId = "smoke_${UUID.randomUUID().toString().take(SMOKE_ID_CHARS)}"
+        val messageId = "msg_${UUID.randomUUID().toString().take(SMOKE_ID_CHARS)}"
         val expiresAt = now + TTL_MS
 
         remote.ensureAuthenticated()
@@ -50,6 +50,7 @@ class SmokeMailboxRemoteUseCase @Inject constructor(
     }
 
     private companion object {
+        const val SMOKE_ID_CHARS = 8
         const val TTL_MS = 60 * 60 * 1000L
     }
 }

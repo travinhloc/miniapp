@@ -16,6 +16,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@Suppress("TooManyFunctions")
 class FirebaseMailboxRemoteDataSource @Inject constructor(
     private val auth: FirebaseAuth,
     private val database: FirebaseDatabase,
@@ -131,17 +132,27 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
 
     private fun parseMessage(snapshot: DataSnapshot, messageId: String): RemoteMailboxMessage? {
         if (!snapshot.exists()) return null
-        val ciphertext = snapshot.child(KEY_CIPHERTEXT).getValue(String::class.java) ?: return null
-        val senderPub = snapshot.child(KEY_SENDER_PUB).getValue(String::class.java) ?: return null
-        val createdAt = snapshot.child(KEY_CREATED_AT).getValue(Long::class.java) ?: return null
-        val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java) ?: return null
-        return RemoteMailboxMessage(
-            messageId = messageId,
-            ciphertext = ciphertext,
-            senderPub = senderPub,
-            createdAt = createdAt,
-            expiresAt = expiresAt,
-        )
+        return toRemoteMessage(snapshot, messageId)
+    }
+
+    private fun toRemoteMessage(snapshot: DataSnapshot, messageId: String): RemoteMailboxMessage? {
+        val ciphertext = snapshot.child(KEY_CIPHERTEXT).getValue(String::class.java)
+        val senderPub = snapshot.child(KEY_SENDER_PUB).getValue(String::class.java)
+        val createdAt = snapshot.child(KEY_CREATED_AT).getValue(Long::class.java)
+        val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java)
+        return when {
+            ciphertext == null -> null
+            senderPub == null -> null
+            createdAt == null -> null
+            expiresAt == null -> null
+            else -> RemoteMailboxMessage(
+                messageId = messageId,
+                ciphertext = ciphertext,
+                senderPub = senderPub,
+                createdAt = createdAt,
+                expiresAt = expiresAt,
+            )
+        }
     }
 
     private fun roomRef(roomId: String) = database.reference.child(PATH_ROOMS).child(roomId)
