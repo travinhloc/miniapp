@@ -13,6 +13,7 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
     private var authenticated = false
     private val roomMeta = ConcurrentHashMap<String, RemoteRoomMeta>()
     private val messages = ConcurrentHashMap<String, RemoteMailboxMessage>()
+    private val reports = ConcurrentHashMap<String, RemoteReport>()
     private val revisions = MutableStateFlow(0)
 
     override suspend fun ensureAuthenticated() {
@@ -62,12 +63,25 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
         revisions.value = revisions.value + 1
     }
 
+    override suspend fun writeReport(report: RemoteReport) {
+        require(report.roomId.length in 1..RemoteReport.MAX_ROOM_ID_LENGTH)
+        require(report.reporterPub.length in 1..RemoteReport.MAX_PUB_LENGTH)
+        report.peerPub?.let { require(it.length in 1..RemoteReport.MAX_PUB_LENGTH) }
+        report.reason?.let { require(it.length <= RemoteReport.MAX_REASON_LENGTH) }
+        ensureAuthenticated()
+        reports[report.reportId] = report
+    }
+
     override fun observeMessages(roomId: String): Flow<List<RemoteMailboxMessage>> =
         revisions.map { listMessagesBlocking(roomId) }
 
     fun isAuthenticated(): Boolean = authenticated
 
     fun metaFor(roomId: String): RemoteRoomMeta? = roomMeta[roomId]
+
+    fun reportFor(reportId: String): RemoteReport? = reports[reportId]
+
+    fun allReports(): List<RemoteReport> = reports.values.toList()
 
     private fun listMessagesBlocking(roomId: String): List<RemoteMailboxMessage> {
         val prefix = "$roomId/"

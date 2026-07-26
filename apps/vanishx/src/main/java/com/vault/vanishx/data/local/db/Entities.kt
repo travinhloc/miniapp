@@ -18,6 +18,7 @@ data class MailboxRoomEntity(
     val title: String?,
     val status: String,
     val role: String,
+    val peerPub: String? = null,
 )
 
 @Entity(tableName = "messages")
@@ -28,4 +29,10 @@ data class MessageEntity(
     val sentAt: Long,
     val expiresAt: Long,
     val direction: String,
+)
+
+@Entity(tableName = "blocked_peers")
+data class BlockedPeerEntity(
+    @PrimaryKey val peerPub: String,
+    val blockedAt: Long,
 )

@@ -102,6 +102,7 @@ class SendSyncRoomMessageUseCaseTest {
                 remote,
                 com.vault.vanishx.data.push.FakeRoomPushTopics(),
             ),
+            blockRepository = mockk(relaxed = true),
         ).invoke("room1")
 
         result.ingested shouldBe 1

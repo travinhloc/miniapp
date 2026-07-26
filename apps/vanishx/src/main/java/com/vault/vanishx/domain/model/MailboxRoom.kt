@@ -8,10 +8,13 @@ data class MailboxRoom(
     val title: String? = null,
     val status: String = STATUS_ACTIVE,
     val role: String = ROLE_MEMBER,
+    /** Peer Ed25519 public key (Base64), when known from meta or inbound messages. */
+    val peerPub: String? = null,
 ) {
     companion object {
         const val STATUS_ACTIVE = "active"
         const val STATUS_EXPIRED = "expired"
+        const val STATUS_LEFT = "left"
         const val ROLE_CREATOR = "creator"
         const val ROLE_MEMBER = "member"
     }

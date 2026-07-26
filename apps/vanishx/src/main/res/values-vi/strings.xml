@@ -55,6 +55,18 @@
     <string name="room_sent_tag">Đã phóng · không thu hồi</string>
     <string name="room_syncing">Đang đồng bộ hộp thư…</string>
     <string name="room_retry_sync">Thử đồng bộ lại</string>
+    <string name="room_menu">⋯</string>
+    <string name="room_block">Chặn đối phương</string>
+    <string name="room_report">Báo cáo</string>
+    <string name="room_block_title">Chặn đối phương?</string>
+    <string name="room_block_body">Chặn theo public key. Bạn rời phòng và không join lại phòng của họ trên máy này.</string>
+    <string name="room_block_confirm">Chặn</string>
+    <string name="room_report_title">Báo cáo phòng</string>
+    <string name="room_report_body">Gửi báo cáo ngắn tới moderation (không upload nội dung chat đã mã hóa).</string>
+    <string name="room_report_reason_hint">Lý do (tuỳ chọn)</string>
+    <string name="room_report_submit">Gửi báo cáo</string>
+    <string name="room_left_title">Bạn đã rời phòng</string>
+    <string name="room_left_body">Đối phương đã bị chặn. Tin local của phòng này đã xóa.</string>
 
     <string name="fcm_channel_id">vanishx_mailbox</string>
     <string name="fcm_channel_name">Hộp thư</string>

@@ -6,6 +6,7 @@ import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteMailboxMessage
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.repository.BlockRepository
 import com.vault.vanishx.domain.repository.IdentityRepository
 import com.vault.vanishx.domain.repository.MailboxRepository
 import timber.log.Timber
@@ -25,6 +26,7 @@ class SyncRoomMailboxUseCase @Inject constructor(
     private val remote: MailboxRemoteDataSource,
     private val cipher: RoomMessageCipher,
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
+    private val blockRepository: BlockRepository,
 ) {
     suspend operator fun invoke(roomId: String): SyncMailboxResult {
         val room = mailboxRepository.getRoom(roomId)
@@ -140,6 +142,7 @@ class SyncRoomMailboxUseCase @Inject constructor(
         now: Long,
     ): ProcessResult {
         val early = processExpiredOrDuplicate(room.id, remoteMessage, now)
+            ?: processBlockedPeer(room.id, remoteMessage, myPub)
         if (early != null) return early
 
         val plaintext = decryptRemote(room, remoteMessage)
@@ -149,6 +152,17 @@ class SyncRoomMailboxUseCase @Inject constructor(
             ingestRemote(room, remoteMessage, myPub, plaintext)
             ProcessResult.INGESTED
         }
+    }
+
+    private suspend fun processBlockedPeer(
+        roomId: String,
+        remoteMessage: RemoteMailboxMessage,
+        myPub: String,
+    ): ProcessResult? {
+        if (remoteMessage.senderPub == myPub) return null
+        if (!blockRepository.isBlocked(remoteMessage.senderPub)) return null
+        runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
+        return ProcessResult.REMOVED_ONLY
     }
 
     private suspend fun processExpiredOrDuplicate(
@@ -187,6 +201,9 @@ class SyncRoomMailboxUseCase @Inject constructor(
         } else {
             ChatMessage.DIRECTION_IN
         }
+        if (shouldRememberPeer(room, direction, remoteMessage.senderPub)) {
+            mailboxRepository.upsertRoom(room.copy(peerPub = remoteMessage.senderPub))
+        }
         mailboxRepository.upsertMessage(
             ChatMessage(
                 id = remoteMessage.messageId,
@@ -199,6 +216,15 @@ class SyncRoomMailboxUseCase @Inject constructor(
         )
         runCatching { remote.deleteMessage(room.id, remoteMessage.messageId) }
     }
+
+    private fun shouldRememberPeer(
+        room: MailboxRoom,
+        direction: String,
+        senderPub: String,
+    ): Boolean =
+        direction == ChatMessage.DIRECTION_IN &&
+            room.peerPub.isNullOrBlank() &&
+            senderPub.isNotBlank()
 
     private enum class ProcessResult {
         INGESTED,

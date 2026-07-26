@@ -55,6 +55,18 @@
     <string name="room_sent_tag">Sent · cannot recall</string>
     <string name="room_syncing">Syncing mailbox…</string>
     <string name="room_retry_sync">Retry sync</string>
+    <string name="room_menu">⋯</string>
+    <string name="room_block">Block peer</string>
+    <string name="room_report">Report</string>
+    <string name="room_block_title">Block this peer?</string>
+    <string name="room_block_body">They will be blocked by public key. You leave this room and cannot join their rooms again on this device.</string>
+    <string name="room_block_confirm">Block</string>
+    <string name="room_report_title">Report room</string>
+    <string name="room_report_body">Send a short report to moderation (encrypted chat content is not uploaded).</string>
+    <string name="room_report_reason_hint">Optional reason</string>
+    <string name="room_report_submit">Submit report</string>
+    <string name="room_left_title">You left this room</string>
+    <string name="room_left_body">The peer was blocked. Local messages for this room were cleared.</string>
 
     <string name="fcm_channel_id">vanishx_mailbox</string>
     <string name="fcm_channel_name">Mailbox</string>

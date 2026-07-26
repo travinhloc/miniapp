@@ -55,11 +55,18 @@ class VanishxDatabaseDaoTest {
                     title = "temp",
                     status = "active",
                     role = "creator",
+                    peerPub = "peer-pub",
                 ),
             )
             val rooms = database.mailboxRoomDao().getByStatus("active")
             rooms.size shouldBe 1
             rooms.first().id shouldBe "room-1"
+            rooms.first().peerPub shouldBe "peer-pub"
+
+            database.blockedPeerDao().upsert(
+                BlockedPeerEntity(peerPub = "peer-pub", blockedAt = 9L),
+            )
+            database.blockedPeerDao().get("peer-pub")?.blockedAt shouldBe 9L
         }
     }
 }

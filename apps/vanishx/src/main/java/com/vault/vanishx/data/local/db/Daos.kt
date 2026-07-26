@@ -43,3 +43,15 @@ interface MessageDao {
     @Query("DELETE FROM messages WHERE roomId = :roomId")
     suspend fun deleteByRoom(roomId: String): Int
 }
+
+@Dao
+interface BlockedPeerDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: BlockedPeerEntity)
+
+    @Query("SELECT * FROM blocked_peers WHERE peerPub = :peerPub LIMIT 1")
+    suspend fun get(peerPub: String): BlockedPeerEntity?
+
+    @Query("SELECT peerPub FROM blocked_peers")
+    suspend fun listPeerPubs(): List<String>
+}

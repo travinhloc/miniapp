@@ -21,7 +21,7 @@ Private key never logged. No phone / email / advertising ID / `ANDROID_ID`.
 | Engine | **SQLCipher** via `net.zetetic:sqlcipher-android` + Room |
 | Passphrase | Random 32 bytes in EncryptedSharedPreferences (`vanishx_db_passphrase_prefs`) via AndroidX `MasterKeys` |
 | DB file | `vanishx.db` (excluded from Auto Backup) |
-| Schema | `meta`, `rooms`, `messages` |
+| Schema | `meta`, `rooms` (+ `peerPub`), `messages`, `blocked_peers` |
 
 Passphrase is **independent** of the Ed25519 identity keyset.
 
@@ -72,7 +72,18 @@ Plaintext never leaves the device. Free has **no recall**. Pro recall = 4.2.
 
 ## 6. Out of scope (later)
 
-- Biometric unlock · Pro recall (4.2) · Block/Report (3.3)
+- Biometric unlock · Pro recall (4.2)
+
+## 7. Block & Report (story 3.3)
+
+| Purpose | Choice |
+|---------|--------|
+| Block key | Peer Ed25519 `publicKeyBase64` |
+| Persist | SQLCipher `blocked_peers` (+ `rooms.peerPub` when known) |
+| Side effect | Leave room (`status=left`), clear local messages, unsubscribe FCM topic |
+| Join | Reject if remote `creatorPub` is blocked |
+| Sync | Drop remote messages from blocked `senderPub` |
+| Report | RTDB `/reports/{id}` write-once (`MAILBOX.md`) |
 
 ## Code map
 
