@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.BuildConfig
+import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
@@ -26,6 +27,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val ensureIdentity: EnsureIdentityUseCase,
     private val syncActiveMailboxes: SyncActiveMailboxesUseCase,
+    private val consumePendingInvite: ConsumePendingInviteUseCase,
     private val smokeMailboxRemote: SmokeMailboxRemoteUseCase,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
@@ -40,14 +42,21 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun bootstrapIdentity() {
-        flow { emit(ensureIdentity()) }
+        flow {
+            val identity = ensureIdentity()
+            val joined = consumePendingInvite()
+            emit(identity to joined)
+        }
             .injectLoading()
-            .onEach { identity ->
+            .onEach { (identity, joinedRoom) ->
                 _uiState.update {
                     it.copy(
                         anonymousId = identity.anonymousId,
                         isBootstrappingIdentity = false,
                     )
+                }
+                if (joinedRoom != null) {
+                    _navigator.emit(MailboxDestination.Room(joinedRoom.id))
                 }
             }
             .flowOn(dispatchersProvider.io)
@@ -74,7 +83,6 @@ class HomeViewModel @Inject constructor(
             .catch { e ->
                 Timber.w(e, "Sync active mailboxes on open failed")
                 _uiState.update { it.copy(isMailboxSyncing = false) }
-                // Soft-fail: Home still usable; room open will retry sync.
             }
             .launchIn(viewModelScope)
     }

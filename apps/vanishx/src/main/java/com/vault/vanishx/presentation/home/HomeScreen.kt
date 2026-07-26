@@ -1,5 +1,7 @@
 package com.vault.vanishx.presentation.home
 
+import android.Manifest
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,6 +34,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.miniapp.core.ui.theme.AppTheme.dimensions
@@ -39,6 +44,7 @@ import com.miniapp.core.ui.theme.ComposeTheme
 import com.vault.vanishx.R
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
@@ -50,6 +56,15 @@ fun HomeScreen(
 
     viewModel.error.collectAsEffect { /* reserved for later stories */ }
     viewModel.navigator.collectAsEffect { destination -> navigator(destination) }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notificationPermission = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+        LaunchedEffect(Unit) {
+            if (!notificationPermission.status.isGranted) {
+                notificationPermission.launchPermissionRequest()
+            }
+        }
+    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onAction(HomeAction.Resume)

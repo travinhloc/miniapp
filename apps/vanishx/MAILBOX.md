@@ -34,6 +34,8 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 - `FirebaseMailboxRemoteDataSource` — RTDB implementation
 - Expired room (4.1): `PurgeExpiredRoomUseCase` clears local SQLCipher messages + remote `messages/` node (meta kept)
 - Home resume (4.1): `SyncActiveMailboxesUseCase` re-resolves TTL, purges expired, syncs active rooms
+- FCM (3.1): `firebase-messaging` · topic `vx_room_{roomId}` · notification → `vanishx://open/{roomId}`
+- Pending invite (3.1): `PendingInviteStore` + `ConsumePendingInviteUseCase` after identity bootstrap
 - Staging debug: Home → **RTDB smoke** writes `dGVzdA==`, reads back, deletes
 
 ## `google-services.json`
@@ -57,4 +59,4 @@ CI: không có file thật → Gradle copy từ `*.placeholder.json` (đủ cho 
 
 ## Out of scope
 
-- WebRTC · FCM (3.1) · Panic/IAP · polish UI
+- WebRTC · Panic/IAP · polish UI · HTTPS App Links · Cloud Functions fan-out

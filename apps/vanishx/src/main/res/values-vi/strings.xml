@@ -54,4 +54,10 @@
     <string name="room_sent_tag">Đã phóng · không thu hồi</string>
     <string name="room_syncing">Đang đồng bộ hộp thư…</string>
     <string name="room_retry_sync">Thử đồng bộ lại</string>
+
+    <string name="fcm_channel_id">vanishx_mailbox</string>
+    <string name="fcm_channel_name">Hộp thư</string>
+    <string name="fcm_channel_description">Thông báo khi phòng tạm có thể có tin mới</string>
+    <string name="fcm_notification_title">Hoạt động hộp thư mới</string>
+    <string name="fcm_notification_body">Mở phòng để đồng bộ tin đã mã hóa.</string>
 </resources>

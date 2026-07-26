@@ -2,6 +2,9 @@ package com.vault.vanishx.di.modules
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.messaging.FirebaseMessaging
+import com.vault.vanishx.data.push.FirebaseRoomPushTopics
+import com.vault.vanishx.data.push.RoomPushTopics
 import com.vault.vanishx.data.remote.FirebaseMailboxRemoteDataSource
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import dagger.Binds
@@ -20,6 +23,12 @@ abstract class FirebaseBindModule {
     abstract fun bindMailboxRemoteDataSource(
         impl: FirebaseMailboxRemoteDataSource,
     ): MailboxRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindRoomPushTopics(
+        impl: FirebaseRoomPushTopics,
+    ): RoomPushTopics
 }
 
 @Module
@@ -33,4 +42,8 @@ object FirebaseProvideModule {
     @Provides
     @Singleton
     fun provideFirebaseDatabase(): FirebaseDatabase = FirebaseDatabase.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseMessaging(): FirebaseMessaging = FirebaseMessaging.getInstance()
 }

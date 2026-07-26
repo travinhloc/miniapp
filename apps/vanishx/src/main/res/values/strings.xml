@@ -54,4 +54,10 @@
     <string name="room_sent_tag">Sent · cannot recall</string>
     <string name="room_syncing">Syncing mailbox…</string>
     <string name="room_retry_sync">Retry sync</string>
+
+    <string name="fcm_channel_id">vanishx_mailbox</string>
+    <string name="fcm_channel_name">Mailbox</string>
+    <string name="fcm_channel_description">Alerts when a temporary room may have new messages</string>
+    <string name="fcm_notification_title">New mailbox activity</string>
+    <string name="fcm_notification_body">Open the room to sync encrypted messages.</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.vault.vanishx.domain.usecase
 
 import com.vault.vanishx.data.crypto.RoomSecretsGenerator
+import com.vault.vanishx.data.push.RoomPushTopics
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteRoomMeta
 import com.vault.vanishx.domain.model.MailboxRoom
@@ -20,6 +21,7 @@ class CreateRoomUseCase @Inject constructor(
     private val identityRepository: IdentityRepository,
     private val remote: MailboxRemoteDataSource,
     private val secretsGenerator: RoomSecretsGenerator,
+    private val roomPushTopics: RoomPushTopics,
 ) {
     suspend operator fun invoke(ttl: RoomTtlOption): CreatedRoom {
         val identity = identityRepository.ensureIdentity()
@@ -42,6 +44,7 @@ class CreateRoomUseCase @Inject constructor(
             ),
         )
         mailboxRepository.upsertRoom(room)
+        roomPushTopics.subscribe(room.id)
         return CreatedRoom(
             room = room,
             invite = RoomInvite(

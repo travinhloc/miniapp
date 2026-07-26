@@ -41,5 +41,9 @@ sealed class MailboxDestination {
         )
 
         override var destination: String = "mailbox/room/$roomId"
+
+        override val deepLinks = listOf(
+            "vanishx://open/{roomId}",
+        )
     }
 }

@@ -1,6 +1,7 @@
 package com.vault.vanishx.domain.usecase
 
 import com.vault.vanishx.data.crypto.RoomMessageCipher
+import com.vault.vanishx.data.push.FakeRoomPushTopics
 import com.vault.vanishx.data.remote.InMemoryMailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteMailboxMessage
 import com.vault.vanishx.domain.model.Identity
@@ -50,7 +51,7 @@ class PurgeAndSyncActiveUseCaseTest {
             ),
         )
 
-        val result = PurgeExpiredRoomUseCase(mailboxRepository, remote).invoke("room1")
+        val result = PurgeExpiredRoomUseCase(mailboxRepository, remote, FakeRoomPushTopics()).invoke("room1")
 
         result.localDeleted shouldBe 2
         result.remotePurged shouldBe true
@@ -91,7 +92,7 @@ class PurgeAndSyncActiveUseCaseTest {
             ),
         )
 
-        val purge = PurgeExpiredRoomUseCase(mailboxRepository, remote)
+        val purge = PurgeExpiredRoomUseCase(mailboxRepository, remote, FakeRoomPushTopics())
         val result = SyncRoomMailboxUseCase(
             mailboxRepository = mailboxRepository,
             identityRepository = identityRepository,
