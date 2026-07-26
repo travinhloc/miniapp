@@ -97,6 +97,7 @@ class SendSyncRoomMessageUseCaseTest {
             identityRepository = identityRepository,
             remote = remote,
             cipher = cipher,
+            purgeExpiredRoom = PurgeExpiredRoomUseCase(mailboxRepository, remote),
         ).invoke("room1")
 
         result.ingested shouldBe 1

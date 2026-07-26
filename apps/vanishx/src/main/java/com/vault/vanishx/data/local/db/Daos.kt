@@ -39,4 +39,7 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE expiresAt > 0 AND expiresAt <= :nowMs")
     suspend fun deleteExpired(nowMs: Long): Int
+
+    @Query("DELETE FROM messages WHERE roomId = :roomId")
+    suspend fun deleteByRoom(roomId: String): Int
 }

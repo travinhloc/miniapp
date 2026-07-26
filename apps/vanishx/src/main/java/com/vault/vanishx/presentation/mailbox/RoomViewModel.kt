@@ -8,12 +8,13 @@ import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
-import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.usecase.GetRoomUseCase
+import com.vault.vanishx.domain.usecase.PurgeExpiredRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -31,6 +33,7 @@ data class RoomUiState(
     val isLoading: Boolean = true,
     val isSyncing: Boolean = false,
     val isSending: Boolean = false,
+    val isPurging: Boolean = false,
     val room: MailboxRoom? = null,
     val isExpired: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
@@ -52,9 +55,9 @@ sealed interface RoomAction {
 class RoomViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getRoom: GetRoomUseCase,
-    private val mailboxRepository: MailboxRepository,
     private val sendRoomMessage: SendRoomMessageUseCase,
     private val syncRoomMailbox: SyncRoomMailboxUseCase,
+    private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
     private val remote: MailboxRemoteDataSource,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
@@ -65,6 +68,7 @@ class RoomViewModel @Inject constructor(
     val uiState: StateFlow<RoomUiState> = _uiState.asStateFlow()
 
     private var observeJob: Job? = null
+    private var expiryJob: Job? = null
 
     init {
         bootstrap()
@@ -72,6 +76,7 @@ class RoomViewModel @Inject constructor(
 
     override fun onCleared() {
         observeJob?.cancel()
+        expiryJob?.cancel()
         super.onCleared()
     }
 
@@ -105,8 +110,9 @@ class RoomViewModel @Inject constructor(
                 }
                 when {
                     room == null -> Unit
-                    expired -> loadLocalMessages()
+                    expired -> purgeAndShowExpired()
                     else -> {
+                        scheduleExpiry(room)
                         sync(showLoading = false)
                         startObserving()
                     }
@@ -123,13 +129,64 @@ class RoomViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun loadLocalMessages() {
-        flow { emit(mailboxRepository.getMessages(roomId)) }
+    private fun scheduleExpiry(room: MailboxRoom) {
+        expiryJob?.cancel()
+        val expiresAt = room.expiresAt
+        if (expiresAt <= 0L) return
+        val delayMs = expiresAt - System.currentTimeMillis()
+        if (delayMs <= 0L) {
+            onLiveExpiry()
+            return
+        }
+        expiryJob = viewModelScope.launch {
+            delay(delayMs)
+            onLiveExpiry()
+        }
+    }
+
+    private fun onLiveExpiry() {
+        if (_uiState.value.isExpired) return
+        observeJob?.cancel()
+        _uiState.update {
+            it.copy(
+                isExpired = true,
+                room = it.room?.copy(status = MailboxRoom.STATUS_EXPIRED),
+                draft = "",
+            )
+        }
+        purgeAndShowExpired()
+    }
+
+    private fun purgeAndShowExpired() {
+        _uiState.update { it.copy(isPurging = true, messages = emptyList()) }
+        flow { emit(purgeExpiredRoom(roomId)) }
             .flowOn(dispatchersProvider.io)
-            .onEach { messages ->
-                _uiState.update { it.copy(messages = messages) }
+            .onEach { result ->
+                _uiState.update {
+                    it.copy(
+                        isPurging = false,
+                        isExpired = true,
+                        messages = emptyList(),
+                        room = it.room?.copy(status = MailboxRoom.STATUS_EXPIRED),
+                        infoMessage = if (!result.remotePurged) {
+                            "Local mailbox cleared; remote purge may need retry when online"
+                        } else {
+                            null
+                        },
+                    )
+                }
             }
-            .catch { e -> Timber.w(e, "Load local messages failed") }
+            .catch { e ->
+                Timber.w(e, "Purge expired room failed")
+                _uiState.update {
+                    it.copy(
+                        isPurging = false,
+                        isExpired = true,
+                        messages = emptyList(),
+                        errorMessage = friendlyError(e),
+                    )
+                }
+            }
             .launchIn(viewModelScope)
     }
 
@@ -141,10 +198,26 @@ class RoomViewModel @Inject constructor(
         flow { emit(syncRoomMailbox(roomId)) }
             .flowOn(dispatchersProvider.io)
             .onEach { result ->
+                val roomNow = getRoom(roomId)
+                val expired = roomNow?.status == MailboxRoom.STATUS_EXPIRED
+                if (expired) {
+                    observeJob?.cancel()
+                    expiryJob?.cancel()
+                    _uiState.update {
+                        it.copy(
+                            isSyncing = false,
+                            isExpired = true,
+                            room = roomNow,
+                            messages = emptyList(),
+                        )
+                    }
+                    return@onEach
+                }
                 _uiState.update {
                     it.copy(
                         isSyncing = false,
                         messages = result.messages,
+                        room = roomNow ?: it.room,
                         infoMessage = if (result.decryptFailures > 0) {
                             "Some messages could not be decrypted"
                         } else {
@@ -169,7 +242,21 @@ class RoomViewModel @Inject constructor(
         observeJob?.cancel()
         observeJob = remote.observeMessages(roomId)
             .onEach { remoteList ->
+                if (_uiState.value.isExpired) return@onEach
                 val result = syncRoomMailbox.ingestRemoteList(roomId, remoteList)
+                val roomNow = getRoom(roomId)
+                if (roomNow?.status == MailboxRoom.STATUS_EXPIRED) {
+                    observeJob?.cancel()
+                    expiryJob?.cancel()
+                    _uiState.update {
+                        it.copy(
+                            isExpired = true,
+                            room = roomNow,
+                            messages = emptyList(),
+                        )
+                    }
+                    return@onEach
+                }
                 _uiState.update {
                     it.copy(
                         messages = result.messages,

@@ -52,4 +52,9 @@ class MailboxRepositoryImpl @Inject constructor(
         localDatabase.withDatabase { db ->
             db.messageDao().deleteExpired(nowMs)
         }
+
+    override suspend fun deleteMessagesForRoom(roomId: String): Int =
+        localDatabase.withDatabase { db ->
+            db.messageDao().deleteByRoom(roomId)
+        }
 }

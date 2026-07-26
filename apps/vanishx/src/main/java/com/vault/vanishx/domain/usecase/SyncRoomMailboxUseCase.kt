@@ -23,6 +23,7 @@ class SyncRoomMailboxUseCase @Inject constructor(
     private val identityRepository: IdentityRepository,
     private val remote: MailboxRemoteDataSource,
     private val cipher: RoomMessageCipher,
+    private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
 ) {
     suspend operator fun invoke(roomId: String): SyncMailboxResult {
         val room = mailboxRepository.getRoom(roomId)
@@ -32,6 +33,17 @@ class SyncRoomMailboxUseCase @Inject constructor(
         if (resolved.status != room.status) {
             mailboxRepository.upsertRoom(resolved)
         }
+
+        if (resolved.status == MailboxRoom.STATUS_EXPIRED) {
+            purgeExpiredRoom(roomId)
+            return SyncMailboxResult(
+                messages = emptyList(),
+                ingested = 0,
+                removedRemote = 0,
+                decryptFailures = 0,
+            )
+        }
+
         mailboxRepository.deleteExpiredMessages(now)
 
         val myPub = identityRepository.ensureIdentity().publicKeyBase64
@@ -74,6 +86,22 @@ class SyncRoomMailboxUseCase @Inject constructor(
         val room = mailboxRepository.getRoom(roomId) ?: error("Room not found")
         val now = System.currentTimeMillis()
         val resolved = room.copy(status = room.resolvedStatus(now))
+        if (resolved.status != room.status) {
+            mailboxRepository.upsertRoom(resolved)
+        }
+
+        if (resolved.status == MailboxRoom.STATUS_EXPIRED) {
+            purgeExpiredRoom(roomId)
+            return SyncMailboxResult(
+                messages = emptyList(),
+                ingested = 0,
+                removedRemote = 0,
+                decryptFailures = 0,
+            )
+        }
+
+        mailboxRepository.deleteExpiredMessages(now)
+
         val myPub = identityRepository.ensureIdentity().publicKeyBase64
         var ingested = 0
         var removed = 0

@@ -48,7 +48,7 @@
     <string name="room_ttl_remaining">Time left: %1$s</string>
     <string name="room_empty_hint">No messages yet. Send an encrypted arrow.</string>
     <string name="room_expired_title">Mailbox expired</string>
-    <string name="room_expired_body">This room’s TTL has ended. Messages can no longer be opened here.</string>
+    <string name="room_expired_body">This room’s TTL has ended. Local messages were cleared and the relay mailbox was purged. Messages can no longer be opened here.</string>
     <string name="room_composer_hint">Type a text message…</string>
     <string name="room_send">Send</string>
     <string name="room_sent_tag">Sent · cannot recall</string>

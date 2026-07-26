@@ -10,6 +10,35 @@ import org.junit.Test
 class InMemoryMailboxRemoteDataSourceTest {
 
     @Test
+    fun `deleteAllMessages clears room mailbox`() = runTest {
+        val remote = InMemoryMailboxRemoteDataSource()
+        val now = 1_700_000_000_000L
+        remote.writeMessage(
+            "room1",
+            RemoteMailboxMessage(
+                messageId = "m1",
+                ciphertext = RemoteMailboxMessage.SMOKE_CIPHERTEXT,
+                senderPub = "pub",
+                createdAt = now,
+                expiresAt = now + 60_000,
+            ),
+        )
+        remote.writeMessage(
+            "room1",
+            RemoteMailboxMessage(
+                messageId = "m2",
+                ciphertext = RemoteMailboxMessage.SMOKE_CIPHERTEXT,
+                senderPub = "pub",
+                createdAt = now,
+                expiresAt = now + 60_000,
+            ),
+        )
+
+        remote.deleteAllMessages("room1")
+        remote.listMessages("room1").isEmpty() shouldBe true
+    }
+
+    @Test
     fun `write read delete message round trip`() = runTest {
         val remote = InMemoryMailboxRemoteDataSource()
         val now = 1_700_000_000_000L

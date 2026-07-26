@@ -30,8 +30,10 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 
 ## Client API
 
-- `MailboxRemoteDataSource` — write / read / delete message + write room meta
+- `MailboxRemoteDataSource` — write / read / delete message / **deleteAllMessages** + write room meta
 - `FirebaseMailboxRemoteDataSource` — RTDB implementation
+- Expired room (4.1): `PurgeExpiredRoomUseCase` clears local SQLCipher messages + remote `messages/` node (meta kept)
+- Home resume (4.1): `SyncActiveMailboxesUseCase` re-resolves TTL, purges expired, syncs active rooms
 - Staging debug: Home → **RTDB smoke** writes `dGVzdA==`, reads back, deletes
 
 ## `google-services.json`
@@ -55,4 +57,4 @@ CI: không có file thật → Gradle copy từ `*.placeholder.json` (đủ cho 
 
 ## Out of scope
 
-- WebRTC · FCM (3.1) · E2EE payload format (2.3) · create/join UI (2.2)
+- WebRTC · FCM (3.1) · Panic/IAP · polish UI
