@@ -12,63 +12,23 @@ plugins {
 }
 
 /**
- * Staging `google-services.json` is gitignored (real Firebase config stays local).
- * CI / clean checkouts need a placeholder so `process*GoogleServices` can run.
- * Never overwrites an existing file.
+ * Real `google-services.json` files stay gitignored (or local-only).
+ * If missing (e.g. CI), copy the committed placeholder next to it.
+ * Never overwrites an existing json.
  */
-fun ensureGoogleServicesPlaceholder(
-    relativePath: String,
-    packageName: String,
-    projectId: String,
-) {
-    val target = file(relativePath)
+fun ensureGoogleServicesFromPlaceholder(flavorDir: String) {
+    val target = file("src/$flavorDir/google-services.json")
     if (target.exists()) return
+    val placeholder = file("src/$flavorDir/google-services.placeholder.json")
+    check(placeholder.exists()) {
+        "Missing ${placeholder.path} — required when google-services.json is absent"
+    }
     target.parentFile.mkdirs()
-    target.writeText(
-        """
-        {
-          "project_info": {
-            "project_number": "0",
-            "project_id": "$projectId",
-            "storage_bucket": "$projectId.appspot.com"
-          },
-          "client": [
-            {
-              "client_info": {
-                "mobilesdk_app_id": "1:0:android:0000000000000000000000",
-                "android_client_info": {
-                  "package_name": "$packageName"
-                }
-              },
-              "oauth_client": [],
-              "api_key": [
-                {
-                  "current_key": "AIzaSyCiPlaceholderDoNotUse"
-                }
-              ],
-              "services": {
-                "appinvite_service": {
-                  "other_platform_oauth_client": []
-                }
-              }
-            }
-          ],
-          "configuration_version": "1"
-        }
-        """.trimIndent() + "\n",
-    )
+    placeholder.copyTo(target, overwrite = false)
 }
 
-ensureGoogleServicesPlaceholder(
-    relativePath = "src/staging/google-services.json",
-    packageName = "com.vault.vanishx.staging",
-    projectId = "vanishx-staging-ci-placeholder",
-)
-ensureGoogleServicesPlaceholder(
-    relativePath = "src/production/google-services.json",
-    packageName = "com.vault.vanishx",
-    projectId = "vanishx-production-placeholder",
-)
+ensureGoogleServicesFromPlaceholder("staging")
+ensureGoogleServicesFromPlaceholder("production")
 
 val signingProperties = loadProperties("$rootDir/signing.properties")
 val getVersionCode: () -> Int = {
