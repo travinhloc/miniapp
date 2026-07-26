@@ -69,7 +69,10 @@ private fun RoomContent(
             }
             else -> {
                 Text(
-                    text = stringResource(R.string.room_title, uiState.roomId.takeLast(6)),
+                    text = stringResource(
+                        R.string.room_title,
+                        uiState.roomId.takeLast(ROOM_ID_DISPLAY_SUFFIX),
+                    ),
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
@@ -111,8 +114,12 @@ private fun RoomContent(
 }
 
 private fun formatRemaining(ms: Long): String {
-    val totalMinutes = ms / 60_000L
-    val hours = totalMinutes / 60L
-    val minutes = totalMinutes % 60L
+    val totalMinutes = ms / MS_PER_MINUTE
+    val hours = totalMinutes / MINUTES_PER_HOUR
+    val minutes = totalMinutes % MINUTES_PER_HOUR
     return "%02d:%02d".format(hours, minutes)
 }
+
+private const val ROOM_ID_DISPLAY_SUFFIX = 6
+private const val MS_PER_MINUTE = 60_000L
+private const val MINUTES_PER_HOUR = 60L

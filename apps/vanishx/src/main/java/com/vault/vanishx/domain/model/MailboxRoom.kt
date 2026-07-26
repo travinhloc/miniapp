@@ -21,10 +21,17 @@ data class MailboxRoom(
 }
 
 enum class RoomTtlOption(val durationMs: Long) {
-    ONE_HOUR(60L * 60L * 1000L),
-    SIX_HOURS(6L * 60L * 60L * 1000L),
-    ONE_DAY(24L * 60L * 60L * 1000L),
-    SEVEN_DAYS(7L * 24L * 60L * 60L * 1000L),
+    ONE_HOUR(RoomTtlMs.ONE_HOUR),
+    SIX_HOURS(RoomTtlMs.SIX_HOURS),
+    ONE_DAY(RoomTtlMs.ONE_DAY),
+    SEVEN_DAYS(RoomTtlMs.SEVEN_DAYS),
+}
+
+private object RoomTtlMs {
+    const val ONE_HOUR = 3_600_000L
+    const val SIX_HOURS = 21_600_000L
+    const val ONE_DAY = 86_400_000L
+    const val SEVEN_DAYS = 604_800_000L
 }
 
 data class RoomInvite(
