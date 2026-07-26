@@ -33,4 +33,10 @@ interface MessageDao {
 
     @Query("SELECT * FROM messages WHERE roomId = :roomId ORDER BY sentAt ASC")
     suspend fun getByRoom(roomId: String): List<MessageEntity>
+
+    @Query("SELECT * FROM messages WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): MessageEntity?
+
+    @Query("DELETE FROM messages WHERE expiresAt > 0 AND expiresAt <= :nowMs")
+    suspend fun deleteExpired(nowMs: Long): Int
 }

@@ -2,8 +2,14 @@ package com.vault.vanishx.data.remote
 
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.miniapp.core.common.DispatchersProvider
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -81,18 +87,18 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         ensureAuthenticated()
         return withContext(dispatchersProvider.io) {
             val snapshot = roomRef(roomId).child(PATH_MESSAGES).child(messageId).get().await()
-            if (!snapshot.exists()) return@withContext null
-            val ciphertext = snapshot.child(KEY_CIPHERTEXT).getValue(String::class.java) ?: return@withContext null
-            val senderPub = snapshot.child(KEY_SENDER_PUB).getValue(String::class.java) ?: return@withContext null
-            val createdAt = snapshot.child(KEY_CREATED_AT).getValue(Long::class.java) ?: return@withContext null
-            val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java) ?: return@withContext null
-            RemoteMailboxMessage(
-                messageId = messageId,
-                ciphertext = ciphertext,
-                senderPub = senderPub,
-                createdAt = createdAt,
-                expiresAt = expiresAt,
-            )
+            parseMessage(snapshot, messageId)
+        }
+    }
+
+    override suspend fun listMessages(roomId: String): List<RemoteMailboxMessage> {
+        ensureAuthenticated()
+        return withContext(dispatchersProvider.io) {
+            val snapshot = roomRef(roomId).child(PATH_MESSAGES).get().await()
+            snapshot.children.mapNotNull { child ->
+                val id = child.key ?: return@mapNotNull null
+                parseMessage(child, id)
+            }
         }
     }
 
@@ -101,6 +107,41 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         withContext(dispatchersProvider.io) {
             roomRef(roomId).child(PATH_MESSAGES).child(messageId).removeValue().await()
         }
+    }
+
+    override fun observeMessages(roomId: String): Flow<List<RemoteMailboxMessage>> = callbackFlow {
+        ensureAuthenticated()
+        val ref = roomRef(roomId).child(PATH_MESSAGES)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val messages = snapshot.children.mapNotNull { child ->
+                    val id = child.key ?: return@mapNotNull null
+                    parseMessage(child, id)
+                }
+                trySend(messages)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
+    }
+
+    private fun parseMessage(snapshot: DataSnapshot, messageId: String): RemoteMailboxMessage? {
+        if (!snapshot.exists()) return null
+        val ciphertext = snapshot.child(KEY_CIPHERTEXT).getValue(String::class.java) ?: return null
+        val senderPub = snapshot.child(KEY_SENDER_PUB).getValue(String::class.java) ?: return null
+        val createdAt = snapshot.child(KEY_CREATED_AT).getValue(Long::class.java) ?: return null
+        val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java) ?: return null
+        return RemoteMailboxMessage(
+            messageId = messageId,
+            ciphertext = ciphertext,
+            senderPub = senderPub,
+            createdAt = createdAt,
+            expiresAt = expiresAt,
+        )
     }
 
     private fun roomRef(roomId: String) = database.reference.child(PATH_ROOMS).child(roomId)

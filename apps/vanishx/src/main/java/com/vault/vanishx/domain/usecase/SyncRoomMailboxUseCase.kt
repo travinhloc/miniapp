@@ -1,0 +1,160 @@
+package com.vault.vanishx.domain.usecase
+
+import com.vault.vanishx.data.crypto.RoomCryptoException
+import com.vault.vanishx.data.crypto.RoomMessageCipher
+import com.vault.vanishx.data.remote.MailboxRemoteDataSource
+import com.vault.vanishx.data.remote.RemoteMailboxMessage
+import com.vault.vanishx.domain.model.ChatMessage
+import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.repository.IdentityRepository
+import com.vault.vanishx.domain.repository.MailboxRepository
+import timber.log.Timber
+import javax.inject.Inject
+
+data class SyncMailboxResult(
+    val messages: List<ChatMessage>,
+    val ingested: Int,
+    val removedRemote: Int,
+    val decryptFailures: Int,
+)
+
+class SyncRoomMailboxUseCase @Inject constructor(
+    private val mailboxRepository: MailboxRepository,
+    private val identityRepository: IdentityRepository,
+    private val remote: MailboxRemoteDataSource,
+    private val cipher: RoomMessageCipher,
+) {
+    suspend operator fun invoke(roomId: String): SyncMailboxResult {
+        val room = mailboxRepository.getRoom(roomId)
+            ?: error("Room not found")
+        val now = System.currentTimeMillis()
+        val resolved = room.copy(status = room.resolvedStatus(now))
+        if (resolved.status != room.status) {
+            mailboxRepository.upsertRoom(resolved)
+        }
+        mailboxRepository.deleteExpiredMessages(now)
+
+        val myPub = identityRepository.ensureIdentity().publicKeyBase64
+        val remoteMessages = remote.listMessages(roomId)
+        var ingested = 0
+        var removed = 0
+        var decryptFailures = 0
+
+        for (remoteMessage in remoteMessages) {
+            when (
+                processRemote(
+                    room = resolved,
+                    remoteMessage = remoteMessage,
+                    myPub = myPub,
+                    now = now,
+                )
+            ) {
+                ProcessResult.INGESTED -> {
+                    ingested++
+                    removed++
+                }
+                ProcessResult.REMOVED_ONLY -> removed++
+                ProcessResult.DECRYPT_FAIL -> decryptFailures++
+                ProcessResult.SKIPPED -> Unit
+            }
+        }
+
+        return SyncMailboxResult(
+            messages = mailboxRepository.getMessages(roomId),
+            ingested = ingested,
+            removedRemote = removed,
+            decryptFailures = decryptFailures,
+        )
+    }
+
+    suspend fun ingestRemoteList(
+        roomId: String,
+        remoteMessages: List<RemoteMailboxMessage>,
+    ): SyncMailboxResult {
+        val room = mailboxRepository.getRoom(roomId) ?: error("Room not found")
+        val now = System.currentTimeMillis()
+        val resolved = room.copy(status = room.resolvedStatus(now))
+        val myPub = identityRepository.ensureIdentity().publicKeyBase64
+        var ingested = 0
+        var removed = 0
+        var decryptFailures = 0
+        for (remoteMessage in remoteMessages) {
+            when (
+                processRemote(
+                    room = resolved,
+                    remoteMessage = remoteMessage,
+                    myPub = myPub,
+                    now = now,
+                )
+            ) {
+                ProcessResult.INGESTED -> {
+                    ingested++
+                    removed++
+                }
+                ProcessResult.REMOVED_ONLY -> removed++
+                ProcessResult.DECRYPT_FAIL -> decryptFailures++
+                ProcessResult.SKIPPED -> Unit
+            }
+        }
+        return SyncMailboxResult(
+            messages = mailboxRepository.getMessages(roomId),
+            ingested = ingested,
+            removedRemote = removed,
+            decryptFailures = decryptFailures,
+        )
+    }
+
+    private suspend fun processRemote(
+        room: MailboxRoom,
+        remoteMessage: RemoteMailboxMessage,
+        myPub: String,
+        now: Long,
+    ): ProcessResult {
+        val roomId = room.id
+        if (remoteMessage.expiresAt > 0L && remoteMessage.expiresAt <= now) {
+            runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
+            return ProcessResult.REMOVED_ONLY
+        }
+
+        val existing = mailboxRepository.getMessage(remoteMessage.messageId) != null
+        if (existing) {
+            runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
+            return ProcessResult.REMOVED_ONLY
+        }
+
+        val plaintext = try {
+            cipher.decrypt(roomId, room.roomKey, remoteMessage.ciphertext)
+        } catch (e: RoomCryptoException) {
+            Timber.w(e, "Decrypt failed for %s", remoteMessage.messageId)
+            return ProcessResult.DECRYPT_FAIL
+        } catch (e: IllegalArgumentException) {
+            Timber.w(e, "Decrypt rejected for %s", remoteMessage.messageId)
+            return ProcessResult.DECRYPT_FAIL
+        }
+
+        val direction = if (remoteMessage.senderPub == myPub) {
+            ChatMessage.DIRECTION_OUT
+        } else {
+            ChatMessage.DIRECTION_IN
+        }
+        mailboxRepository.upsertMessage(
+            ChatMessage(
+                id = remoteMessage.messageId,
+                roomId = roomId,
+                body = plaintext,
+                sentAt = remoteMessage.createdAt,
+                expiresAt = remoteMessage.expiresAt,
+                direction = direction,
+            ),
+        )
+        runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
+        return ProcessResult.INGESTED
+    }
+
+    private enum class ProcessResult {
+        INGESTED,
+        REMOVED_ONLY,
+        DECRYPT_FAIL,
+        SKIPPED,
+    }
+}
