@@ -23,7 +23,11 @@ class CreateRoomUseCase @Inject constructor(
     private val secretsGenerator: RoomSecretsGenerator,
     private val roomPushTopics: RoomPushTopics,
 ) {
-    suspend operator fun invoke(ttl: RoomTtlOption): CreatedRoom {
+    suspend operator fun invoke(
+        ttl: RoomTtlOption,
+        title: String? = null,
+        nickname: String? = null,
+    ): CreatedRoom {
         val identity = identityRepository.ensureIdentity()
         val now = System.currentTimeMillis()
         val expiresAt = now + ttl.durationMs
@@ -32,6 +36,8 @@ class CreateRoomUseCase @Inject constructor(
             roomKey = secretsGenerator.newRoomKey(),
             createdAt = now,
             expiresAt = expiresAt,
+            title = title?.trim()?.takeIf { it.isNotEmpty() },
+            nickname = nickname?.trim()?.takeIf { it.isNotEmpty() },
             status = MailboxRoom.STATUS_ACTIVE,
             role = MailboxRoom.ROLE_CREATOR,
         )

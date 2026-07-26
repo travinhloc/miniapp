@@ -1,72 +1,52 @@
 package com.vault.vanishx.presentation.mailbox
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
-import android.widget.Toast
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
-import com.miniapp.core.ui.theme.AppTheme.dimensions
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.RoomTtlOption
 import com.vault.vanishx.presentation.extensions.collectAsEffect
+import com.vault.vanishx.presentation.theme.VanishXColors
 
 @Composable
 fun CreateRoomScreen(
     viewModel: CreateRoomViewModel = hiltViewModel(),
     navigator: (BaseDestination) -> Unit,
 ) = BaseScreen {
-    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
     viewModel.navigator.collectAsEffect { destination -> navigator(destination) }
 
     CreateRoomContent(
         uiState = uiState,
         onAction = viewModel::onAction,
-        onCopy = { uri ->
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("VanishX invite", uri))
-            Toast.makeText(context, context.getString(R.string.create_copied), Toast.LENGTH_SHORT).show()
-        },
-        onShare = { uri ->
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, uri)
-            }
-            context.startActivity(Intent.createChooser(intent, context.getString(R.string.create_share)))
-        },
     )
 }
 
@@ -74,32 +54,58 @@ fun CreateRoomScreen(
 private fun CreateRoomContent(
     uiState: CreateRoomUiState,
     onAction: (CreateRoomAction) -> Unit,
-    onCopy: (String) -> Unit,
-    onShare: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(VanishXColors.Bg)
             .verticalScroll(rememberScrollState())
-            .padding(all = dimensions.spacingMedium),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = stringResource(R.string.create_title),
             style = MaterialTheme.typography.headlineSmall,
+            color = VanishXColors.OnSurface,
             modifier = Modifier.fillMaxWidth(),
         )
-        androidx.compose.foundation.layout.Spacer(
-            modifier = Modifier.height(dimensions.spacingMedium),
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.create_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = VanishXColors.Muted,
+            modifier = Modifier.fillMaxWidth(),
         )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        OutlinedTextField(
+            value = uiState.nickname,
+            onValueChange = { onAction(CreateRoomAction.NicknameChanged(it)) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isCreating,
+            singleLine = true,
+            label = { Text(text = stringResource(R.string.create_nickname_label)) },
+            placeholder = { Text(text = stringResource(R.string.create_nickname_hint)) },
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = uiState.title,
+            onValueChange = { onAction(CreateRoomAction.TitleChanged(it)) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isCreating,
+            singleLine = true,
+            label = { Text(text = stringResource(R.string.create_room_name_label)) },
+            placeholder = { Text(text = stringResource(R.string.create_room_name_hint)) },
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = stringResource(R.string.create_ttl_label),
             style = MaterialTheme.typography.labelLarge,
+            color = VanishXColors.OnSurface,
             modifier = Modifier.fillMaxWidth(),
         )
-        androidx.compose.foundation.layout.Spacer(
-            modifier = Modifier.height(dimensions.spacingSmall),
-        )
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,106 +116,60 @@ private fun CreateRoomContent(
                 FilterChip(
                     selected = uiState.selectedTtl == ttl,
                     onClick = { onAction(CreateRoomAction.SelectTtl(ttl)) },
-                    enabled = uiState.inviteUri == null,
+                    enabled = !uiState.isCreating,
                     label = { Text(text = ttlLabel(ttl)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = VanishXColors.Primary.copy(alpha = 0.18f),
+                        selectedLabelColor = VanishXColors.Primary,
+                        containerColor = VanishXColors.Surface,
+                        labelColor = VanishXColors.Muted,
+                    ),
                 )
             }
         }
-        androidx.compose.foundation.layout.Spacer(
-            modifier = Modifier.height(dimensions.spacingMedium),
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = uiState.inviteNote,
+            onValueChange = { onAction(CreateRoomAction.InviteNoteChanged(it)) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isCreating,
+            minLines = 2,
+            label = { Text(text = stringResource(R.string.create_invite_note_label)) },
+            placeholder = { Text(text = stringResource(R.string.create_invite_note_hint)) },
         )
-        if (uiState.inviteUri == null) {
-            Button(
-                onClick = { onAction(CreateRoomAction.Create) },
-                enabled = !uiState.isCreating,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = if (uiState.isCreating) {
-                        stringResource(R.string.create_creating)
-                    } else {
-                        stringResource(R.string.create_action)
-                    },
-                )
-            }
-        } else {
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Button(
+            onClick = { onAction(CreateRoomAction.Create) },
+            enabled = !uiState.isCreating,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = VanishXColors.Primary,
+                contentColor = VanishXColors.OnPrimary,
+            ),
+        ) {
             Text(
-                text = stringResource(R.string.create_share_label),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            androidx.compose.foundation.layout.Spacer(
-                modifier = Modifier.height(dimensions.spacingSmall),
-            )
-            uiState.qrBitmap?.let { bitmap ->
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = stringResource(R.string.create_qr_cd),
-                    modifier = Modifier.size(220.dp),
-                )
-            }
-            androidx.compose.foundation.layout.Spacer(
-                modifier = Modifier.height(dimensions.spacingSmall),
-            )
-            SelectionContainer {
-                Text(
-                    text = uiState.inviteUri.orEmpty(),
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            androidx.compose.foundation.layout.Spacer(
-                modifier = Modifier.height(dimensions.spacingSmall),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = { uiState.inviteUri?.let(onCopy) },
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(text = stringResource(R.string.create_copy))
-                }
-                Button(
-                    onClick = { uiState.inviteUri?.let(onShare) },
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(text = stringResource(R.string.create_share))
-                }
-            }
-            androidx.compose.foundation.layout.Spacer(
-                modifier = Modifier.height(dimensions.spacingSmall),
-            )
-            Button(
-                onClick = { onAction(CreateRoomAction.OpenRoom) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = stringResource(R.string.create_enter_room))
-            }
-            Text(
-                text = stringResource(R.string.create_note),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = dimensions.spacingSmall),
+                text = if (uiState.isCreating) {
+                    stringResource(R.string.create_creating)
+                } else {
+                    stringResource(R.string.create_action)
+                },
             )
         }
+
         uiState.errorMessage?.let { error ->
-            androidx.compose.foundation.layout.Spacer(
-                modifier = Modifier.height(dimensions.spacingSmall),
-            )
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = error,
-                color = MaterialTheme.colorScheme.error,
+                color = VanishXColors.Error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        androidx.compose.foundation.layout.Spacer(
-            modifier = Modifier.height(dimensions.spacingMedium),
-        )
+
+        Spacer(modifier = Modifier.height(16.dp))
         TextButton(onClick = { onAction(CreateRoomAction.Back) }) {
             Text(text = stringResource(R.string.action_back))
         }

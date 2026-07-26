@@ -53,7 +53,7 @@ class PurgeAndSyncActiveUseCaseTest {
 
         val result = PurgeExpiredRoomUseCase(mailboxRepository, remote, FakeRoomPushTopics()).invoke("room1")
 
-        result.localDeleted shouldBe 2
+        result.localDeleted shouldBe 0
         result.remotePurged shouldBe true
         remote.listMessages("room1").isEmpty() shouldBe true
         coVerify {
@@ -61,6 +61,7 @@ class PurgeAndSyncActiveUseCaseTest {
                 match { it.status == MailboxRoom.STATUS_EXPIRED },
             )
         }
+        coVerify(exactly = 0) { mailboxRepository.deleteMessagesForRoom(any()) }
     }
 
     @Test

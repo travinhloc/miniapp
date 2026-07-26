@@ -6,6 +6,8 @@ data class MailboxRoom(
     val createdAt: Long = 0L,
     val expiresAt: Long = 0L,
     val title: String? = null,
+    /** Local display nickname for this device. */
+    val nickname: String? = null,
     val status: String = STATUS_ACTIVE,
     val role: String = ROLE_MEMBER,
     /** Peer Ed25519 public key (Base64), when known from meta or inbound messages. */

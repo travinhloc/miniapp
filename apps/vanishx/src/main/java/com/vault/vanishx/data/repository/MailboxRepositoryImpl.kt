@@ -21,6 +21,11 @@ class MailboxRepositoryImpl @Inject constructor(
                 .map { it.toDomain() }
         }
 
+    override suspend fun getAllRooms(): List<MailboxRoom> =
+        localDatabase.withDatabase { db ->
+            db.mailboxRoomDao().getAll().map { it.toDomain() }
+        }
+
     override suspend fun getRoom(roomId: String): MailboxRoom? =
         localDatabase.withDatabase { db ->
             db.mailboxRoomDao().getById(roomId)?.toDomain()

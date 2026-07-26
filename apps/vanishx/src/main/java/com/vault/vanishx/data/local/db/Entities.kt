@@ -16,6 +16,7 @@ data class MailboxRoomEntity(
     val createdAt: Long,
     val expiresAt: Long,
     val title: String?,
+    val nickname: String? = null,
     val status: String,
     val role: String,
     val peerPub: String? = null,
