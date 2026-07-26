@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">VanishX</string>
     <string name="error_generic">Đã xảy ra lỗi không mong muốn</string>
+    <string name="action_back">Quay lại</string>
     <string name="home_tagline">Chat tạm · ẩn danh · tự hết hạn</string>
     <string name="home_create_room">Tạo hộp thư / phòng tạm</string>
     <string name="home_join_room">Vào bằng link / QR / mã</string>
@@ -15,4 +16,37 @@
     <string name="home_rtdb_smoke_log_error">Smoke mailbox LỖI (giữ để copy)</string>
     <string name="home_rtdb_smoke_clear_log">Xóa log</string>
     <string name="home_rtdb_smoke_running">Đang chạy RTDB smoke… (tối đa ~25s)</string>
+
+    <string name="ttl_1h">1 giờ</string>
+    <string name="ttl_6h">6 giờ</string>
+    <string name="ttl_24h">24 giờ</string>
+    <string name="ttl_7d">7 ngày</string>
+
+    <string name="create_title">Tạo phòng tạm</string>
+    <string name="create_ttl_label">Hết hạn sau</string>
+    <string name="create_action">Tạo phòng</string>
+    <string name="create_creating">Đang tạo…</string>
+    <string name="create_share_label">Chia sẻ lời mời</string>
+    <string name="create_qr_cd">Mã QR lời mời</string>
+    <string name="create_copy">Sao chép</string>
+    <string name="create_share">Chia sẻ</string>
+    <string name="create_copied">Đã sao chép lời mời</string>
+    <string name="create_enter_room">Vào phòng</string>
+    <string name="create_note">Ai có link + key room sẽ mở được hộp thư khi còn hạn.</string>
+
+    <string name="join_title">Vào phòng</string>
+    <string name="join_subtitle">Dán link hoặc quét QR. Không cần SĐT / email.</string>
+    <string name="join_input_label">Link / mã mời</string>
+    <string name="join_scan_qr">Quét QR</string>
+    <string name="join_scan_prompt">Quét QR lời mời VanishX</string>
+    <string name="join_camera_permission">Cần quyền camera để quét QR</string>
+    <string name="join_action">Vào phòng</string>
+    <string name="join_joining">Đang vào…</string>
+
+    <string name="room_loading">Đang tải phòng…</string>
+    <string name="room_title">Phòng ···%1$s</string>
+    <string name="room_ttl_remaining">Còn hạn: %1$s</string>
+    <string name="room_empty_hint">Hộp thư trống. Gửi tin mã hóa sẽ có ở story sau.</string>
+    <string name="room_expired_title">Hộp thư đã hết hạn</string>
+    <string name="room_expired_body">TTL phòng đã kết thúc. Không còn mở tin tại đây.</string>
 </resources>

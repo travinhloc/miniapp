@@ -144,6 +144,9 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
     implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.zxing.core)
+    implementation(libs.zxing.android.embedded)
+    implementation(libs.accompanist.permissions)
     implementation(libs.timber)
 
     testImplementation(libs.bundles.unitTest)

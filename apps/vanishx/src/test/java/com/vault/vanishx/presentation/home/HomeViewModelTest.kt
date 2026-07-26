@@ -6,6 +6,7 @@ import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
+import com.vault.vanishx.presentation.mailbox.MailboxDestination
 import com.vault.vanishx.test.CoroutineTestRule
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -51,31 +52,26 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `CreateRoom shows placeholder then can be cleared`() = runTest {
-        viewModel.uiState.test {
-            awaitItem()
-
+    fun `CreateRoom navigates to create destination`() = runTest {
+        viewModel.navigator.test {
             viewModel.onAction(HomeAction.CreateRoom)
-            awaitItem().showPlaceholder shouldBe true
-
-            viewModel.onAction(HomeAction.ClearPlaceholder)
-            awaitItem().showPlaceholder shouldBe false
+            awaitItem() shouldBe MailboxDestination.Create
         }
     }
 
     @Test
-    fun `JoinRoom shows placeholder`() = runTest {
-        viewModel.uiState.test {
-            awaitItem()
-
+    fun `JoinRoom navigates to join destination`() = runTest {
+        viewModel.navigator.test {
             viewModel.onAction(HomeAction.JoinRoom)
-            awaitItem().showPlaceholder shouldBe true
+            awaitItem() shouldBe MailboxDestination.Join
         }
     }
 
     @Test
     fun `Loads active room count on init`() = runTest {
-        coEvery { mailboxRepository.getActiveRooms() } returns listOf(MailboxRoom(id = "r1"))
+        coEvery { mailboxRepository.getActiveRooms() } returns listOf(
+            MailboxRoom(id = "r1", roomKey = "k1"),
+        )
         viewModel = HomeViewModel(
             mailboxRepository = mailboxRepository,
             ensureIdentity = ensureIdentity,

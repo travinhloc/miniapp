@@ -20,6 +20,11 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
         roomMeta[roomId] = meta
     }
 
+    override suspend fun readRoomMeta(roomId: String): RemoteRoomMeta? {
+        ensureAuthenticated()
+        return roomMeta[roomId]
+    }
+
     override suspend fun writeMessage(roomId: String, message: RemoteMailboxMessage) {
         require(message.ciphertext.length in 1..RemoteMailboxMessage.MAX_CIPHERTEXT_LENGTH)
         ensureAuthenticated()

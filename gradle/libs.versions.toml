@@ -41,6 +41,8 @@ testCore = "1.6.1"
 timber = "5.0.1"
 tink = "1.16.0"
 turbine = "0.13.0"
+zxing = "3.5.3"
+zxingEmbedded = "4.3.0"
 
 [libraries]
 # AndroidX
@@ -77,6 +79,8 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 # Crypto
 tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingEmbedded" }
 
 # Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }

@@ -12,10 +12,12 @@ data class MetaEntity(
 @Entity(tableName = "rooms")
 data class MailboxRoomEntity(
     @PrimaryKey val id: String,
+    val roomKey: String,
     val createdAt: Long,
     val expiresAt: Long,
     val title: String?,
     val status: String,
+    val role: String,
 )
 
 @Entity(tableName = "messages")
