@@ -1,4 +1,6 @@
 /build
 
-# Google services
+# Real Firebase client configs (local / secrets-ish). Placeholders are committed for CI.
 google-services.json
+!src/**/google-services.placeholder.json
+!src/production/google-services.json

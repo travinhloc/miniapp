@@ -8,7 +8,27 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kover)
+    alias(libs.plugins.google.services)
 }
+
+/**
+ * Real `google-services.json` files stay gitignored (or local-only).
+ * If missing (e.g. CI), copy the committed placeholder next to it.
+ * Never overwrites an existing json.
+ */
+fun ensureGoogleServicesFromPlaceholder(flavorDir: String) {
+    val target = file("src/$flavorDir/google-services.json")
+    if (target.exists()) return
+    val placeholder = file("src/$flavorDir/google-services.placeholder.json")
+    check(placeholder.exists()) {
+        "Missing ${placeholder.path} — required when google-services.json is absent"
+    }
+    target.parentFile.mkdirs()
+    placeholder.copyTo(target, overwrite = false)
+}
+
+ensureGoogleServicesFromPlaceholder("staging")
+ensureGoogleServicesFromPlaceholder("production")
 
 val signingProperties = loadProperties("$rootDir/signing.properties")
 val getVersionCode: () -> Int = {
@@ -139,6 +159,10 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.database)
+    implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.timber)
 
     testImplementation(libs.bundles.unitTest)

@@ -35,9 +35,13 @@ Passphrase is **independent** of the Ed25519 identity keyset.
 
 Identity keyset wipe stays for story 3.2.
 
-## 3. Out of scope (later)
+## 3. Firebase mailbox (story 2.1)
 
-- Room message E2EE / Firebase mailbox (2.x)
+See [`MAILBOX.md`](MAILBOX.md) — RTDB schema, rules, Anonymous Auth, remote data source.
+
+## 4. Out of scope (later)
+
+- Room message E2EE payload (2.3) · create/join UI (2.2)
 - App lock / FLAG_SECURE / Panic UI (3.2+)
 
 ## Code map
@@ -45,4 +49,5 @@ Identity keyset wipe stays for story 3.2.
 - `data/crypto/TinkIdentityKeyStore.kt` — identity  
 - `data/local/db/VanishxLocalDatabase.kt` — SQLCipher Room + wipe  
 - `data/local/db/DatabasePassphraseStore.kt` — DB passphrase  
+- `data/remote/FirebaseMailboxRemoteDataSource.kt` — RTDB mailbox  
 - `domain/usecase/EnsureIdentityUseCase.kt` — identity bootstrap  

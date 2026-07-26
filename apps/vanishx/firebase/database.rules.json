@@ -1,0 +1,50 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "meta": {
+          ".validate": "!newData.exists() || (newData.hasChildren(['createdAt', 'expiresAt']) && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && newData.child('expiresAt').val() > now)",
+          "createdAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "expiresAt": {
+            ".validate": "newData.isNumber() && newData.val() > now"
+          },
+          "creatorPub": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 512"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "messages": {
+          "$messageId": {
+            ".validate": "!newData.exists() || (newData.hasChildren(['ciphertext', 'senderPub', 'createdAt', 'expiresAt']) && newData.child('ciphertext').isString() && newData.child('ciphertext').val().length > 0 && newData.child('ciphertext').val().length <= 16384 && newData.child('senderPub').isString() && newData.child('senderPub').val().length > 0 && newData.child('senderPub').val().length <= 512 && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && newData.child('expiresAt').val() > now)",
+            "ciphertext": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 16384"
+            },
+            "senderPub": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 512"
+            },
+            "createdAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "expiresAt": {
+              ".validate": "newData.isNumber() && newData.val() > now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}
