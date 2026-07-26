@@ -117,6 +117,24 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         }
     }
 
+    override suspend fun writeReport(report: RemoteReport) {
+        require(report.roomId.length in 1..RemoteReport.MAX_ROOM_ID_LENGTH)
+        require(report.reporterPub.length in 1..RemoteReport.MAX_PUB_LENGTH)
+        report.peerPub?.let { require(it.length in 1..RemoteReport.MAX_PUB_LENGTH) }
+        report.reason?.let { require(it.length <= RemoteReport.MAX_REASON_LENGTH) }
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            val payload = buildMap<String, Any> {
+                put(KEY_ROOM_ID, report.roomId)
+                put(KEY_REPORTER_PUB, report.reporterPub)
+                put(KEY_CREATED_AT, report.createdAt)
+                report.peerPub?.let { put(KEY_PEER_PUB, it) }
+                report.reason?.takeIf { it.isNotBlank() }?.let { put(KEY_REASON, it) }
+            }
+            database.reference.child(PATH_REPORTS).child(report.reportId).setValue(payload).await()
+        }
+    }
+
     override fun observeMessages(roomId: String): Flow<List<RemoteMailboxMessage>> = callbackFlow {
         ensureAuthenticated()
         val ref = roomRef(roomId).child(PATH_MESSAGES)
@@ -168,10 +186,15 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         const val PATH_ROOMS = "rooms"
         const val PATH_META = "meta"
         const val PATH_MESSAGES = "messages"
+        const val PATH_REPORTS = "reports"
         const val KEY_CREATED_AT = "createdAt"
         const val KEY_EXPIRES_AT = "expiresAt"
         const val KEY_CREATOR_PUB = "creatorPub"
         const val KEY_CIPHERTEXT = "ciphertext"
         const val KEY_SENDER_PUB = "senderPub"
+        const val KEY_ROOM_ID = "roomId"
+        const val KEY_REPORTER_PUB = "reporterPub"
+        const val KEY_PEER_PUB = "peerPub"
+        const val KEY_REASON = "reason"
     }
 }

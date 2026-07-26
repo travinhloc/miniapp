@@ -57,6 +57,7 @@ class CreateJoinRoomUseCaseTest {
             mailboxRepository = mailboxRepository,
             remote = remote,
             roomPushTopics = pushTopics,
+            blockRepository = mockk(relaxed = true),
         ).invoke(RoomInvite(roomId = "r1", roomKey = "k1", expiresAt = System.currentTimeMillis() + 60_000))
 
         room.role shouldBe MailboxRoom.ROLE_MEMBER

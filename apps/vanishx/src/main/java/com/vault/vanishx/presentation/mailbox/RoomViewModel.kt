@@ -8,8 +8,10 @@ import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.usecase.BlockPeerUseCase
 import com.vault.vanishx.domain.usecase.GetRoomUseCase
 import com.vault.vanishx.domain.usecase.PurgeExpiredRoomUseCase
+import com.vault.vanishx.domain.usecase.ReportRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,10 +36,15 @@ data class RoomUiState(
     val isSyncing: Boolean = false,
     val isSending: Boolean = false,
     val isPurging: Boolean = false,
+    val isBlocking: Boolean = false,
+    val isReporting: Boolean = false,
     val room: MailboxRoom? = null,
     val isExpired: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
     val draft: String = "",
+    val showBlockConfirm: Boolean = false,
+    val showReportDialog: Boolean = false,
+    val reportReason: String = "",
     val errorMessage: String? = null,
     val infoMessage: String? = null,
 )
@@ -48,6 +55,13 @@ sealed interface RoomAction {
     data object Send : RoomAction
     data class DraftChanged(val value: String) : RoomAction
     data object ClearFeedback : RoomAction
+    data object OpenBlockConfirm : RoomAction
+    data object DismissBlockConfirm : RoomAction
+    data object ConfirmBlock : RoomAction
+    data object OpenReport : RoomAction
+    data object DismissReport : RoomAction
+    data class ReportReasonChanged(val value: String) : RoomAction
+    data object SubmitReport : RoomAction
 }
 
 @HiltViewModel
@@ -58,6 +72,8 @@ class RoomViewModel @Inject constructor(
     private val sendRoomMessage: SendRoomMessageUseCase,
     private val syncRoomMailbox: SyncRoomMailboxUseCase,
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
+    private val blockPeer: BlockPeerUseCase,
+    private val reportRoom: ReportRoomUseCase,
     private val remote: MailboxRemoteDataSource,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
@@ -91,6 +107,30 @@ class RoomViewModel @Inject constructor(
             RoomAction.ClearFeedback -> _uiState.update {
                 it.copy(errorMessage = null, infoMessage = null)
             }
+            else -> onUgcAction(action)
+        }
+    }
+
+    private fun onUgcAction(action: RoomAction) {
+        when (action) {
+            RoomAction.OpenBlockConfirm -> _uiState.update {
+                it.copy(showBlockConfirm = true, errorMessage = null)
+            }
+            RoomAction.DismissBlockConfirm -> _uiState.update {
+                it.copy(showBlockConfirm = false)
+            }
+            RoomAction.ConfirmBlock -> confirmBlock()
+            RoomAction.OpenReport -> _uiState.update {
+                it.copy(showReportDialog = true, reportReason = "", errorMessage = null)
+            }
+            RoomAction.DismissReport -> _uiState.update {
+                it.copy(showReportDialog = false, reportReason = "")
+            }
+            is RoomAction.ReportReasonChanged -> _uiState.update {
+                it.copy(reportReason = action.value)
+            }
+            RoomAction.SubmitReport -> submitReport()
+            else -> Unit
         }
     }
 
@@ -99,7 +139,8 @@ class RoomViewModel @Inject constructor(
         flow { emit(getRoom(roomId)) }
             .flowOn(dispatchersProvider.io)
             .onEach { room ->
-                val expired = room?.status == MailboxRoom.STATUS_EXPIRED
+                val expired = room?.status == MailboxRoom.STATUS_EXPIRED ||
+                    room?.status == MailboxRoom.STATUS_LEFT
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -110,6 +151,7 @@ class RoomViewModel @Inject constructor(
                 }
                 when {
                     room == null -> Unit
+                    room.status == MailboxRoom.STATUS_LEFT -> Unit
                     expired -> purgeAndShowExpired()
                     else -> {
                         scheduleExpiry(room)
@@ -199,7 +241,8 @@ class RoomViewModel @Inject constructor(
             .flowOn(dispatchersProvider.io)
             .onEach { result ->
                 val roomNow = getRoom(roomId)
-                val expired = roomNow?.status == MailboxRoom.STATUS_EXPIRED
+                val expired = roomNow?.status == MailboxRoom.STATUS_EXPIRED ||
+                    roomNow?.status == MailboxRoom.STATUS_LEFT
                 if (expired) {
                     observeJob?.cancel()
                     expiryJob?.cancel()
@@ -245,7 +288,9 @@ class RoomViewModel @Inject constructor(
                 if (_uiState.value.isExpired) return@onEach
                 val result = syncRoomMailbox.ingestRemoteList(roomId, remoteList)
                 val roomNow = getRoom(roomId)
-                if (roomNow?.status == MailboxRoom.STATUS_EXPIRED) {
+                if (roomNow?.status == MailboxRoom.STATUS_EXPIRED ||
+                    roomNow?.status == MailboxRoom.STATUS_LEFT
+                ) {
                     observeJob?.cancel()
                     expiryJob?.cancel()
                     _uiState.update {
@@ -260,6 +305,7 @@ class RoomViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         messages = result.messages,
+                        room = roomNow ?: it.room,
                         infoMessage = if (result.decryptFailures > 0) {
                             "Some messages could not be decrypted"
                         } else {
@@ -304,12 +350,86 @@ class RoomViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun confirmBlock() {
+        if (_uiState.value.isBlocking) return
+        _uiState.update {
+            it.copy(isBlocking = true, showBlockConfirm = false, errorMessage = null)
+        }
+        flow { emit(blockPeer(roomId)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach {
+                observeJob?.cancel()
+                expiryJob?.cancel()
+                _uiState.update {
+                    it.copy(
+                        isBlocking = false,
+                        isExpired = true,
+                        messages = emptyList(),
+                        draft = "",
+                        room = it.room?.copy(status = MailboxRoom.STATUS_LEFT),
+                        infoMessage = "Peer blocked. You left this room.",
+                    )
+                }
+                _navigator.emit(BaseDestination.Up())
+            }
+            .catch { e ->
+                Timber.e(e, "Block peer failed")
+                _uiState.update {
+                    it.copy(
+                        isBlocking = false,
+                        errorMessage = friendlyError(e),
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun submitReport() {
+        if (_uiState.value.isReporting) return
+        val reason = _uiState.value.reportReason
+        _uiState.update {
+            it.copy(isReporting = true, showReportDialog = false, errorMessage = null)
+        }
+        flow { emit(reportRoom(roomId, reason)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach {
+                _uiState.update {
+                    it.copy(
+                        isReporting = false,
+                        reportReason = "",
+                        infoMessage = "Report submitted.",
+                    )
+                }
+            }
+            .catch { e ->
+                Timber.e(e, "Report failed")
+                _uiState.update {
+                    it.copy(
+                        isReporting = false,
+                        errorMessage = friendlyError(e),
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
     private fun friendlyError(error: Throwable): String {
         val message = error.message.orEmpty()
         return mapFriendlyError(message) ?: message.ifBlank { error::class.java.simpleName }
     }
 
-    private fun mapFriendlyError(message: String): String? = when {
+    private fun mapFriendlyError(message: String): String? =
+        mapUgcError(message) ?: mapMailboxError(message)
+
+    private fun mapUgcError(message: String): String? = when {
+        message.contains("Peer identity not known", ignoreCase = true) ->
+            "Peer not known yet. Wait until you receive a message, then try Block again."
+        message.contains("Peer is blocked", ignoreCase = true) -> "This peer is blocked"
+        message.contains("Reason too long", ignoreCase = true) -> "Report reason is too long"
+        else -> null
+    }
+
+    private fun mapMailboxError(message: String): String? = when {
         message.contains("expired", ignoreCase = true) -> "Room expired"
         message.contains("Permission denied", ignoreCase = true) ->
             "Could not reach mailbox (permission). Check connection and try again."

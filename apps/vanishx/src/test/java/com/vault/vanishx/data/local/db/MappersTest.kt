@@ -16,6 +16,7 @@ class MappersTest {
             title = "t",
             status = MailboxRoom.STATUS_ACTIVE,
             role = MailboxRoom.ROLE_CREATOR,
+            peerPub = "peer",
         )
 
         domain.toEntity().toDomain() shouldBe domain

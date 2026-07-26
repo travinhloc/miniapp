@@ -99,6 +99,7 @@ class PurgeAndSyncActiveUseCaseTest {
             remote = remote,
             cipher = cipher,
             purgeExpiredRoom = purge,
+            blockRepository = mockk(relaxed = true),
         ).invoke("room1")
 
         result.ingested shouldBe 0

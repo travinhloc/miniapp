@@ -45,6 +45,30 @@
           ".validate": false
         }
       }
+    },
+    "reports": {
+      "$reportId": {
+        ".read": false,
+        ".write": "auth != null && !data.exists() && newData.hasChildren(['roomId', 'reporterPub', 'createdAt'])",
+        "roomId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64"
+        },
+        "reporterPub": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 512"
+        },
+        "peerPub": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 512)"
+        },
+        "reason": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 500)"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
     }
   }
 }

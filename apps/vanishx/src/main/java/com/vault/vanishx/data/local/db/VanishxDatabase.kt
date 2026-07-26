@@ -8,14 +8,16 @@ import androidx.room.RoomDatabase
         MetaEntity::class,
         MailboxRoomEntity::class,
         MessageEntity::class,
+        BlockedPeerEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class VanishxDatabase : RoomDatabase() {
     abstract fun metaDao(): MetaDao
     abstract fun mailboxRoomDao(): MailboxRoomDao
     abstract fun messageDao(): MessageDao
+    abstract fun blockedPeerDao(): BlockedPeerDao
 
     companion object {
         const val NAME = "vanishx.db"

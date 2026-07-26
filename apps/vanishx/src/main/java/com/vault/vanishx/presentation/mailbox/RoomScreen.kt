@@ -18,7 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -26,6 +29,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +45,7 @@ import com.miniapp.core.mvvm.BaseScreen
 import com.miniapp.core.ui.theme.AppTheme.dimensions
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.ChatMessage
+import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 
 @Composable
@@ -69,6 +76,7 @@ private fun RoomContent(
 
         when {
             uiState.isLoading -> RoomLoading(modifier = Modifier.weight(1f))
+            uiState.room?.status == MailboxRoom.STATUS_LEFT -> RoomLeft(modifier = Modifier.weight(1f))
             uiState.isExpired -> RoomExpired(modifier = Modifier.weight(1f))
             else -> RoomActiveBody(
                 uiState = uiState,
@@ -79,6 +87,59 @@ private fun RoomContent(
 
         FeedbackMessages(uiState = uiState)
     }
+
+    if (uiState.showBlockConfirm) {
+        AlertDialog(
+            onDismissRequest = { onAction(RoomAction.DismissBlockConfirm) },
+            title = { Text(text = stringResource(R.string.room_block_title)) },
+            text = { Text(text = stringResource(R.string.room_block_body)) },
+            confirmButton = {
+                TextButton(onClick = { onAction(RoomAction.ConfirmBlock) }) {
+                    Text(text = stringResource(R.string.room_block_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onAction(RoomAction.DismissBlockConfirm) }) {
+                    Text(text = stringResource(R.string.action_back))
+                }
+            },
+        )
+    }
+
+    if (uiState.showReportDialog) {
+        AlertDialog(
+            onDismissRequest = { onAction(RoomAction.DismissReport) },
+            title = { Text(text = stringResource(R.string.room_report_title)) },
+            text = {
+                Column {
+                    Text(text = stringResource(R.string.room_report_body))
+                    Spacer(modifier = Modifier.height(dimensions.spacingSmall))
+                    OutlinedTextField(
+                        value = uiState.reportReason,
+                        onValueChange = { onAction(RoomAction.ReportReasonChanged(it)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(text = stringResource(R.string.room_report_reason_hint))
+                        },
+                        maxLines = REPORT_REASON_MAX_LINES,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { onAction(RoomAction.SubmitReport) },
+                    enabled = !uiState.isReporting,
+                ) {
+                    Text(text = stringResource(R.string.room_report_submit))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onAction(RoomAction.DismissReport) }) {
+                    Text(text = stringResource(R.string.action_back))
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -86,6 +147,9 @@ private fun RoomHeader(
     uiState: RoomUiState,
     onAction: (RoomAction) -> Unit,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val showMenu = uiState.room?.status == MailboxRoom.STATUS_ACTIVE && !uiState.isExpired
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -107,6 +171,34 @@ private fun RoomHeader(
                 )
             }
         }
+        if (showMenu) {
+            Box {
+                TextButton(onClick = { menuExpanded = true }) {
+                    Text(text = stringResource(R.string.room_menu))
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(text = stringResource(R.string.room_block)) },
+                        onClick = {
+                            menuExpanded = false
+                            onAction(RoomAction.OpenBlockConfirm)
+                        },
+                        enabled = !uiState.isBlocking,
+                    )
+                    DropdownMenuItem(
+                        text = { Text(text = stringResource(R.string.room_report)) },
+                        onClick = {
+                            menuExpanded = false
+                            onAction(RoomAction.OpenReport)
+                        },
+                        enabled = !uiState.isReporting,
+                    )
+                }
+            }
+        }
         TextButton(onClick = { onAction(RoomAction.Back) }) {
             Text(text = stringResource(R.string.action_back))
         }
@@ -115,7 +207,8 @@ private fun RoomHeader(
 
 private fun shouldShowTtl(uiState: RoomUiState): Boolean {
     val expiresAt = uiState.room?.expiresAt ?: return false
-    return expiresAt > 0L && !uiState.isExpired
+    return expiresAt > 0L && !uiState.isExpired &&
+        uiState.room.status == MailboxRoom.STATUS_ACTIVE
 }
 
 @Composable
@@ -143,6 +236,28 @@ private fun RoomExpired(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(dimensions.spacingSmall))
             Text(
                 text = stringResource(R.string.room_expired_body),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RoomLeft(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringResource(R.string.room_left_title),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(dimensions.spacingSmall))
+            Text(
+                text = stringResource(R.string.room_left_body),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
@@ -306,6 +421,7 @@ private const val ROOM_ID_DISPLAY_SUFFIX = 6
 private const val MS_PER_MINUTE = 60_000L
 private const val MINUTES_PER_HOUR = 60L
 private const val COMPOSER_MAX_LINES = 4
+private const val REPORT_REASON_MAX_LINES = 3
 
 private object RoomUiDimens {
     val composerGap = 8.dp

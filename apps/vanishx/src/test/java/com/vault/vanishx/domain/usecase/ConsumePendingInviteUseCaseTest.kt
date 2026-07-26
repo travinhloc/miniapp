@@ -45,7 +45,7 @@ class ConsumePendingInviteUseCaseTest {
         coEvery { mailboxRepository.getRoom("room1") } returns null
         coEvery { mailboxRepository.upsertRoom(any()) } returns Unit
 
-        val join = JoinRoomUseCase(mailboxRepository, remote, pushTopics)
+        val join = JoinRoomUseCase(mailboxRepository, remote, pushTopics, mockk(relaxed = true))
         val room = ConsumePendingInviteUseCase(store, join).invoke()
 
         room?.id shouldBe "room1"

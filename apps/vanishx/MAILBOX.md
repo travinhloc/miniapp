@@ -22,6 +22,13 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
     senderPub: string   // base64
     createdAt: number
     expiresAt: number   // message TTL (must be > now on write)
+
+/reports/{reportId}     // UGC (story 3.3) — client write-only
+  roomId: string
+  reporterPub: string
+  peerPub: string?      // optional
+  reason: string?       // optional ≤500
+  createdAt: number
 ```
 
 **Forbidden fields** (rules reject via `$other: false`): `plaintext`, `body`, `text`, `message`, or any other key.
@@ -30,12 +37,13 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 
 ## Client API
 
-- `MailboxRemoteDataSource` — write / read / delete message / **deleteAllMessages** + write room meta
+- `MailboxRemoteDataSource` — write / read / delete message / **deleteAllMessages** / **writeReport** + write room meta
 - `FirebaseMailboxRemoteDataSource` — RTDB implementation
 - Expired room (4.1): `PurgeExpiredRoomUseCase` clears local SQLCipher messages + remote `messages/` node (meta kept)
 - Home resume (4.1): `SyncActiveMailboxesUseCase` re-resolves TTL, purges expired, syncs active rooms
 - FCM (3.1): `firebase-messaging` · topic `vx_room_{roomId}` · notification → `vanishx://open/{roomId}`
 - Pending invite (3.1): `PendingInviteStore` + `ConsumePendingInviteUseCase` after identity bootstrap
+- Block / Report (3.3): local `blocked_peers` by peer pubkey · leave room · RTDB `/reports`
 - Staging debug: Home → **RTDB smoke** writes `dGVzdA==`, reads back, deletes
 
 ## `google-services.json`

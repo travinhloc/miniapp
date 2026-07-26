@@ -3,6 +3,7 @@ package com.vault.vanishx.data.remote
 /**
  * Firebase RTDB mailbox access — ciphertext + TTL metadata only.
  */
+@Suppress("TooManyFunctions")
 interface MailboxRemoteDataSource {
     suspend fun ensureAuthenticated()
 
@@ -20,6 +21,9 @@ interface MailboxRemoteDataSource {
 
     /** Removes all message children for [roomId]; room meta is left intact. */
     suspend fun deleteAllMessages(roomId: String)
+
+    /** Writes a one-shot UGC report under `/reports/{reportId}`. */
+    suspend fun writeReport(report: RemoteReport)
 
     /**
      * Emits the full message list whenever children change. Caller must cancel the collection

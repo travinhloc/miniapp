@@ -19,3 +19,19 @@ data class RemoteMailboxMessage(
         const val MAX_CIPHERTEXT_LENGTH = 16_384
     }
 }
+
+/** UGC report payload (story 3.3) — write-only RTDB node. */
+data class RemoteReport(
+    val reportId: String,
+    val roomId: String,
+    val reporterPub: String,
+    val peerPub: String? = null,
+    val reason: String? = null,
+    val createdAt: Long,
+) {
+    companion object {
+        const val MAX_REASON_LENGTH = 500
+        const val MAX_ROOM_ID_LENGTH = 64
+        const val MAX_PUB_LENGTH = 512
+    }
+}
