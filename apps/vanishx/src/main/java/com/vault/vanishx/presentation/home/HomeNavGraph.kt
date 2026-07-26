@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.navigation
 import com.vault.vanishx.presentation.AppDestination
 import com.vault.vanishx.presentation.composable
+import com.vault.vanishx.presentation.mailbox.mailboxNavGraph
 import com.vault.vanishx.presentation.navigate
 
 fun NavGraphBuilder.homeNavGraph(
@@ -19,5 +20,6 @@ fun NavGraphBuilder.homeNavGraph(
                 navigator = { destination -> navController.navigate(destination) },
             )
         }
+        mailboxNavGraph(navController = navController)
     }
 }

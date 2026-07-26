@@ -8,6 +8,8 @@ interface MailboxRemoteDataSource {
 
     suspend fun writeRoomMeta(roomId: String, meta: RemoteRoomMeta)
 
+    suspend fun readRoomMeta(roomId: String): RemoteRoomMeta?
+
     suspend fun writeMessage(roomId: String, message: RemoteMailboxMessage)
 
     suspend fun readMessage(roomId: String, messageId: String): RemoteMailboxMessage?

@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">VanishX</string>
     <string name="error_generic">Unexpected error</string>
+    <string name="action_back">Back</string>
     <string name="home_tagline">Temporary chat · anonymous · auto-expires</string>
     <string name="home_create_room">Create temporary mailbox</string>
     <string name="home_join_room">Join with link / QR / code</string>
@@ -15,4 +16,37 @@
     <string name="home_rtdb_smoke_log_error">Mailbox smoke ERROR (long-press to copy)</string>
     <string name="home_rtdb_smoke_clear_log">Clear log</string>
     <string name="home_rtdb_smoke_running">Running RTDB smoke… (max ~25s)</string>
+
+    <string name="ttl_1h">1h</string>
+    <string name="ttl_6h">6h</string>
+    <string name="ttl_24h">24h</string>
+    <string name="ttl_7d">7d</string>
+
+    <string name="create_title">Create temporary room</string>
+    <string name="create_ttl_label">Expires after</string>
+    <string name="create_action">Create room</string>
+    <string name="create_creating">Creating…</string>
+    <string name="create_share_label">Share invite</string>
+    <string name="create_qr_cd">Invite QR code</string>
+    <string name="create_copy">Copy</string>
+    <string name="create_share">Share</string>
+    <string name="create_copied">Invite copied</string>
+    <string name="create_enter_room">Enter room</string>
+    <string name="create_note">Anyone with the link + room key can open the mailbox while it is still valid.</string>
+
+    <string name="join_title">Join room</string>
+    <string name="join_subtitle">Paste invite link or scan QR. No phone or email required.</string>
+    <string name="join_input_label">Invite link or code</string>
+    <string name="join_scan_qr">Scan QR</string>
+    <string name="join_scan_prompt">Scan VanishX invite QR</string>
+    <string name="join_camera_permission">Camera permission needed to scan QR</string>
+    <string name="join_action">Join</string>
+    <string name="join_joining">Joining…</string>
+
+    <string name="room_loading">Loading room…</string>
+    <string name="room_title">Room ···%1$s</string>
+    <string name="room_ttl_remaining">Time left: %1$s</string>
+    <string name="room_empty_hint">Mailbox is empty. Sending encrypted text comes in the next story.</string>
+    <string name="room_expired_title">Mailbox expired</string>
+    <string name="room_expired_body">This room’s TTL has ended. Messages can no longer be opened here.</string>
 </resources>

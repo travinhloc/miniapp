@@ -39,15 +39,32 @@ Identity keyset wipe stays for story 3.2.
 
 See [`MAILBOX.md`](MAILBOX.md) — RTDB schema, rules, Anonymous Auth, remote data source.
 
-## 4. Out of scope (later)
+## 4. Room invite (story 2.2)
 
-- Room message E2EE payload (2.3) · create/join UI (2.2)
+| Purpose | Choice |
+|---------|--------|
+| Room id | 16 random bytes → URL-safe Base64, take 22 chars |
+| Room key | 32 random bytes → URL-safe Base64 (E2EE in 2.3) |
+| Invite URI | `vanishx://r/{roomId}?k={roomKey}&e={expiresAtMs}` |
+| QR | ZXing encode + JourneyApps scan |
+| TTL Free | 1h / 6h / 24h / 7d |
+
+**Tradeoff:** room key is in the query string (capability URL). Convenient for QR/share; anyone with the link has the key. HTTPS App Links / key fragmentation can harden later (3.1).
+
+Local `rooms` row stores `roomKey` + `role` (`creator` \| `member`) in SQLCipher.
+
+## 5. Out of scope (later)
+
+- Room message E2EE payload (2.3)
 - App lock / FLAG_SECURE / Panic UI (3.2+)
 
 ## Code map
 
 - `data/crypto/TinkIdentityKeyStore.kt` — identity  
+- `data/crypto/RoomSecretsGenerator.kt` — room id/key  
+- `domain/model/InviteUriCodec.kt` — invite URI  
 - `data/local/db/VanishxLocalDatabase.kt` — SQLCipher Room + wipe  
 - `data/local/db/DatabasePassphraseStore.kt` — DB passphrase  
 - `data/remote/FirebaseMailboxRemoteDataSource.kt` — RTDB mailbox  
 - `domain/usecase/EnsureIdentityUseCase.kt` — identity bootstrap  
+- `domain/usecase/CreateRoomUseCase.kt` / `JoinRoomUseCase.kt` — invite flow  

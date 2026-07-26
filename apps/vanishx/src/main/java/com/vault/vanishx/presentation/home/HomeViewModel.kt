@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.BuildConfig
+import com.vault.vanishx.presentation.mailbox.MailboxDestination
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
@@ -70,10 +71,11 @@ class HomeViewModel @Inject constructor(
 
     fun onAction(action: HomeAction) {
         when (action) {
-            HomeAction.CreateRoom,
-            HomeAction.JoinRoom,
-            -> {
-                _uiState.update { it.copy(showPlaceholder = true) }
+            HomeAction.CreateRoom -> launch {
+                _navigator.emit(MailboxDestination.Create)
+            }
+            HomeAction.JoinRoom -> launch {
+                _navigator.emit(MailboxDestination.Join)
             }
             HomeAction.ClearPlaceholder -> {
                 _uiState.update { it.copy(showPlaceholder = false) }

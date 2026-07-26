@@ -45,6 +45,22 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         }
     }
 
+    override suspend fun readRoomMeta(roomId: String): RemoteRoomMeta? {
+        ensureAuthenticated()
+        return withContext(dispatchersProvider.io) {
+            val snapshot = roomRef(roomId).child(PATH_META).get().await()
+            if (!snapshot.exists()) return@withContext null
+            val createdAt = snapshot.child(KEY_CREATED_AT).getValue(Long::class.java) ?: return@withContext null
+            val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java) ?: return@withContext null
+            val creatorPub = snapshot.child(KEY_CREATOR_PUB).getValue(String::class.java)
+            RemoteRoomMeta(
+                createdAt = createdAt,
+                expiresAt = expiresAt,
+                creatorPub = creatorPub,
+            )
+        }
+    }
+
     override suspend fun writeMessage(roomId: String, message: RemoteMailboxMessage) {
         require(message.ciphertext.length in 1..RemoteMailboxMessage.MAX_CIPHERTEXT_LENGTH) {
             "ciphertext length must be 1..${RemoteMailboxMessage.MAX_CIPHERTEXT_LENGTH}"

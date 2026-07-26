@@ -49,10 +49,12 @@ class VanishxDatabaseDaoTest {
             database.mailboxRoomDao().upsert(
                 MailboxRoomEntity(
                     id = "room-1",
+                    roomKey = "key-1",
                     createdAt = 1L,
                     expiresAt = 2L,
                     title = "temp",
                     status = "active",
+                    role = "creator",
                 ),
             )
             val rooms = database.mailboxRoomDao().getByStatus("active")

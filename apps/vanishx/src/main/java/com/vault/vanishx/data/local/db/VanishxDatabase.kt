@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase
         MailboxRoomEntity::class,
         MessageEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class VanishxDatabase : RoomDatabase() {
