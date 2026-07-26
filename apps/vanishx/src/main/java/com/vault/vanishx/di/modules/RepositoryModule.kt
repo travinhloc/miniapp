@@ -1,5 +1,6 @@
 package com.vault.vanishx.di.modules
 
+import com.vault.vanishx.data.billing.StubProEntitlementRepository
 import com.vault.vanishx.data.crypto.IdentityKeyStore
 import com.vault.vanishx.data.crypto.TinkIdentityKeyStore
 import com.vault.vanishx.data.local.db.VanishxLocalDatabase
@@ -10,6 +11,7 @@ import com.vault.vanishx.domain.repository.BlockRepository
 import com.vault.vanishx.domain.repository.IdentityRepository
 import com.vault.vanishx.domain.repository.LocalDatabaseWiper
 import com.vault.vanishx.domain.repository.MailboxRepository
+import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -27,6 +29,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindBlockRepository(impl: BlockRepositoryImpl): BlockRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindProEntitlementRepository(impl: StubProEntitlementRepository): ProEntitlementRepository
 
     @Binds
     @Singleton

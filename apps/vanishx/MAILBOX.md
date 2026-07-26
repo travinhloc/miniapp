@@ -44,6 +44,7 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 - FCM (3.1): `firebase-messaging` · topic `vx_room_{roomId}` · notification → `vanishx://open/{roomId}`
 - Pending invite (3.1): `PendingInviteStore` + `ConsumePendingInviteUseCase` after identity bootstrap
 - Block / Report (3.3): local `blocked_peers` by peer pubkey · leave room · RTDB `/reports`
+- Pro recall (4.2): stub Pro (staging debug) · `RecallRoomMessageUseCase` deletes RTDB message if still present · local `recalled` flag (IAP deferred)
 - Staging debug: Home → **RTDB smoke** writes `dGVzdA==`, reads back, deletes
 
 ## `google-services.json`

@@ -67,6 +67,11 @@
     <string name="room_report_submit">Submit report</string>
     <string name="room_left_title">You left this room</string>
     <string name="room_left_body">The peer was blocked. Local messages for this room were cleared.</string>
+    <string name="room_recall">Recall</string>
+    <string name="room_recalled_tag">Recalled · best-effort if already downloaded</string>
+    <string name="home_pro_stub_on">Pro stub: ON (recall enabled)</string>
+    <string name="home_pro_stub_off">Pro stub: OFF (Free)</string>
+    <string name="home_pro_stub_hint">MVP stub — real IAP later. Staging debug only.</string>
 
     <string name="fcm_channel_id">vanishx_mailbox</string>
     <string name="fcm_channel_name">Mailbox</string>

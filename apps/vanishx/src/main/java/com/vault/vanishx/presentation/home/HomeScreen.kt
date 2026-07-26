@@ -80,6 +80,8 @@ fun HomeScreen(
     HomeScreenContent(
         anonymousId = uiState.anonymousId,
         showMailboxSmoke = uiState.showMailboxSmoke,
+        showProStubToggle = uiState.showProStubToggle,
+        isProStub = uiState.isProStub,
         isMailboxSmokeRunning = uiState.isMailboxSmokeRunning,
         mailboxSmokeResult = uiState.mailboxSmokeResult,
         mailboxSmokeError = uiState.mailboxSmokeError,
@@ -91,6 +93,8 @@ fun HomeScreen(
 private fun HomeScreenContent(
     anonymousId: String?,
     showMailboxSmoke: Boolean,
+    showProStubToggle: Boolean,
+    isProStub: Boolean,
     isMailboxSmokeRunning: Boolean,
     mailboxSmokeResult: String?,
     mailboxSmokeError: String?,
@@ -147,6 +151,25 @@ private fun HomeScreenContent(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(text = stringResource(id = R.string.home_security))
+        }
+        if (showProStubToggle) {
+            Spacer(modifier = Modifier.height(dimensions.spacingSmall))
+            TextButton(
+                onClick = { onAction(HomeAction.ToggleProStub) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(
+                        id = if (isProStub) R.string.home_pro_stub_on else R.string.home_pro_stub_off,
+                    ),
+                )
+            }
+            Text(
+                text = stringResource(id = R.string.home_pro_stub_hint),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
         if (showMailboxSmoke) {
             Spacer(modifier = Modifier.height(dimensions.spacingSmall))
@@ -231,6 +254,8 @@ private fun HomeScreenPreview() {
         HomeScreenContent(
             anonymousId = "vx_AbCdEfGhIjKlMnOpQrStUv",
             showMailboxSmoke = true,
+            showProStubToggle = true,
+            isProStub = false,
             isMailboxSmokeRunning = false,
             mailboxSmokeResult = null,
             mailboxSmokeError = "FirebaseDatabaseException: Permission denied",

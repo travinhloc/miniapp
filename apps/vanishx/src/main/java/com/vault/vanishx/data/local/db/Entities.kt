@@ -29,6 +29,7 @@ data class MessageEntity(
     val sentAt: Long,
     val expiresAt: Long,
     val direction: String,
+    val recalled: Boolean = false,
 )
 
 @Entity(tableName = "blocked_peers")

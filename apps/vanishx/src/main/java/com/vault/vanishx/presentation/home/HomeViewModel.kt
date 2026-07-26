@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.BuildConfig
+import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
@@ -30,15 +31,23 @@ class HomeViewModel @Inject constructor(
     private val syncActiveMailboxes: SyncActiveMailboxesUseCase,
     private val consumePendingInvite: ConsumePendingInviteUseCase,
     private val smokeMailboxRemote: SmokeMailboxRemoteUseCase,
+    private val proEntitlement: ProEntitlementRepository,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(
-        HomeUiState(showMailboxSmoke = isMailboxSmokeEnabled()),
+        HomeUiState(
+            showMailboxSmoke = isMailboxSmokeEnabled(),
+            showProStubToggle = isProStubToggleEnabled(),
+            isProStub = proEntitlement.isProNow(),
+        ),
     )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        proEntitlement.isPro
+            .onEach { pro -> _uiState.update { it.copy(isProStub = pro) } }
+            .launchIn(viewModelScope)
         bootstrapIdentity()
     }
 
@@ -113,6 +122,10 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             }
+            HomeAction.ToggleProStub -> {
+                if (!isProStubToggleEnabled()) return
+                proEntitlement.setProStub(!_uiState.value.isProStub)
+            }
         }
     }
 
@@ -173,6 +186,9 @@ class HomeViewModel @Inject constructor(
         const val SMOKE_TIMEOUT_MS = 25_000L
 
         fun isMailboxSmokeEnabled(): Boolean =
+            BuildConfig.DEBUG && BuildConfig.FLAVOR == "staging"
+
+        fun isProStubToggleEnabled(): Boolean =
             BuildConfig.DEBUG && BuildConfig.FLAVOR == "staging"
     }
 }

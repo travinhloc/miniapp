@@ -274,6 +274,10 @@ private fun RoomActiveBody(
     Column(modifier = modifier.fillMaxWidth()) {
         RoomMessageList(
             messages = uiState.messages,
+            isPro = uiState.isPro,
+            isExpired = uiState.isExpired,
+            isRecalling = uiState.isRecalling,
+            onAction = onAction,
             modifier = Modifier.weight(1f),
         )
 
@@ -318,6 +322,10 @@ private fun RoomActiveBody(
 @Suppress("UnstableCollections")
 private fun RoomMessageList(
     messages: List<ChatMessage>,
+    isPro: Boolean,
+    isExpired: Boolean,
+    isRecalling: Boolean,
+    onAction: (RoomAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -345,7 +353,15 @@ private fun RoomMessageList(
             verticalArrangement = Arrangement.spacedBy(dimensions.spacingSmall),
         ) {
             items(messages, key = { it.id }) { message ->
-                MessageBubble(message = message)
+                MessageBubble(
+                    message = message,
+                    canRecall = isPro &&
+                        !isExpired &&
+                        !isRecalling &&
+                        message.direction == ChatMessage.DIRECTION_OUT &&
+                        !message.recalled,
+                    onRecall = { onAction(RoomAction.RecallMessage(message.id)) },
+                )
             }
         }
     }
@@ -375,7 +391,11 @@ private fun FeedbackMessages(uiState: RoomUiState) {
 }
 
 @Composable
-private fun MessageBubble(message: ChatMessage) {
+private fun MessageBubble(
+    message: ChatMessage,
+    canRecall: Boolean,
+    onRecall: () -> Unit,
+) {
     val mine = message.direction == ChatMessage.DIRECTION_OUT
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -394,18 +414,34 @@ private fun MessageBubble(message: ChatMessage) {
                 )
                 .padding(dimensions.spacingSmall),
         ) {
-            if (mine) {
-                Text(
-                    text = stringResource(R.string.room_sent_tag),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.height(RoomUiDimens.sentTagGap))
+            when {
+                message.recalled -> {
+                    Text(
+                        text = stringResource(R.string.room_recalled_tag),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                else -> {
+                    if (mine) {
+                        Text(
+                            text = stringResource(R.string.room_sent_tag),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(RoomUiDimens.sentTagGap))
+                    }
+                    Text(
+                        text = message.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    if (canRecall) {
+                        TextButton(onClick = onRecall) {
+                            Text(text = stringResource(R.string.room_recall))
+                        }
+                    }
+                }
             }
-            Text(
-                text = message.body,
-                style = MaterialTheme.typography.bodyMedium,
-            )
         }
     }
 }
