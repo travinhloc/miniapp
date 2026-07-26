@@ -41,7 +41,9 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 | staging | `src/staging/google-services.json` | Real project (`vanihx-staging`); **gitignored** |
 | production | `src/production/google-services.json` | Placeholder until prod Firebase exists |
 
-File **phải có** `project_info.firebase_url` (URL Realtime Database). Nếu thiếu: tạo RTDB trên Console rồi **tải lại** `google-services.json` thay file cũ.
+File **phải có** `project_info.firebase_url` (URL Realtime Database) trên máy dev. Nếu thiếu: tạo RTDB trên Console rồi **tải lại** `google-services.json` thay file cũ.
+
+CI: nếu `src/staging/google-services.json` không có (gitignored), Gradle ghi **placeholder** lúc configure — đủ để `process*GoogleServices` chạy; Firebase runtime trên CI không dùng được.
 
 ## Deploy rules
 
