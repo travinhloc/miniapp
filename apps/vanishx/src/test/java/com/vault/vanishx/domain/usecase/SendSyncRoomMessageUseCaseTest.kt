@@ -97,7 +97,11 @@ class SendSyncRoomMessageUseCaseTest {
             identityRepository = identityRepository,
             remote = remote,
             cipher = cipher,
-            purgeExpiredRoom = PurgeExpiredRoomUseCase(mailboxRepository, remote),
+            purgeExpiredRoom = PurgeExpiredRoomUseCase(
+                mailboxRepository,
+                remote,
+                com.vault.vanishx.data.push.FakeRoomPushTopics(),
+            ),
         ).invoke("room1")
 
         result.ingested shouldBe 1

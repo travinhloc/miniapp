@@ -1,5 +1,6 @@
 package com.vault.vanishx.domain.usecase
 
+import com.vault.vanishx.data.push.RoomPushTopics
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.domain.model.InviteUriCodec
 import com.vault.vanishx.domain.model.MailboxRoom
@@ -10,6 +11,7 @@ import javax.inject.Inject
 class JoinRoomUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
     private val remote: MailboxRemoteDataSource,
+    private val roomPushTopics: RoomPushTopics,
 ) {
     suspend operator fun invoke(rawInvite: String): MailboxRoom {
         val invite = InviteUriCodec.parse(rawInvite)
@@ -19,7 +21,11 @@ class JoinRoomUseCase @Inject constructor(
 
     suspend operator fun invoke(invite: RoomInvite): MailboxRoom {
         mailboxRepository.getRoom(invite.roomId)?.let { existing ->
-            return existing.copy(status = existing.resolvedStatus())
+            val resolved = existing.copy(status = existing.resolvedStatus())
+            if (resolved.status == MailboxRoom.STATUS_ACTIVE) {
+                roomPushTopics.subscribe(resolved.id)
+            }
+            return resolved
         }
 
         val remoteMeta = runCatching { remote.readRoomMeta(invite.roomId) }.getOrNull()
@@ -41,6 +47,9 @@ class JoinRoomUseCase @Inject constructor(
             role = MailboxRoom.ROLE_MEMBER,
         )
         mailboxRepository.upsertRoom(room)
+        if (status == MailboxRoom.STATUS_ACTIVE) {
+            roomPushTopics.subscribe(room.id)
+        }
         return room
     }
 }

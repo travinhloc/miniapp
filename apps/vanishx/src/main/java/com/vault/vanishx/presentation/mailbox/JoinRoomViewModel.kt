@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseViewModel
+import com.vault.vanishx.data.invite.PendingInviteStore
 import com.vault.vanishx.domain.model.InviteUriCodec
 import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.domain.usecase.JoinRoomUseCase
@@ -38,6 +39,7 @@ sealed interface JoinRoomAction {
 class JoinRoomViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val joinRoom: JoinRoomUseCase,
+    private val pendingInviteStore: PendingInviteStore,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
 
@@ -81,14 +83,11 @@ class JoinRoomViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "Invite is empty") }
             return
         }
-        // Validate early for clearer errors
-        if (InviteUriCodec.parse(trimmed) == null && !trimmed.contains("://")) {
-            // allow bare "roomId?k=key" via codec normalize
-        }
         _uiState.update { it.copy(isJoining = true, errorMessage = null) }
         flow { emit(joinRoom(trimmed)) }
             .flowOn(dispatchersProvider.io)
             .onEach { room ->
+                pendingInviteStore.clear()
                 _uiState.update { it.copy(isJoining = false) }
                 _navigator.emit(MailboxDestination.Room(room.id))
             }

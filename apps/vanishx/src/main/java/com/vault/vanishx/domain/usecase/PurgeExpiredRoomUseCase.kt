@@ -1,5 +1,6 @@
 package com.vault.vanishx.domain.usecase
 
+import com.vault.vanishx.data.push.RoomPushTopics
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.MailboxRepository
@@ -19,6 +20,7 @@ data class PurgeExpiredRoomResult(
 class PurgeExpiredRoomUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
     private val remote: MailboxRemoteDataSource,
+    private val roomPushTopics: RoomPushTopics,
 ) {
     suspend operator fun invoke(roomId: String): PurgeExpiredRoomResult {
         val room = mailboxRepository.getRoom(roomId)
@@ -31,6 +33,8 @@ class PurgeExpiredRoomUseCase @Inject constructor(
         }.onFailure { e ->
             Timber.w(e, "Remote purge failed for room %s", roomId)
         }.isSuccess
+
+        roomPushTopics.unsubscribe(roomId)
 
         return PurgeExpiredRoomResult(
             roomId = roomId,
