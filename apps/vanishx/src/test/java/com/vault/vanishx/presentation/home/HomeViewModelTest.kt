@@ -5,7 +5,6 @@ import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
-import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesResult
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
 import com.vault.vanishx.presentation.mailbox.MailboxDestination
@@ -33,7 +32,6 @@ class HomeViewModelTest {
     private val ensureIdentity: EnsureIdentityUseCase = mockk()
     private val syncActiveMailboxes: SyncActiveMailboxesUseCase = mockk()
     private val consumePendingInvite: ConsumePendingInviteUseCase = mockk()
-    private val smokeMailboxRemote: SmokeMailboxRemoteUseCase = mockk()
     private val proEntitlement: ProEntitlementRepository = mockk(relaxed = true)
     private val proFlow = MutableStateFlow(false)
 
@@ -58,7 +56,6 @@ class HomeViewModelTest {
             ensureIdentity = ensureIdentity,
             syncActiveMailboxes = syncActiveMailboxes,
             consumePendingInvite = consumePendingInvite,
-            smokeMailboxRemote = smokeMailboxRemote,
             proEntitlement = proEntitlement,
             dispatchersProvider = coroutinesRule.testDispatcherProvider,
         )

@@ -45,7 +45,6 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 - Pending invite (3.1): `PendingInviteStore` + `ConsumePendingInviteUseCase` after identity bootstrap
 - Block / Report (3.3): local `blocked_peers` by peer pubkey · leave room · RTDB `/reports`
 - Pro recall (4.2): stub Pro (staging debug) · `RecallRoomMessageUseCase` deletes RTDB message if still present · local `recalled` flag (IAP deferred)
-- Staging debug: Home → **RTDB smoke** writes `dGVzdA==`, reads back, deletes
 
 ## `google-services.json`
 
@@ -64,7 +63,7 @@ CI: không có file thật → Gradle copy từ `*.placeholder.json` (đủ cho 
 1. Firebase Console → Realtime Database → Rules, paste `firebase/database.rules.json`, **Publish**  
    **or** `firebase deploy --only database` if the Firebase CLI is linked to this project.
 2. Enable **Anonymous** sign-in under Authentication.
-3. Run `./gradlew :apps:vanishx:installStagingDebug`, open app, tap **RTDB smoke**.
+3. Run `./gradlew :apps:vanishx:installStagingDebug`, create/join a room, send a message.
 
 ## Out of scope
 

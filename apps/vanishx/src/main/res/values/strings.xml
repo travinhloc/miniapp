@@ -8,15 +8,7 @@
     <string name="home_join_room">Join with link / QR / code</string>
     <string name="home_security">Security · PIN / Panic</string>
     <string name="home_arrow_hint">Messages are arrows — once sent, Free cannot recall them.</string>
-    <string name="home_action_placeholder">Coming in a later story</string>
     <string name="home_anonymous_id">ID: %1$s</string>
-    <string name="home_rtdb_smoke">RTDB smoke</string>
-    <string name="home_rtdb_smoke_ok">Mailbox smoke OK: %1$s</string>
-    <string name="home_rtdb_smoke_fail">Mailbox smoke failed: %1$s</string>
-    <string name="home_rtdb_smoke_log_ok">Mailbox smoke OK (long-press to copy)</string>
-    <string name="home_rtdb_smoke_log_error">Mailbox smoke ERROR (long-press to copy)</string>
-    <string name="home_rtdb_smoke_clear_log">Clear log</string>
-    <string name="home_rtdb_smoke_running">Running RTDB smoke… (max ~25s)</string>
 
     <string name="ttl_1h">1h</string>
     <string name="ttl_6h">6h</string>
