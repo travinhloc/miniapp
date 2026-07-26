@@ -20,6 +20,10 @@ class InMemoryIdentityKeyStoreTest {
                     publicKeyBase64 = "cHVi",
                 ).also { stored = it }
             }
+
+            override fun clear() {
+                stored = null
+            }
         }
 
         val first = store.getOrCreateIdentity()
@@ -53,5 +57,9 @@ class InMemoryIdentityKeyStore : IdentityKeyStore {
             anonymousId = AnonymousIdDeriver.fromPublicKeyBytes(ByteArray(32) { 7 }),
             publicKeyBase64 = AnonymousIdDeriver.publicKeyBase64(ByteArray(32) { 7 }),
         ).also { stored = it }
+    }
+
+    override fun clear() {
+        stored = null
     }
 }

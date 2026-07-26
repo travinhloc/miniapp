@@ -25,15 +25,18 @@ Private key never logged. No phone / email / advertising ID / `ANDROID_ID`.
 
 Passphrase is **independent** of the Ed25519 identity keyset.
 
-### Wipe hook (Panic later)
+### Wipe hook (Panic — story 3.2)
 
-`LocalDatabaseWiper.wipe()` / `VanishxLocalDatabase.wipe()`:
+`PanicWipeUseCase` / `LocalDatabaseWiper.wipe()`:
 
 1. Close Room  
 2. Delete DB (+ wal/shm)  
 3. Clear passphrase prefs  
+4. Clear Tink identity keyset prefs  
+5. Clear pending invite + PIN store  
+6. Bootstrap fresh identity  
 
-Identity keyset wipe stays for story 3.2.
+App lock: Unlock PIN vs Panic PIN (`SecurityPinStore`). `FLAG_SECURE` on `MainActivity`.
 
 ## 3. Firebase mailbox (story 2.1)
 
@@ -69,8 +72,7 @@ Plaintext never leaves the device. Free has **no recall**. Pro recall = 4.2.
 
 ## 6. Out of scope (later)
 
-- App lock / FLAG_SECURE / Panic UI (3.2+)
-- FCM (3.1) · Pro recall (4.2)
+- Biometric unlock · Pro recall (4.2) · Block/Report (3.3)
 
 ## Code map
 

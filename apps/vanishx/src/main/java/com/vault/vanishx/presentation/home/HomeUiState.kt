@@ -17,6 +17,7 @@ sealed interface HomeAction {
     data object JoinRoom : HomeAction
     data object ClearPlaceholder : HomeAction
     data object Resume : HomeAction
+    data object OpenSecurity : HomeAction
     data object RunMailboxSmoke : HomeAction
     data object ClearMailboxSmokeFeedback : HomeAction
 }

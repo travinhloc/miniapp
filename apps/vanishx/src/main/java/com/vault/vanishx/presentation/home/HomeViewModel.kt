@@ -9,6 +9,7 @@ import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SmokeMailboxRemoteUseCase
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
 import com.vault.vanishx.presentation.mailbox.MailboxDestination
+import com.vault.vanishx.presentation.security.SecurityDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -99,6 +100,9 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { it.copy(showPlaceholder = false) }
             }
             HomeAction.Resume -> syncOnOpen()
+            HomeAction.OpenSecurity -> launch {
+                _navigator.emit(SecurityDestination.Settings)
+            }
             HomeAction.RunMailboxSmoke -> runMailboxSmoke()
             HomeAction.ClearMailboxSmokeFeedback -> {
                 _uiState.update {

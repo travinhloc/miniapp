@@ -11,4 +11,7 @@ interface IdentityKeyStore {
      * Must be idempotent across process restarts when backed by durable storage.
      */
     fun getOrCreateIdentity(): Identity
+
+    /** Deletes durable identity key material (Panic wipe). */
+    fun clear()
 }

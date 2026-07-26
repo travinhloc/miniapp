@@ -6,6 +6,7 @@
     <string name="home_tagline">Chat tạm · ẩn danh · tự hết hạn</string>
     <string name="home_create_room">Tạo hộp thư / phòng tạm</string>
     <string name="home_join_room">Vào bằng link / QR / mã</string>
+    <string name="home_security">Bảo mật · PIN / Panic</string>
     <string name="home_arrow_hint">Tin như mũi tên — phóng đi không thu hồi (Free).</string>
     <string name="home_action_placeholder">Sẽ có ở story sau</string>
     <string name="home_anonymous_id">ID: %1$s</string>
@@ -60,4 +61,26 @@
     <string name="fcm_channel_description">Thông báo khi phòng tạm có thể có tin mới</string>
     <string name="fcm_notification_title">Hoạt động hộp thư mới</string>
     <string name="fcm_notification_body">Mở phòng để đồng bộ tin đã mã hóa.</string>
+
+    <string name="lock_title">VanishX đã khóa</string>
+    <string name="lock_subtitle">Nhập PIN mở khóa. Panic PIN xóa sạch dữ liệu local ngay.</string>
+    <string name="lock_pin_label">PIN</string>
+    <string name="lock_unlock">Mở khóa</string>
+    <string name="lock_wiping">Đang xóa…</string>
+
+    <string name="security_title">Bảo mật</string>
+    <string name="security_subtitle">PIN khóa app và Panic PIN. Panic giống mở khóa nhưng xóa hết.</string>
+    <string name="security_unlock_status_on">PIN mở khóa: bật</string>
+    <string name="security_unlock_status_off">PIN mở khóa: tắt</string>
+    <string name="security_panic_status_on">Panic PIN: bật</string>
+    <string name="security_panic_status_off">Panic PIN: tắt</string>
+    <string name="security_unlock_pin">PIN mở khóa mới</string>
+    <string name="security_unlock_pin_confirm">Xác nhận PIN mở khóa</string>
+    <string name="security_panic_pin">Panic PIN mới</string>
+    <string name="security_panic_pin_confirm">Xác nhận Panic PIN</string>
+    <string name="security_panic_hint">Phải khác PIN mở khóa. Dùng khi bị ép — reset như máy mới cài.</string>
+    <string name="security_save_unlock">Lưu PIN mở khóa</string>
+    <string name="security_save_panic">Lưu Panic PIN</string>
+    <string name="security_clear_unlock">Xóa PIN mở khóa</string>
+    <string name="security_clear_panic">Xóa Panic PIN</string>
 </resources>
