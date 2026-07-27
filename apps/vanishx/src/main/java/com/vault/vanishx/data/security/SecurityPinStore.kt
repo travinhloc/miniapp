@@ -90,10 +90,26 @@ class SecurityPinStore (
         return hash(pin, decode(saltEncoded)) == expected
     }
 
+    fun failedUnlockAttempts(): Int = prefs.getInt(KEY_FAILED_ATTEMPTS, 0)
+
+    fun recordFailedUnlock(): Int {
+        val next = failedUnlockAttempts() + 1
+        prefs.edit().putInt(KEY_FAILED_ATTEMPTS, next).apply()
+        return next
+    }
+
+    fun clearFailedUnlockAttempts() {
+        prefs.edit().remove(KEY_FAILED_ATTEMPTS).apply()
+    }
+
+    fun isBiometricEnabled(): Boolean = prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, enabled).apply()
+    }
+
     private fun requireValidPin(pin: String) {
-        require(pin.length in PIN_MIN_LENGTH..PIN_MAX_LENGTH) {
-            "PIN must be $PIN_MIN_LENGTH–$PIN_MAX_LENGTH digits"
-        }
+        require(pin.length == PIN_LENGTH) { "PIN must be $PIN_LENGTH digits" }
         require(pin.all { it.isDigit() }) { "PIN must be numeric" }
     }
 
@@ -113,14 +129,19 @@ class SecurityPinStore (
 
     companion object {
         const val PREF_FILE = "vanishx_security_pin_prefs"
-        const val PIN_MIN_LENGTH = 4
-        const val PIN_MAX_LENGTH = 8
+        /** Story 5.3: unlock / panic PIN are exactly 4 digits. */
+        const val PIN_LENGTH = 4
+        const val PIN_MIN_LENGTH = PIN_LENGTH
+        const val PIN_MAX_LENGTH = PIN_LENGTH
+        const val MAX_UNLOCK_ATTEMPTS = 5
         private const val SALT_BYTES = 16
         private const val HMAC_ALG = "HmacSHA256"
         private const val KEY_UNLOCK_SALT = "unlock_salt"
         private const val KEY_UNLOCK_HASH = "unlock_hash"
         private const val KEY_PANIC_SALT = "panic_salt"
         private const val KEY_PANIC_HASH = "panic_hash"
+        private const val KEY_FAILED_ATTEMPTS = "failed_unlock_attempts"
+        private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
 
         fun createEncryptedPrefs(context: Context): SharedPreferences {
             val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)

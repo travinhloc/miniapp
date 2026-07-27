@@ -3,21 +3,87 @@
     <string name="app_name">VanishX</string>
     <string name="error_generic">Unexpected error</string>
     <string name="action_back">Back</string>
+
+    <!-- Splash -->
+    <string name="splash_tagline">Temporary chat · anonymous · auto-expires</string>
+    <string name="splash_protecting">Protecting your privacy…</string>
+
+    <!-- Auth setup -->
+    <string name="auth_setup_title">Set unlock PIN</string>
+    <string name="auth_setup_enter">Enter a 4-digit PIN</string>
+    <string name="auth_setup_confirm">Confirm your PIN</string>
+    <string name="auth_setup_biometric">Use biometrics next time?</string>
+    <string name="auth_setup_enable_bio">Enable biometrics</string>
+    <string name="auth_setup_skip_bio">Skip for now</string>
+
+    <!-- Home -->
     <string name="home_tagline">Temporary chat · anonymous · auto-expires</string>
-    <string name="home_create_room">Create temporary mailbox</string>
+    <string name="home_create_room">Create temporary room</string>
     <string name="home_join_room">Join with link / QR / code</string>
     <string name="home_security">Security · PIN / Panic</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_invite_hint">Paste invite link</string>
+    <string name="home_join_go">Join</string>
+    <string name="home_scan_qr">Scan QR</string>
+    <string name="home_share_hint">Room created — share the invite</string>
+    <string name="home_recent_title">Recent chats</string>
+    <string name="home_recent_empty">No rooms yet. Create one or join with a link.</string>
+    <string name="home_open">Open</string>
+    <string name="home_see_more">See more</string>
+    <string name="home_history">History</string>
     <string name="home_arrow_hint">Messages are arrows — once sent, Free cannot recall them.</string>
     <string name="home_anonymous_id">ID: %1$s</string>
+    <string name="home_pro_stub_on">Pro stub: ON (recall enabled)</string>
+    <string name="home_pro_stub_off">Pro stub: OFF (Free)</string>
+    <string name="home_pro_stub_hint">MVP stub — real IAP later. Staging debug only.</string>
 
+    <!-- Badges -->
+    <string name="badge_remaining">%1$s left</string>
+    <string name="badge_expired">Expired</string>
+
+    <!-- History -->
+    <string name="history_title">History</string>
+    <string name="history_subtitle">Stored on this device only</string>
+    <string name="history_filter_open">Active</string>
+    <string name="history_filter_expired">Expired</string>
+    <string name="history_filter_all">All</string>
+    <string name="history_empty">No rooms in this filter.</string>
+    <string name="history_note">Free can only open active rooms. Expired rooms need VanishX Pro to view again.</string>
+    <string name="history_open_pro">Open with Pro</string>
+    <string name="history_action_none">—</string>
+    <string name="history_meta_creator">You created</string>
+    <string name="history_meta_member">You joined</string>
+    <string name="history_meta_archived">Saved on device</string>
+    <string name="history_meta_left">Blocked / left</string>
+    <string name="history_badge_left">Left</string>
+
+    <!-- Paywall -->
+    <string name="paywall_title">VanishX Pro</string>
+    <string name="paywall_subtitle">Messages stay encrypted on your device. Pro unlocks viewing saved history.</string>
+    <string name="paywall_benefit_history">View messages after a room expires</string>
+    <string name="paywall_benefit_recall">Recall sent messages</string>
+    <string name="paywall_benefit_ping">Ping a room if still on the network</string>
+    <string name="paywall_continue_pro">Continue with Pro</string>
+    <string name="paywall_not_now">Not now</string>
+    <string name="paywall_stub_note">Paywall mockup · enable Pro stub before real IAP</string>
+
+    <!-- TTL -->
     <string name="ttl_1h">1h</string>
     <string name="ttl_6h">6h</string>
     <string name="ttl_24h">24h</string>
     <string name="ttl_7d">7d</string>
 
-    <string name="create_title">Create temporary room</string>
+    <!-- Create room -->
+    <string name="create_title">Create room</string>
+    <string name="create_subtitle">Create an invite, then return to Home. Others join via link / QR.</string>
+    <string name="create_nickname_label">Nickname</string>
+    <string name="create_nickname_hint">e.g. Alex</string>
+    <string name="create_room_name_label">Room name</string>
+    <string name="create_room_name_hint">e.g. Weekend plans</string>
     <string name="create_ttl_label">Expires after</string>
-    <string name="create_action">Create room</string>
+    <string name="create_invite_note_label">Invite note (optional)</string>
+    <string name="create_invite_note_hint">e.g. Join before 8 PM</string>
+    <string name="create_action">Create</string>
     <string name="create_creating">Creating…</string>
     <string name="create_share_label">Share invite</string>
     <string name="create_qr_cd">Invite QR code</string>
@@ -27,22 +93,41 @@
     <string name="create_enter_room">Enter room</string>
     <string name="create_note">Anyone with the link + room key can open the mailbox while it is still valid.</string>
 
+    <!-- Join room -->
     <string name="join_title">Join room</string>
     <string name="join_subtitle">Paste invite link or scan QR. No phone or email required.</string>
     <string name="join_input_label">Invite link or code</string>
     <string name="join_scan_qr">Scan QR</string>
     <string name="join_scan_prompt">Scan VanishX invite QR</string>
     <string name="join_camera_permission">Camera permission needed to scan QR</string>
-    <string name="join_action">Join</string>
+    <string name="join_action">Continue</string>
     <string name="join_joining">Joining…</string>
+    <string name="join_preview_title">Join room</string>
+    <string name="join_preview_subtitle">Valid invite · choose a nickname, then enter or save for later.</string>
+    <string name="join_preview_room_id">Room #%1$s</string>
+    <string name="join_nickname_label">Nickname</string>
+    <string name="join_nickname_hint">e.g. Sam</string>
+    <string name="join_enter_room">Enter</string>
+    <string name="join_save_for_later">Save for later</string>
 
+    <!-- Room -->
     <string name="room_loading">Loading room…</string>
     <string name="room_title">Room ···%1$s</string>
     <string name="room_ttl_remaining">Time left: %1$s</string>
     <string name="room_empty_hint">No messages yet. Send an encrypted arrow.</string>
     <string name="room_expired_title">Mailbox expired</string>
-    <string name="room_expired_body">This room’s TTL has ended. Local messages were cleared and the relay mailbox was purged. Messages can no longer be opened here.</string>
-    <string name="room_composer_hint">Type a text message…</string>
+    <string name="room_expired_body">This room has expired. Remote messages were purged. Local archive may still be available with Pro.</string>
+    <string name="room_locked_title">Room expired</string>
+    <string name="room_locked_body">Chat is locked on Free. Unlock with Pro to read the local archive.</string>
+    <string name="room_back_history">Back to history</string>
+    <string name="room_archive_banner">Read-only archive · composer hidden</string>
+    <string name="room_ping">Ping room</string>
+    <string name="room_ping_title">Ping this room?</string>
+    <string name="room_ping_body">Checks whether remote room meta still exists. Does not create a new room.</string>
+    <string name="room_ping_confirm">Ping</string>
+    <string name="room_empty_e2e_title">End-to-end encrypted</string>
+    <string name="room_empty_e2e_body">Messages stay protected on your device.</string>
+    <string name="room_composer_hint">Type a message…</string>
     <string name="room_send">Send</string>
     <string name="room_sent_tag">Sent · cannot recall</string>
     <string name="room_syncing">Syncing mailbox…</string>
@@ -61,22 +146,22 @@
     <string name="room_left_body">The peer was blocked. Local messages for this room were cleared.</string>
     <string name="room_recall">Recall</string>
     <string name="room_recalled_tag">Recalled · best-effort if already downloaded</string>
-    <string name="home_pro_stub_on">Pro stub: ON (recall enabled)</string>
-    <string name="home_pro_stub_off">Pro stub: OFF (Free)</string>
-    <string name="home_pro_stub_hint">MVP stub — real IAP later. Staging debug only.</string>
 
-    <string name="fcm_channel_id">vanishx_mailbox</string>
-    <string name="fcm_channel_name">Mailbox</string>
-    <string name="fcm_channel_description">Alerts when a temporary room may have new messages</string>
-    <string name="fcm_notification_title">New mailbox activity</string>
-    <string name="fcm_notification_body">Open the room to sync encrypted messages.</string>
-
+    <!-- Lock -->
     <string name="lock_title">VanishX is locked</string>
     <string name="lock_subtitle">Enter unlock PIN. Panic PIN wipes all local data instantly.</string>
     <string name="lock_pin_label">PIN</string>
     <string name="lock_unlock">Unlock</string>
     <string name="lock_wiping">Wiping…</string>
+    <string name="lock_bio_title">Unlock with biometrics</string>
+    <string name="lock_bio_subtitle">Confirm your identity</string>
+    <string name="lock_bio_negative">Use PIN</string>
+    <string name="lock_burn_title">Too many attempts</string>
+    <string name="lock_burn_body">Wiping all local data…</string>
+    <string name="lock_attempts_left">%1$d attempts left</string>
+    <string name="lock_use_bio">Use biometrics</string>
 
+    <!-- Settings -->
     <string name="security_title">Security</string>
     <string name="security_subtitle">App lock PIN and Panic PIN. Panic looks like unlock but erases everything.</string>
     <string name="security_unlock_status_on">Unlock PIN: on</string>
@@ -92,4 +177,17 @@
     <string name="security_save_panic">Save Panic PIN</string>
     <string name="security_clear_unlock">Remove unlock PIN</string>
     <string name="security_clear_panic">Remove Panic PIN</string>
+    <string name="settings_section_identity">Identity</string>
+    <string name="settings_section_security">Security</string>
+    <string name="settings_section_pro">Pro (staging)</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_identity_loading">Loading anonymous ID…</string>
+
+    <!-- FCM -->
+    <string name="fcm_channel_id">vanishx_mailbox</string>
+    <string name="fcm_channel_name">Mailbox</string>
+    <string name="fcm_channel_description">Alerts when a temporary room may have new messages</string>
+    <string name="fcm_notification_title">New mailbox activity</string>
+    <string name="fcm_notification_body">Open the room to sync encrypted messages.</string>
 </resources>

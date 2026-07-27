@@ -14,8 +14,9 @@ data class PurgeExpiredRoomResult(
 )
 
 /**
- * Marks room expired, wipes local plaintext for the room, and removes remote mailbox messages
- * without decrypting. Room meta is left for invite discovery / status.
+ * Marks room expired and removes remote mailbox messages without decrypting.
+ * Local plaintext is kept for Pro archive / Free locked gate (story 5.6).
+ * Room meta is left for invite discovery / Ping.
  */
 class PurgeExpiredRoomUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
@@ -27,7 +28,6 @@ class PurgeExpiredRoomUseCase @Inject constructor(
             ?: error("Room not found")
         mailboxRepository.upsertRoom(room.copy(status = MailboxRoom.STATUS_EXPIRED))
 
-        val localDeleted = mailboxRepository.deleteMessagesForRoom(roomId)
         val remotePurged = runCatching {
             remote.deleteAllMessages(roomId)
         }.onFailure { e ->
@@ -38,7 +38,7 @@ class PurgeExpiredRoomUseCase @Inject constructor(
 
         return PurgeExpiredRoomResult(
             roomId = roomId,
-            localDeleted = localDeleted,
+            localDeleted = 0,
             remotePurged = remotePurged,
         )
     }

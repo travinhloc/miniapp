@@ -1,7 +1,9 @@
 package com.vault.vanishx.presentation.home
 
 import app.cash.turbine.test
+import com.vault.vanishx.data.invite.PendingInviteStore
 import com.vault.vanishx.domain.model.Identity
+import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
@@ -32,6 +34,8 @@ class HomeViewModelTest {
     private val ensureIdentity: EnsureIdentityUseCase = mockk()
     private val syncActiveMailboxes: SyncActiveMailboxesUseCase = mockk()
     private val consumePendingInvite: ConsumePendingInviteUseCase = mockk()
+    private val mailboxRepository: MailboxRepository = mockk(relaxed = true)
+    private val pendingInviteStore: PendingInviteStore = mockk(relaxed = true)
     private val proEntitlement: ProEntitlementRepository = mockk(relaxed = true)
     private val proFlow = MutableStateFlow(false)
 
@@ -44,6 +48,7 @@ class HomeViewModelTest {
             publicKeyBase64 = "pub",
         )
         coEvery { consumePendingInvite() } returns null
+        coEvery { mailboxRepository.getAllRooms() } returns emptyList()
         coEvery { syncActiveMailboxes() } returns SyncActiveMailboxesResult(
             activeCount = 0,
             purgedCount = 0,
@@ -56,6 +61,8 @@ class HomeViewModelTest {
             ensureIdentity = ensureIdentity,
             syncActiveMailboxes = syncActiveMailboxes,
             consumePendingInvite = consumePendingInvite,
+            mailboxRepository = mailboxRepository,
+            pendingInviteStore = pendingInviteStore,
             proEntitlement = proEntitlement,
             dispatchersProvider = coroutinesRule.testDispatcherProvider,
         )
@@ -85,7 +92,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `Resume syncs active mailboxes and updates count`() = runTest {
+    fun `Resume syncs active mailboxes`() = runTest {
         coEvery { syncActiveMailboxes() } returns SyncActiveMailboxesResult(
             activeCount = 2,
             purgedCount = 1,
@@ -96,10 +103,8 @@ class HomeViewModelTest {
         viewModel.onAction(HomeAction.Resume)
         advanceUntilIdle()
 
-        viewModel.uiState.test {
-            expectMostRecentItem().activeRoomCount shouldBe 2
-        }
         coVerify(atLeast = 1) { syncActiveMailboxes() }
+        coVerify(atLeast = 1) { mailboxRepository.getAllRooms() }
     }
 
     @Test
@@ -109,9 +114,9 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `OpenSecurity navigates to settings`() = runTest {
+    fun `OpenSettings navigates to settings`() = runTest {
         viewModel.navigator.test {
-            viewModel.onAction(HomeAction.OpenSecurity)
+            viewModel.onAction(HomeAction.OpenSettings)
             awaitItem() shouldBe SecurityDestination.Settings
         }
     }

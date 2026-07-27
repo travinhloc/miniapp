@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("TooManyFunctions", "ComplexMethod")
 
 package com.vault.vanishx.presentation.mailbox
 
@@ -77,6 +77,15 @@ private fun RoomContent(
         when {
             uiState.isLoading -> RoomLoading(modifier = Modifier.weight(1f))
             uiState.room?.status == MailboxRoom.STATUS_LEFT -> RoomLeft(modifier = Modifier.weight(1f))
+            uiState.isExpired && !uiState.isPro -> RoomExpiredFree(
+                modifier = Modifier.weight(1f),
+                onAction = onAction,
+            )
+            uiState.isExpired && uiState.isPro -> RoomExpiredProArchive(
+                uiState = uiState,
+                onAction = onAction,
+                modifier = Modifier.weight(1f),
+            )
             uiState.isExpired -> RoomExpired(modifier = Modifier.weight(1f))
             else -> RoomActiveBody(
                 uiState = uiState,
@@ -135,6 +144,24 @@ private fun RoomContent(
             },
             dismissButton = {
                 TextButton(onClick = { onAction(RoomAction.DismissReport) }) {
+                    Text(text = stringResource(R.string.action_back))
+                }
+            },
+        )
+    }
+
+    if (uiState.showPingConfirm) {
+        AlertDialog(
+            onDismissRequest = { onAction(RoomAction.DismissPing) },
+            title = { Text(text = stringResource(R.string.room_ping_title)) },
+            text = { Text(text = stringResource(R.string.room_ping_body)) },
+            confirmButton = {
+                TextButton(onClick = { onAction(RoomAction.PingRoom) }) {
+                    Text(text = stringResource(R.string.room_ping_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onAction(RoomAction.DismissPing) }) {
                     Text(text = stringResource(R.string.action_back))
                 }
             },
@@ -218,6 +245,76 @@ private fun RoomLoading(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(text = stringResource(R.string.room_loading))
+    }
+}
+
+@Composable
+private fun RoomExpiredFree(
+    onAction: (RoomAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(dimensions.spacingMedium),
+        ) {
+            Text(
+                text = stringResource(R.string.room_locked_title),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(dimensions.spacingSmall))
+            Text(
+                text = stringResource(R.string.room_locked_body),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(dimensions.spacingMedium))
+            Button(onClick = { onAction(RoomAction.OpenPaywall) }) {
+                Text(text = stringResource(R.string.history_open_pro))
+            }
+            TextButton(onClick = { onAction(RoomAction.Back) }) {
+                Text(text = stringResource(R.string.room_back_history))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoomExpiredProArchive(
+    uiState: RoomUiState,
+    onAction: (RoomAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.room_archive_banner),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = dimensions.spacingSmall),
+            textAlign = TextAlign.Center,
+        )
+        RoomMessageList(
+            messages = uiState.messages,
+            isPro = true,
+            isExpired = true,
+            isRecalling = false,
+            onAction = onAction,
+            modifier = Modifier.weight(1f),
+        )
+        Button(
+            onClick = { onAction(RoomAction.PingRoom) },
+            enabled = !uiState.pingBusy,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(text = stringResource(R.string.room_ping))
+        }
     }
 }
 
@@ -339,11 +436,26 @@ private fun RoomMessageList(
             modifier = modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = stringResource(R.string.room_empty_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(dimensions.spacingMedium),
+            ) {
+                Text(
+                    text = stringResource(R.string.room_empty_e2e_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(dimensions.spacingSmall))
+                Text(
+                    text = stringResource(R.string.room_empty_e2e_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     } else {
         LazyColumn(
@@ -407,7 +519,7 @@ private fun MessageBubble(
                 .clip(RoundedCornerShape(RoomUiDimens.bubbleCorner))
                 .background(
                     if (mine) {
-                        MaterialTheme.colorScheme.primaryContainer
+                        MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant
                     },
@@ -423,18 +535,23 @@ private fun MessageBubble(
                     )
                 }
                 else -> {
-                    if (mine) {
-                        Text(
-                            text = stringResource(R.string.room_sent_tag),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.height(RoomUiDimens.sentTagGap))
-                    }
                     Text(
                         text = message.body,
                         style = MaterialTheme.typography.bodyMedium,
+                        color = if (mine) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
                     )
+                    if (mine) {
+                        Spacer(modifier = Modifier.height(RoomUiDimens.sentTagGap))
+                        Text(
+                            text = "✓✓",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
+                        )
+                    }
                     if (canRecall) {
                         TextButton(onClick = onRecall) {
                             Text(text = stringResource(R.string.room_recall))

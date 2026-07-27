@@ -22,6 +22,9 @@ interface MailboxRoomDao {
     @Query("SELECT * FROM rooms WHERE status = :status ORDER BY createdAt DESC")
     suspend fun getByStatus(status: String): List<MailboxRoomEntity>
 
+    @Query("SELECT * FROM rooms ORDER BY createdAt DESC")
+    suspend fun getAll(): List<MailboxRoomEntity>
+
     @Query("SELECT * FROM rooms WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): MailboxRoomEntity?
 }

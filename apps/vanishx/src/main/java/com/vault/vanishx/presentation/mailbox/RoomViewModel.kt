@@ -8,14 +8,17 @@ import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.BlockPeerUseCase
 import com.vault.vanishx.domain.usecase.GetRoomUseCase
+import com.vault.vanishx.domain.usecase.PingRoomUseCase
 import com.vault.vanishx.domain.usecase.PurgeExpiredRoomUseCase
 import com.vault.vanishx.domain.usecase.RecallRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.ReportRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
+import com.vault.vanishx.presentation.paywall.PaywallDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -51,6 +54,9 @@ data class RoomUiState(
     val reportReason: String = "",
     val errorMessage: String? = null,
     val infoMessage: String? = null,
+    val showPingConfirm: Boolean = false,
+    val pingBusy: Boolean = false,
+    val remoteMetaPresent: Boolean? = null,
 )
 
 sealed interface RoomAction {
@@ -67,19 +73,24 @@ sealed interface RoomAction {
     data class ReportReasonChanged(val value: String) : RoomAction
     data object SubmitReport : RoomAction
     data class RecallMessage(val messageId: String) : RoomAction
+    data object OpenPaywall : RoomAction
+    data object PingRoom : RoomAction
+    data object DismissPing : RoomAction
 }
 
 @HiltViewModel
-@Suppress("LargeClass", "TooManyFunctions")
+@Suppress("LargeClass", "TooManyFunctions", "ComplexMethod", "ComplexCondition")
 class RoomViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getRoom: GetRoomUseCase,
     private val sendRoomMessage: SendRoomMessageUseCase,
     private val syncRoomMailbox: SyncRoomMailboxUseCase,
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
+    private val pingRoom: PingRoomUseCase,
     private val blockPeer: BlockPeerUseCase,
     private val reportRoom: ReportRoomUseCase,
     private val recallRoomMessage: RecallRoomMessageUseCase,
+    private val mailboxRepository: MailboxRepository,
     private val proEntitlement: ProEntitlementRepository,
     private val remote: MailboxRemoteDataSource,
     private val dispatchersProvider: DispatchersProvider,
@@ -146,8 +157,45 @@ class RoomViewModel @Inject constructor(
             }
             RoomAction.SubmitReport -> submitReport()
             is RoomAction.RecallMessage -> recall(action.messageId)
+            RoomAction.OpenPaywall -> launch { _navigator.emit(PaywallDestination.Paywall) }
+            RoomAction.PingRoom -> confirmPing()
+            RoomAction.DismissPing -> _uiState.update {
+                it.copy(showPingConfirm = false, remoteMetaPresent = null)
+            }
             else -> Unit
         }
+    }
+
+    private fun confirmPing() {
+        val state = _uiState.value
+        if (!state.isExpired || !state.isPro || state.pingBusy) return
+        if (!state.showPingConfirm) {
+            _uiState.update { it.copy(showPingConfirm = true, errorMessage = null) }
+            return
+        }
+        _uiState.update { it.copy(pingBusy = true) }
+        flow { emit(pingRoom(roomId)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { result ->
+                _uiState.update {
+                    it.copy(
+                        pingBusy = false,
+                        showPingConfirm = false,
+                        remoteMetaPresent = result.remoteMetaPresent,
+                        infoMessage = if (result.remoteMetaPresent) {
+                            "Remote room meta still present — ping noted"
+                        } else {
+                            "Remote meta gone — cannot ping"
+                        },
+                    )
+                }
+            }
+            .catch { e ->
+                _uiState.update {
+                    it.copy(pingBusy = false, errorMessage = friendlyError(e))
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun recall(messageId: String) {
@@ -248,18 +296,31 @@ class RoomViewModel @Inject constructor(
     }
 
     private fun purgeAndShowExpired() {
-        _uiState.update { it.copy(isPurging = true, messages = emptyList()) }
-        flow { emit(purgeExpiredRoom(roomId)) }
+        val keepLocal = _uiState.value.isPro
+        if (!keepLocal) {
+            _uiState.update { it.copy(isPurging = true, messages = emptyList()) }
+        } else {
+            _uiState.update { it.copy(isPurging = true) }
+        }
+        flow {
+            val result = purgeExpiredRoom(roomId)
+            val local = if (_uiState.value.isPro) {
+                mailboxRepository.getMessages(roomId)
+            } else {
+                emptyList()
+            }
+            emit(result to local)
+        }
             .flowOn(dispatchersProvider.io)
-            .onEach { result ->
+            .onEach { (result, local) ->
                 _uiState.update {
                     it.copy(
                         isPurging = false,
                         isExpired = true,
-                        messages = emptyList(),
+                        messages = if (it.isPro) local else emptyList(),
                         room = it.room?.copy(status = MailboxRoom.STATUS_EXPIRED),
                         infoMessage = if (!result.remotePurged) {
-                            "Local mailbox cleared; remote purge may need retry when online"
+                            "Remote purge may need retry when online"
                         } else {
                             null
                         },
@@ -272,7 +333,7 @@ class RoomViewModel @Inject constructor(
                     it.copy(
                         isPurging = false,
                         isExpired = true,
-                        messages = emptyList(),
+                        messages = if (it.isPro) it.messages else emptyList(),
                         errorMessage = friendlyError(e),
                     )
                 }
