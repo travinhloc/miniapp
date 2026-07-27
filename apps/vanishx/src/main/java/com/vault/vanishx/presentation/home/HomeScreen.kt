@@ -56,8 +56,8 @@ import com.vault.vanishx.presentation.util.formatRemainingMs
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel(),
     navigator: (destination: BaseDestination) -> Unit,
+    viewModel: HomeViewModel = hiltViewModel(),
     createdInviteUri: String? = null,
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -107,6 +107,7 @@ fun HomeScreen(
     )
 }
 
+@Suppress("ComplexMethod")
 @Composable
 private fun HomeScreenContent(
     uiState: HomeUiState,

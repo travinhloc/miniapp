@@ -27,6 +27,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
+@Suppress("TooManyFunctions", "ComplexMethod")
 class HomeViewModel @Inject constructor(
     private val ensureIdentity: EnsureIdentityUseCase,
     private val syncActiveMailboxes: SyncActiveMailboxesUseCase,
@@ -121,40 +122,42 @@ class HomeViewModel @Inject constructor(
 
     fun onAction(action: HomeAction) {
         when (action) {
-            HomeAction.CreateRoom -> launch {
-                _navigator.emit(MailboxDestination.Create)
-            }
-            HomeAction.JoinRoom, HomeAction.ScanQr -> launch {
-                _navigator.emit(MailboxDestination.Join)
-            }
+            HomeAction.CreateRoom -> navigateCreate()
+            HomeAction.JoinRoom, HomeAction.ScanQr -> navigateJoin()
             HomeAction.Resume -> syncOnOpen()
-            HomeAction.OpenSettings -> launch {
-                _navigator.emit(SecurityDestination.Settings)
-            }
-            HomeAction.OpenHistory -> launch {
-                _navigator.emit(HistoryDestination.History)
-            }
-            HomeAction.ToggleProStub -> {
-                if (!isProStubToggleEnabled()) return
-                proEntitlement.setProStub(!_uiState.value.isProStub)
-            }
+            HomeAction.OpenSettings -> navigateSettings()
+            HomeAction.OpenHistory -> navigateHistory()
+            HomeAction.ToggleProStub -> toggleProStub()
             is HomeAction.InviteDraftChanged -> _uiState.update {
                 it.copy(inviteDraft = action.value, errorMessage = null)
             }
-            HomeAction.JoinFromDraft -> {
-                val draft = _uiState.value.inviteDraft.trim()
-                if (draft.isEmpty()) {
-                    _uiState.update { it.copy(errorMessage = "Hãy dán link mời") }
-                    return
-                }
-                pendingInviteStore.save(draft)
-                launch { _navigator.emit(MailboxDestination.Join) }
-            }
-            is HomeAction.OpenRoom -> launch {
-                _navigator.emit(MailboxDestination.Room(action.roomId))
-            }
+            HomeAction.JoinFromDraft -> joinFromDraft()
+            is HomeAction.OpenRoom -> navigateRoom(action.roomId)
             HomeAction.DismissShareHint -> _uiState.update { it.copy(shareHintUri = null) }
         }
+    }
+
+    private fun navigateCreate() = launch { _navigator.emit(MailboxDestination.Create) }
+    private fun navigateJoin() = launch { _navigator.emit(MailboxDestination.Join) }
+    private fun navigateSettings() = launch { _navigator.emit(SecurityDestination.Settings) }
+    private fun navigateHistory() = launch { _navigator.emit(HistoryDestination.History) }
+    private fun navigateRoom(roomId: String) = launch {
+        _navigator.emit(MailboxDestination.Room(roomId))
+    }
+
+    private fun toggleProStub() {
+        if (!isProStubToggleEnabled()) return
+        proEntitlement.setProStub(!_uiState.value.isProStub)
+    }
+
+    private fun joinFromDraft() {
+        val draft = _uiState.value.inviteDraft.trim()
+        if (draft.isEmpty()) {
+            _uiState.update { it.copy(errorMessage = "Hãy dán link mời") }
+            return
+        }
+        pendingInviteStore.save(draft)
+        navigateJoin()
     }
 
     fun onReturnedFromCreate(inviteUri: String?) {

@@ -1,5 +1,6 @@
 package com.vault.vanishx.presentation.splash
 
+import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -28,14 +29,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import android.provider.Settings
 import com.vault.vanishx.R
 import com.vault.vanishx.presentation.theme.VanishXColors
 import kotlinx.coroutines.delay
 
+private const val SPLASH_DELAY_MS = 1_800L
+private const val SPLASH_DELAY_REDUCED_MS = 400L
+private const val RIPPLE_DURATION_MS = 2_200
+private const val RIPPLE_CENTER_Y_FRACTION = 0.42f
+private const val RIPPLE_MAX_RADIUS_FRACTION = 0.55f
+private const val RIPPLE_PHASE_STEP = 0.28f
+private const val RIPPLE_ALPHA_PRIMARY = 0.22f
+private const val RIPPLE_ALPHA_ACCENT = 0.18f
+private const val RIPPLE_ALPHA_FAINT = 0.10f
+private val LogoSize = 88.dp
+private val BrandGap = 24.dp
+private val TaglineGap = 8.dp
+private val ProtectingGap = 32.dp
+
 @Composable
 fun SplashScreen(
     onFinished: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val reduceMotion = remember {
@@ -46,12 +61,12 @@ fun SplashScreen(
         ) == 0f
     }
     LaunchedEffect(Unit) {
-        delay(if (reduceMotion) 400L else 1_800L)
+        delay(if (reduceMotion) SPLASH_DELAY_REDUCED_MS else SPLASH_DELAY_MS)
         onFinished()
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(VanishXColors.Bg),
         contentAlignment = Alignment.Center,
@@ -62,7 +77,7 @@ fun SplashScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 modifier = Modifier
-                    .size(88.dp)
+                    .size(LogoSize)
                     .background(VanishXColors.Surface, shape = MaterialTheme.shapes.large),
                 contentAlignment = Alignment.Center,
             ) {
@@ -72,20 +87,20 @@ fun SplashScreen(
                     color = VanishXColors.Primary,
                 )
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(BrandGap))
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
                 color = VanishXColors.OnSurface,
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(TaglineGap))
             Text(
                 text = stringResource(R.string.splash_tagline),
                 style = MaterialTheme.typography.bodyMedium,
                 color = VanishXColors.Muted,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(ProtectingGap))
             Text(
                 text = stringResource(R.string.splash_protecting),
                 style = MaterialTheme.typography.labelMedium,
@@ -102,20 +117,20 @@ private fun RippleBackdrop() {
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2_200, easing = LinearEasing),
+            animation = tween(durationMillis = RIPPLE_DURATION_MS, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "pulse",
     )
     Canvas(modifier = Modifier.fillMaxSize()) {
-        val center = Offset(size.width / 2f, size.height * 0.42f)
-        val maxR = size.minDimension * 0.55f
+        val center = Offset(size.width / 2f, size.height * RIPPLE_CENTER_Y_FRACTION)
+        val maxR = size.minDimension * RIPPLE_MAX_RADIUS_FRACTION
         listOf(
-            VanishXColors.Primary.copy(alpha = 0.22f),
-            VanishXColors.Accent.copy(alpha = 0.18f),
-            VanishXColors.Primary.copy(alpha = 0.10f),
+            VanishXColors.Primary.copy(alpha = RIPPLE_ALPHA_PRIMARY),
+            VanishXColors.Accent.copy(alpha = RIPPLE_ALPHA_ACCENT),
+            VanishXColors.Primary.copy(alpha = RIPPLE_ALPHA_FAINT),
         ).forEachIndexed { index, color ->
-            val t = ((pulse + index * 0.28f) % 1f)
+            val t = ((pulse + index * RIPPLE_PHASE_STEP) % 1f)
             drawCircle(
                 color = color,
                 radius = maxR * t,

@@ -44,9 +44,11 @@ fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomIt
         id = id,
         displayName = nickname?.takeIf { it.isNotBlank() }
             ?: title?.takeIf { it.isNotBlank() }
-            ?: "···${id.takeLast(6)}",
+            ?: "···${id.takeLast(ROOM_ID_SUFFIX_LEN)}",
         remainingMs = if (expiresAt > 0L) (expiresAt - nowMs).coerceAtLeast(0L) else 0L,
         isExpired = expired,
         role = role,
     )
 }
+
+private const val ROOM_ID_SUFFIX_LEN = 6
