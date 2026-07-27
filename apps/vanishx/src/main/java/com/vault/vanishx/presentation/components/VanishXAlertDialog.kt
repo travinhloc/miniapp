@@ -13,12 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vault.vanishx.presentation.theme.VanishXColors
 
-enum class VanishXAlertTone {
-    Primary,
-    Accent,
-    Danger,
-    Warn,
-}
+private val DialogCorner = 16.dp
+private val ButtonCorner = 8.dp
+private const val CONFIRM_BUTTON_WIDTH_FRACTION = 0.45f
 
 @Composable
 fun VanishXAlertDialog(
@@ -50,7 +47,7 @@ fun VanishXAlertDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(DialogCorner),
         containerColor = VanishXColors.Surface,
         title = {
             Text(text = title, style = MaterialTheme.typography.titleLarge)
@@ -66,8 +63,8 @@ fun VanishXAlertDialog(
             Button(
                 onClick = onConfirm,
                 colors = confirmColors,
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth(0.45f),
+                shape = RoundedCornerShape(ButtonCorner),
+                modifier = Modifier.fillMaxWidth(CONFIRM_BUTTON_WIDTH_FRACTION),
             ) {
                 Text(text = confirmLabel)
             }

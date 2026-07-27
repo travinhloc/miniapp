@@ -35,8 +35,8 @@ import com.vault.vanishx.presentation.theme.VanishXColors
 
 @Composable
 fun LockScreen(
-    viewModel: LockViewModel = hiltViewModel(),
     onUnlocked: () -> Unit,
+    viewModel: LockViewModel = hiltViewModel(),
     onWiped: () -> Unit = {},
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -51,16 +51,19 @@ fun LockScreen(
     }
 
     LaunchedEffect(uiState.biometricAvailable, uiState.promptBiometric) {
-        if (uiState.promptBiometric && activity != null &&
+        val shouldPrompt = uiState.promptBiometric &&
+            activity != null &&
             BiometricUnlockHelper.canAuthenticate(activity)
-        ) {
+        if (shouldPrompt) {
             BiometricUnlockHelper.prompt(
                 activity = activity,
-                title = context.getString(R.string.lock_bio_title),
-                subtitle = context.getString(R.string.lock_bio_subtitle),
-                negative = context.getString(R.string.lock_bio_negative),
-                onSuccess = { viewModel.onAction(LockAction.BiometricSuccess) },
-                onError = { viewModel.onAction(LockAction.BiometricFailed(it)) },
+                request = BiometricPromptRequest(
+                    title = context.getString(R.string.lock_bio_title),
+                    subtitle = context.getString(R.string.lock_bio_subtitle),
+                    negative = context.getString(R.string.lock_bio_negative),
+                    onSuccess = { viewModel.onAction(LockAction.BiometricSuccess) },
+                    onError = { viewModel.onAction(LockAction.BiometricFailed(it)) },
+                ),
             )
             viewModel.onAction(LockAction.BiometricPromptShown)
         }
@@ -75,6 +78,7 @@ fun LockScreen(
     )
 }
 
+@Suppress("ComplexMethod")
 @Composable
 private fun LockContent(
     uiState: LockUiState,

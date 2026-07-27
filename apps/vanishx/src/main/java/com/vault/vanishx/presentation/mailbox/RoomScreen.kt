@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("TooManyFunctions", "ComplexMethod")
 
 package com.vault.vanishx.presentation.mailbox
 

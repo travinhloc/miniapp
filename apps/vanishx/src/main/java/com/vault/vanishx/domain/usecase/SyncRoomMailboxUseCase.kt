@@ -159,8 +159,9 @@ class SyncRoomMailboxUseCase @Inject constructor(
         remoteMessage: RemoteMailboxMessage,
         myPub: String,
     ): ProcessResult? {
-        if (remoteMessage.senderPub == myPub) return null
-        if (!blockRepository.isBlocked(remoteMessage.senderPub)) return null
+        val shouldSkip = remoteMessage.senderPub == myPub ||
+            !blockRepository.isBlocked(remoteMessage.senderPub)
+        if (shouldSkip) return null
         runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
         return ProcessResult.REMOVED_ONLY
     }

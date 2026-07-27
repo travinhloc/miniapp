@@ -61,6 +61,7 @@ class LockViewModel @Inject constructor(
     )
     val uiState: StateFlow<LockUiState> = _uiState.asStateFlow()
 
+    @Suppress("ComplexMethod")
     fun onAction(action: LockAction) {
         when (action) {
             is LockAction.Digit -> appendDigit(action.value)

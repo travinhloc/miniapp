@@ -354,7 +354,7 @@ style:
 Compose:
   CompositionLocalAllowlist:
     active: true
-    allowedCompositionLocals: LocalAppColors,LocalAppDimensions,LocalAppShapes,LocalAppStyles,LocalAppTypography
+    allowedCompositionLocals: LocalAppColors,LocalAppDimensions,LocalAppShapes,LocalAppStyles,LocalAppTypography,LocalVanishXExtra
   ContentEmitterReturningValues:
     active: true
   DefaultsVisibility:

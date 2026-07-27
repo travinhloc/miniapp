@@ -79,7 +79,7 @@ sealed interface RoomAction {
 }
 
 @HiltViewModel
-@Suppress("LargeClass", "TooManyFunctions")
+@Suppress("LargeClass", "TooManyFunctions", "ComplexMethod", "ComplexCondition")
 class RoomViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getRoom: GetRoomUseCase,

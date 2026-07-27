@@ -81,6 +81,7 @@ class JoinRoomViewModel @Inject constructor(
         }
     }
 
+    @Suppress("ComplexMethod")
     fun onAction(action: JoinRoomAction) {
         when (action) {
             is JoinRoomAction.InputChanged -> _uiState.update {
@@ -122,17 +123,7 @@ class JoinRoomViewModel @Inject constructor(
     }
 
     private fun join(navigateToRoom: Boolean) {
-        if (_uiState.value.isJoining) return
-        val preview = _uiState.value.preview
-        val raw = preview?.rawInvite ?: _uiState.value.input.trim()
-        if (raw.isEmpty()) {
-            _uiState.update { it.copy(errorMessage = "Invite is empty") }
-            return
-        }
-        if (preview == null) {
-            showPreview(raw)
-            if (_uiState.value.preview == null) return
-        }
+        val raw = resolveJoinRaw() ?: return
         val nickname = _uiState.value.nickname.takeIf { it.isNotBlank() }
         _uiState.update { it.copy(isJoining = true, errorMessage = null) }
         flow { emit(joinRoom(raw, nickname)) }
@@ -157,10 +148,29 @@ class JoinRoomViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun resolveJoinRaw(): String? {
+        if (_uiState.value.isJoining) return null
+        val preview = _uiState.value.preview
+        val raw = preview?.rawInvite ?: _uiState.value.input.trim()
+        val invalidEmpty = raw.isEmpty()
+        if (invalidEmpty) {
+            _uiState.update { it.copy(errorMessage = "Invite is empty") }
+        }
+        val needsPreview = !invalidEmpty && preview == null
+        if (needsPreview) {
+            showPreview(raw)
+        }
+        val ready = !invalidEmpty && (preview != null || _uiState.value.preview != null)
+        return raw.takeIf { ready }
+    }
+
     private companion object {
         const val NICKNAME_MAX = 24
     }
 }
+
+private const val PREVIEW_TITLE_SUFFIX = 6
+private const val PREVIEW_ID_SUFFIX = 4
 
 private fun RoomInvite.toPreview(rawInvite: String): JoinInvitePreview {
     val now = System.currentTimeMillis()
@@ -169,8 +179,8 @@ private fun RoomInvite.toPreview(rawInvite: String): JoinInvitePreview {
     }
     return JoinInvitePreview(
         rawInvite = rawInvite,
-        roomTitle = "···${roomId.takeLast(6)}",
-        roomIdLabel = "···${roomId.takeLast(4).uppercase()}",
+        roomTitle = "···${roomId.takeLast(PREVIEW_TITLE_SUFFIX)}",
+        roomIdLabel = "···${roomId.takeLast(PREVIEW_ID_SUFFIX).uppercase()}",
         remainingLabel = remaining,
     )
 }

@@ -11,20 +11,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vault.vanishx.presentation.theme.VanishXColors
 
+private val DotSize = 14.dp
+private val DotGap = 12.dp
+private const val DEFAULT_PIN_LENGTH = 4
+
 @Composable
 fun PinDots(
     filled: Int,
-    total: Int = 4,
     modifier: Modifier = Modifier,
+    total: Int = DEFAULT_PIN_LENGTH,
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(DotGap),
     ) {
         repeat(total) { index ->
             Surface(
-                modifier = Modifier.size(14.dp),
-                shape = RoundedCornerShape(50),
+                modifier = Modifier.size(DotSize),
+                shape = RoundedCornerShape(percent = 50),
                 color = if (index < filled) {
                     VanishXColors.Primary
                 } else {

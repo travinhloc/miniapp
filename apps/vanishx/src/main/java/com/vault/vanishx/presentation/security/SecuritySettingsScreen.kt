@@ -49,6 +49,7 @@ fun SecuritySettingsScreen(
     )
 }
 
+@Suppress("ComplexMethod")
 @Composable
 private fun SecuritySettingsContent(
     uiState: SecuritySettingsUiState,

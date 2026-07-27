@@ -5,6 +5,14 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
+data class BiometricPromptRequest(
+    val title: String,
+    val subtitle: String,
+    val negative: String,
+    val onSuccess: () -> Unit,
+    val onError: (String) -> Unit = {},
+)
+
 object BiometricUnlockHelper {
 
     fun canAuthenticate(activity: FragmentActivity): Boolean {
@@ -17,11 +25,7 @@ object BiometricUnlockHelper {
 
     fun prompt(
         activity: FragmentActivity,
-        title: String,
-        subtitle: String,
-        negative: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit = {},
+        request: BiometricPromptRequest,
     ) {
         val executor = ContextCompat.getMainExecutor(activity)
         val prompt = BiometricPrompt(
@@ -31,25 +35,26 @@ object BiometricUnlockHelper {
                 override fun onAuthenticationSucceeded(
                     result: BiometricPrompt.AuthenticationResult,
                 ) {
-                    onSuccess()
+                    request.onSuccess()
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    if (errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON &&
-                        errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
-                        errorCode != BiometricPrompt.ERROR_CANCELED
-                    ) {
-                        onError(errString.toString())
-                    }
+                    if (isUserDismissed(errorCode)) return
+                    request.onError(errString.toString())
                 }
             },
         )
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
-                .setTitle(title)
-                .setSubtitle(subtitle)
-                .setNegativeButtonText(negative)
+                .setTitle(request.title)
+                .setSubtitle(request.subtitle)
+                .setNegativeButtonText(request.negative)
                 .build(),
         )
     }
+
+    private fun isUserDismissed(errorCode: Int): Boolean =
+        errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+            errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+            errorCode == BiometricPrompt.ERROR_CANCELED
 }
