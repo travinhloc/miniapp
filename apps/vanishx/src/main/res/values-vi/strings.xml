@@ -10,11 +10,15 @@
 
     <!-- Auth setup -->
     <string name="auth_setup_title">Đặt PIN mở khóa</string>
-    <string name="auth_setup_enter">Nhập PIN 4 số</string>
-    <string name="auth_setup_confirm">Xác nhận PIN</string>
-    <string name="auth_setup_biometric">Dùng vân tay / khuôn mặt lần sau?</string>
-    <string name="auth_setup_enable_bio">Bật sinh trắc học</string>
-    <string name="auth_setup_skip_bio">Bỏ qua</string>
+    <string name="auth_setup_enter">Chọn PIN gồm 4 số</string>
+    <string name="auth_setup_confirm">Nhập lại PIN lần nữa</string>
+    <string name="auth_setup_biometric">Mở khóa nhanh lần sau?</string>
+    <string name="auth_setup_enable_bio">Dùng vân tay / khuôn mặt</string>
+    <string name="auth_setup_skip_bio">Chỉ dùng PIN</string>
+    <string name="auth_setup_round_enter">PIN mới</string>
+    <string name="auth_setup_round_confirm">Xác nhận</string>
+    <string name="auth_setup_mismatch">PIN không khớp. Thử lại.</string>
+    <string name="auth_setup_bio_hint">Bạn luôn mở khóa bằng PIN được.</string>
 
     <!-- Home -->
     <string name="home_tagline">Chat tạm · ẩn danh · tự hết hạn</string>
@@ -149,17 +153,19 @@
 
     <!-- Lock -->
     <string name="lock_title">VanishX đã khóa</string>
-    <string name="lock_subtitle">Nhập PIN mở khóa. Panic PIN xóa sạch dữ liệu local ngay.</string>
+    <string name="lock_subtitle">Nhập PIN 4 số để tiếp tục.</string>
     <string name="lock_pin_label">PIN</string>
     <string name="lock_unlock">Mở khóa</string>
     <string name="lock_wiping">Đang xóa…</string>
-    <string name="lock_bio_title">Mở khóa bằng sinh trắc học</string>
-    <string name="lock_bio_subtitle">Xác nhận danh tính</string>
+    <string name="lock_bio_title">Mở khóa bằng vân tay / khuôn mặt</string>
+    <string name="lock_bio_subtitle">Xác nhận đó là bạn</string>
     <string name="lock_bio_negative">Dùng PIN</string>
     <string name="lock_burn_title">Quá nhiều lần thử</string>
-    <string name="lock_burn_body">Đang xóa sạch dữ liệu local…</string>
+    <string name="lock_burn_body">Đã xóa toàn bộ dữ liệu trên máy này.</string>
+    <string name="lock_burn_progress">Đang xóa toàn bộ dữ liệu…</string>
     <string name="lock_attempts_left">Còn %1$d lần thử</string>
-    <string name="lock_use_bio">Dùng sinh trắc học</string>
+    <string name="lock_wrong_pin">PIN sai. Còn %1$d lần thử.</string>
+    <string name="lock_use_bio">Vân tay / khuôn mặt</string>
 
     <!-- Settings -->
     <string name="security_title">Cài đặt</string>

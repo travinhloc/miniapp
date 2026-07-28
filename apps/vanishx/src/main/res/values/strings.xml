@@ -10,11 +10,15 @@
 
     <!-- Auth setup -->
     <string name="auth_setup_title">Set unlock PIN</string>
-    <string name="auth_setup_enter">Enter a 4-digit PIN</string>
-    <string name="auth_setup_confirm">Confirm your PIN</string>
-    <string name="auth_setup_biometric">Use biometrics next time?</string>
-    <string name="auth_setup_enable_bio">Enable biometrics</string>
-    <string name="auth_setup_skip_bio">Skip for now</string>
+    <string name="auth_setup_enter">Choose a 4-digit PIN</string>
+    <string name="auth_setup_confirm">Enter the same PIN again</string>
+    <string name="auth_setup_biometric">Unlock faster next time?</string>
+    <string name="auth_setup_enable_bio">Use fingerprint / face</string>
+    <string name="auth_setup_skip_bio">Use PIN only</string>
+    <string name="auth_setup_round_enter">New PIN</string>
+    <string name="auth_setup_round_confirm">Confirm</string>
+    <string name="auth_setup_mismatch">PINs don’t match. Try again.</string>
+    <string name="auth_setup_bio_hint">You can always unlock with your PIN.</string>
 
     <!-- Home -->
     <string name="home_tagline">Temporary chat · anonymous · auto-expires</string>
@@ -149,17 +153,19 @@
 
     <!-- Lock -->
     <string name="lock_title">VanishX is locked</string>
-    <string name="lock_subtitle">Enter unlock PIN. Panic PIN wipes all local data instantly.</string>
+    <string name="lock_subtitle">Enter your 4-digit PIN to continue.</string>
     <string name="lock_pin_label">PIN</string>
     <string name="lock_unlock">Unlock</string>
-    <string name="lock_wiping">Wiping…</string>
-    <string name="lock_bio_title">Unlock with biometrics</string>
-    <string name="lock_bio_subtitle">Confirm your identity</string>
+    <string name="lock_wiping">Deleting…</string>
+    <string name="lock_bio_title">Unlock with fingerprint / face</string>
+    <string name="lock_bio_subtitle">Confirm it’s you</string>
     <string name="lock_bio_negative">Use PIN</string>
     <string name="lock_burn_title">Too many attempts</string>
-    <string name="lock_burn_body">Wiping all local data…</string>
+    <string name="lock_burn_body">All data on this device has been deleted.</string>
+    <string name="lock_burn_progress">Deleting all data…</string>
     <string name="lock_attempts_left">%1$d attempts left</string>
-    <string name="lock_use_bio">Use biometrics</string>
+    <string name="lock_wrong_pin">Wrong PIN. %1$d attempts left.</string>
+    <string name="lock_use_bio">Fingerprint / face</string>
 
     <!-- Settings -->
     <string name="security_title">Security</string>
