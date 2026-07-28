@@ -112,6 +112,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         recentRooms = items.take(RECENT_LIMIT),
+                        totalRoomCount = items.size,
                         hasMoreRooms = items.size > RECENT_LIMIT,
                     )
                 }
@@ -129,10 +130,15 @@ class HomeViewModel @Inject constructor(
             HomeAction.OpenHistory -> navigateHistory()
             HomeAction.ToggleProStub -> toggleProStub()
             is HomeAction.InviteDraftChanged -> _uiState.update {
-                it.copy(inviteDraft = action.value, errorMessage = null)
+                it.copy(
+                    inviteDraft = action.value,
+                    inviteDraftEmpty = false,
+                    errorMessage = null,
+                )
             }
             HomeAction.JoinFromDraft -> joinFromDraft()
             is HomeAction.OpenRoom -> navigateRoom(action.roomId)
+            is HomeAction.DeleteRoom -> deleteRoom(action.roomId)
             HomeAction.DismissShareHint -> _uiState.update { it.copy(shareHintUri = null) }
         }
     }
@@ -153,11 +159,24 @@ class HomeViewModel @Inject constructor(
     private fun joinFromDraft() {
         val draft = _uiState.value.inviteDraft.trim()
         if (draft.isEmpty()) {
-            _uiState.update { it.copy(errorMessage = "Hãy dán link mời") }
+            _uiState.update { it.copy(inviteDraftEmpty = true) }
             return
         }
         pendingInviteStore.save(draft)
         navigateJoin()
+    }
+
+    private fun deleteRoom(roomId: String) {
+        flow {
+            val room = mailboxRepository.getRoom(roomId) ?: return@flow
+            mailboxRepository.deleteMessagesForRoom(roomId)
+            mailboxRepository.upsertRoom(room.copy(status = com.vault.vanishx.domain.model.MailboxRoom.STATUS_LEFT))
+            emit(Unit)
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach { refreshRooms() }
+            .catch { e -> Timber.w(e, "Delete room failed") }
+            .launchIn(viewModelScope)
     }
 
     fun onReturnedFromCreate(inviteUri: String?) {

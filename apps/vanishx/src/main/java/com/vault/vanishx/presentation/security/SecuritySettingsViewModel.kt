@@ -8,6 +8,7 @@ import com.vault.vanishx.data.security.SecurityPinStore
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.presentation.history.HistoryDestination
+import com.vault.vanishx.presentation.paywall.PaywallDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +45,8 @@ sealed interface SecuritySettingsAction {
     data object ClearPanicPin : SecuritySettingsAction
     data object ClearFeedback : SecuritySettingsAction
     data object OpenHistory : SecuritySettingsAction
+    data object OpenPaywall : SecuritySettingsAction
+    data object RestorePurchases : SecuritySettingsAction
     data object ToggleProStub : SecuritySettingsAction
     data object Back : SecuritySettingsAction
 }
@@ -86,6 +89,12 @@ class SecuritySettingsViewModel @Inject constructor(
             SecuritySettingsAction.ClearFeedback -> clearFeedback()
             SecuritySettingsAction.OpenHistory -> launch {
                 _navigator.emit(HistoryDestination.History)
+            }
+            SecuritySettingsAction.OpenPaywall -> launch {
+                _navigator.emit(PaywallDestination.Paywall)
+            }
+            SecuritySettingsAction.RestorePurchases -> _uiState.update {
+                it.copy(infoMessage = "Restore purchases is not available yet (IAP stub).")
             }
             SecuritySettingsAction.ToggleProStub -> {
                 if (!isProStubToggleEnabled()) return

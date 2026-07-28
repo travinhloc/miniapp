@@ -22,14 +22,15 @@ import javax.inject.Inject
 data class LockUiState(
     val pin: String = "",
     val isBusy: Boolean = false,
-    val errorMessage: String? = null,
     val unlocked: Boolean = false,
     val wiped: Boolean = false,
     val showBurnOverlay: Boolean = false,
     val attemptsLeft: Int = SecurityPinStore.MAX_UNLOCK_ATTEMPTS,
+    val showWrongPin: Boolean = false,
+    val shakeToken: Int = 0,
     val biometricEnabled: Boolean = false,
-    val biometricAvailable: Boolean = false,
     val promptBiometric: Boolean = false,
+    val biometricError: String? = null,
 )
 
 sealed interface LockAction {
@@ -40,8 +41,6 @@ sealed interface LockAction {
     data object BiometricPromptShown : LockAction
     data object BiometricSuccess : LockAction
     data class BiometricFailed(val message: String) : LockAction
-    @Deprecated("Use Digit/Backspace")
-    data class PinChanged(val value: String) : LockAction
 }
 
 @HiltViewModel
@@ -66,33 +65,31 @@ class LockViewModel @Inject constructor(
         when (action) {
             is LockAction.Digit -> appendDigit(action.value)
             LockAction.Backspace -> _uiState.update {
-                it.copy(pin = it.pin.dropLast(1), errorMessage = null)
-            }
-            is LockAction.PinChanged -> {
-                val digits = action.value.filter { it.isDigit() }
-                    .take(SecurityPinStore.PIN_LENGTH)
-                _uiState.update { it.copy(pin = digits, errorMessage = null) }
-                if (digits.length == SecurityPinStore.PIN_LENGTH) submit()
+                it.copy(pin = it.pin.dropLast(1), showWrongPin = false, biometricError = null)
             }
             LockAction.Submit -> submit()
-            LockAction.RequestBiometric -> _uiState.update { it.copy(promptBiometric = true) }
+            LockAction.RequestBiometric -> _uiState.update {
+                it.copy(promptBiometric = true, biometricError = null)
+            }
             LockAction.BiometricPromptShown -> _uiState.update { it.copy(promptBiometric = false) }
             LockAction.BiometricSuccess -> unlock()
             is LockAction.BiometricFailed -> _uiState.update {
-                it.copy(errorMessage = action.message, promptBiometric = false)
+                it.copy(biometricError = action.message, promptBiometric = false)
             }
         }
     }
 
     private fun appendDigit(digit: Char) {
-        if (_uiState.value.isBusy) return
+        if (_uiState.value.isBusy || _uiState.value.showBurnOverlay) return
         val next = (_uiState.value.pin + digit).take(SecurityPinStore.PIN_LENGTH)
-        _uiState.update { it.copy(pin = next, errorMessage = null) }
+        _uiState.update {
+            it.copy(pin = next, showWrongPin = false, biometricError = null)
+        }
         if (next.length == SecurityPinStore.PIN_LENGTH) submit()
     }
 
     private fun submit() {
-        if (_uiState.value.isBusy) return
+        if (_uiState.value.isBusy || _uiState.value.showBurnOverlay) return
         val pin = _uiState.value.pin
         if (pin.length != SecurityPinStore.PIN_LENGTH) return
         when (securityPinStore.verify(pin)) {
@@ -109,7 +106,8 @@ class LockViewModel @Inject constructor(
             it.copy(
                 unlocked = true,
                 pin = "",
-                errorMessage = null,
+                showWrongPin = false,
+                biometricError = null,
                 attemptsLeft = SecurityPinStore.MAX_UNLOCK_ATTEMPTS,
             )
         }
@@ -124,7 +122,8 @@ class LockViewModel @Inject constructor(
                     showBurnOverlay = true,
                     pin = "",
                     attemptsLeft = 0,
-                    errorMessage = null,
+                    showWrongPin = false,
+                    shakeToken = it.shakeToken + 1,
                 )
             }
             wipe()
@@ -133,14 +132,15 @@ class LockViewModel @Inject constructor(
                 it.copy(
                     pin = "",
                     attemptsLeft = left,
-                    errorMessage = "PIN sai. Còn $left lần thử.",
+                    showWrongPin = true,
+                    shakeToken = it.shakeToken + 1,
                 )
             }
         }
     }
 
     private fun wipe() {
-        _uiState.update { it.copy(isBusy = true, errorMessage = null) }
+        _uiState.update { it.copy(isBusy = true, showBurnOverlay = true) }
         flow { emit(panicWipe()) }
             .flowOn(dispatchersProvider.io)
             .onEach {
@@ -158,7 +158,7 @@ class LockViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isBusy = false,
-                        errorMessage = e.message ?: e::class.java.simpleName,
+                        biometricError = e.message ?: e::class.java.simpleName,
                     )
                 }
             }

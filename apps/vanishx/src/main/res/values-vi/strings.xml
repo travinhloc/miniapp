@@ -10,32 +10,44 @@
 
     <!-- Auth setup -->
     <string name="auth_setup_title">Đặt PIN mở khóa</string>
-    <string name="auth_setup_enter">Nhập PIN 4 số</string>
-    <string name="auth_setup_confirm">Xác nhận PIN</string>
-    <string name="auth_setup_biometric">Dùng vân tay / khuôn mặt lần sau?</string>
-    <string name="auth_setup_enable_bio">Bật sinh trắc học</string>
-    <string name="auth_setup_skip_bio">Bỏ qua</string>
+    <string name="auth_setup_enter">Chọn PIN gồm 4 số</string>
+    <string name="auth_setup_confirm">Nhập lại PIN lần nữa</string>
+    <string name="auth_setup_biometric">Mở khóa nhanh lần sau?</string>
+    <string name="auth_setup_enable_bio">Dùng vân tay / khuôn mặt</string>
+    <string name="auth_setup_skip_bio">Chỉ dùng PIN</string>
+    <string name="auth_setup_round_enter">PIN mới</string>
+    <string name="auth_setup_round_confirm">Xác nhận</string>
+    <string name="auth_setup_mismatch">PIN không khớp. Thử lại.</string>
+    <string name="auth_setup_bio_hint">Bạn luôn mở khóa bằng PIN được.</string>
 
     <!-- Home -->
-    <string name="home_tagline">Chat tạm · ẩn danh · tự hết hạn</string>
+    <string name="home_tagline">Chat riêng tư · tự biến mất</string>
     <string name="home_create_room">Tạo phòng tạm</string>
     <string name="home_join_room">Vào bằng link / QR / mã</string>
-    <string name="home_security">Bảo mật · PIN / Panic</string>
+    <string name="home_security">Bảo mật</string>
     <string name="home_settings">Cài đặt</string>
-    <string name="home_invite_hint">Dán link mời</string>
+    <string name="home_invite_hint">Dán link mời…</string>
+    <string name="home_invite_empty">Hãy dán link mời</string>
     <string name="home_join_go">Vào</string>
-    <string name="home_scan_qr">Quét QR</string>
+    <string name="home_scan_qr">Quét mã QR</string>
     <string name="home_share_hint">Đã tạo phòng — chia sẻ lời mời</string>
     <string name="home_recent_title">Chat gần đây</string>
+    <string name="home_recent_count">%1$d / %2$d</string>
     <string name="home_recent_empty">Chưa có phòng. Tạo mới hoặc vào bằng link.</string>
     <string name="home_open">Mở</string>
     <string name="home_see_more">Xem thêm</string>
     <string name="home_history">Lịch sử</string>
+    <string name="home_delete_title">Xóa phòng?</string>
+    <string name="home_delete_body">“%1$s” sẽ rời danh sách trên máy này. Xóa sạch toàn bộ vẫn ở Cài đặt.</string>
+    <string name="home_delete_confirm">Xóa</string>
+    <string name="home_delete_cd">Xóa %1$s</string>
     <string name="home_arrow_hint">Tin như mũi tên — phóng đi không thu hồi (Free).</string>
     <string name="home_anonymous_id">ID: %1$s</string>
     <string name="home_pro_stub_on">Pro stub: BẬT (có thu hồi)</string>
     <string name="home_pro_stub_off">Pro stub: TẮT (Free)</string>
     <string name="home_pro_stub_hint">Stub MVP — IAP thật sau. Chỉ staging debug.</string>
+
+    <string name="action_cancel">Hủy</string>
 
     <!-- Badges -->
     <string name="badge_remaining">Còn %1$s</string>
@@ -59,6 +71,7 @@
 
     <!-- Paywall -->
     <string name="paywall_title">VanishX Pro</string>
+    <string name="paywall_hero_title">Giữ mũi tên,\nmở lại kho.</string>
     <string name="paywall_subtitle">Tin nhắn vẫn được mã hóa trên máy bạn. Pro chỉ mở thêm quyền xem lại tin đã lưu.</string>
     <string name="paywall_benefit_history">Xem lại tin sau khi phòng hết hạn</string>
     <string name="paywall_benefit_recall">Thu hồi tin đã gửi</string>
@@ -146,20 +159,26 @@
     <string name="room_left_body">Đối phương đã bị chặn. Tin local của phòng này đã xóa.</string>
     <string name="room_recall">Thu hồi</string>
     <string name="room_recalled_tag">Đã thu hồi · best-effort nếu đã tải máy nhận</string>
+    <string name="room_ttl_chip">Còn %1$s</string>
+    <string name="room_menu_cd">Tuỳ chọn khác</string>
+    <string name="room_send_cd">Gửi tin nhắn</string>
+    <string name="room_sent_checks">✓✓</string>
 
     <!-- Lock -->
     <string name="lock_title">VanishX đã khóa</string>
-    <string name="lock_subtitle">Nhập PIN mở khóa. Panic PIN xóa sạch dữ liệu local ngay.</string>
+    <string name="lock_subtitle">Nhập PIN 4 số để tiếp tục.</string>
     <string name="lock_pin_label">PIN</string>
     <string name="lock_unlock">Mở khóa</string>
     <string name="lock_wiping">Đang xóa…</string>
-    <string name="lock_bio_title">Mở khóa bằng sinh trắc học</string>
-    <string name="lock_bio_subtitle">Xác nhận danh tính</string>
+    <string name="lock_bio_title">Mở khóa bằng vân tay / khuôn mặt</string>
+    <string name="lock_bio_subtitle">Xác nhận đó là bạn</string>
     <string name="lock_bio_negative">Dùng PIN</string>
     <string name="lock_burn_title">Quá nhiều lần thử</string>
-    <string name="lock_burn_body">Đang xóa sạch dữ liệu local…</string>
+    <string name="lock_burn_body">Đã xóa toàn bộ dữ liệu trên máy này.</string>
+    <string name="lock_burn_progress">Đang xóa toàn bộ dữ liệu…</string>
     <string name="lock_attempts_left">Còn %1$d lần thử</string>
-    <string name="lock_use_bio">Dùng sinh trắc học</string>
+    <string name="lock_wrong_pin">PIN sai. Còn %1$d lần thử.</string>
+    <string name="lock_use_bio">Vân tay / khuôn mặt</string>
 
     <!-- Settings -->
     <string name="security_title">Cài đặt</string>
@@ -183,6 +202,30 @@
     <string name="settings_section_data">Dữ liệu</string>
     <string name="settings_section_about">Giới thiệu</string>
     <string name="settings_identity_loading">Đang tải ID ẩn danh…</string>
+    <string name="settings_identity_title">ID ẩn danh</string>
+    <string name="settings_identity_sub">Trên máy bạn · không SĐT / email</string>
+    <string name="settings_unlock_row_title">Mã PIN mở khóa</string>
+    <string name="settings_unlock_row_sub">4 số · xác nhận 2 lần khi đổi</string>
+    <string name="settings_panic_row_title">Mã PIN khẩn cấp</string>
+    <string name="settings_panic_row_sub">Xóa ngay · khác mã PIN mở khóa</string>
+    <string name="settings_status_on">Bật</string>
+    <string name="settings_status_off">Tắt</string>
+    <string name="settings_pro_row_title">VanishX Pro</string>
+    <string name="settings_pro_row_sub">Xem lại tin · thu hồi · gọi lại phòng</string>
+    <string name="settings_pro_free">Miễn phí</string>
+    <string name="settings_pro_active">Pro</string>
+    <string name="settings_restore_purchases">Khôi phục mua hàng</string>
+    <string name="settings_restore_sub">Lấy lại gói Pro đã mua</string>
+    <string name="settings_history_row_title">Lịch sử trên máy</string>
+    <string name="settings_history_row_sub">Đang mở / Hết hạn / Tất cả</string>
+    <string name="settings_version_title">Phiên bản</string>
+    <string name="settings_version_sub">Chat tự biến mất · mã hóa trên máy</string>
+    <string name="settings_pin_wrong_warning">Sai PIN mở khóa 5 lần → xóa sạch dữ liệu và đặt lại app như mới cài. Mã PIN khẩn cấp cũng xóa toàn bộ tin nhắn và lịch sử đã lưu.</string>
+    <string name="settings_unlock_screen_title">Mã PIN mở khóa</string>
+    <string name="settings_panic_screen_title">Mã PIN khẩn cấp</string>
+    <string name="settings_unlock_form_hint">PIN đúng 4 số. Đổi PIN cần nhập 2 lần khớp.</string>
+    <string name="settings_chevron">›</string>
+    <string name="settings_restore_stub">Chưa hỗ trợ khôi phục mua hàng (stub IAP).</string>
 
     <!-- FCM -->
     <string name="fcm_channel_id">vanishx_mailbox</string>

@@ -15,11 +15,13 @@ data class HomeUiState(
     val isBootstrappingIdentity: Boolean = true,
     val isMailboxSyncing: Boolean = false,
     val recentRooms: List<HomeRoomItem> = emptyList(),
+    val totalRoomCount: Int = 0,
     val hasMoreRooms: Boolean = false,
     val inviteDraft: String = "",
     val shareHintUri: String? = null,
     val showProStubToggle: Boolean = false,
     val isProStub: Boolean = false,
+    val inviteDraftEmpty: Boolean = false,
     val errorMessage: String? = null,
 )
 
@@ -34,6 +36,7 @@ sealed interface HomeAction {
     data class InviteDraftChanged(val value: String) : HomeAction
     data object JoinFromDraft : HomeAction
     data class OpenRoom(val roomId: String) : HomeAction
+    data class DeleteRoom(val roomId: String) : HomeAction
     data object DismissShareHint : HomeAction
 }
 

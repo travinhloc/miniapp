@@ -1,11 +1,6 @@
 package com.vault.vanishx.presentation.mailbox
 
-import android.Manifest
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,6 +37,12 @@ import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.theme.VanishXColors
+import android.Manifest
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -221,66 +222,84 @@ private fun JoinRoomContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(VanishXColors.Bg)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .background(VanishXColors.Bg),
     ) {
-        Text(
-            text = stringResource(R.string.join_title),
-            style = MaterialTheme.typography.headlineSmall,
-            color = VanishXColors.OnSurface,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.join_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = VanishXColors.Muted,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        OutlinedTextField(
-            value = uiState.input,
-            onValueChange = { onAction(JoinRoomAction.InputChanged(it)) },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(text = stringResource(R.string.join_input_label)) },
-            singleLine = false,
-            minLines = 2,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = onScanClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = stringResource(R.string.join_scan_qr))
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(
-            onClick = { onAction(JoinRoomAction.RequestPreview) },
-            enabled = !uiState.isJoining,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = VanishXColors.Primary,
-                contentColor = VanishXColors.OnPrimary,
-            ),
-        ) {
-            Text(text = stringResource(R.string.join_action))
-        }
-        uiState.errorMessage?.let { error ->
-            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = { onAction(JoinRoomAction.Back) }) {
+                Text(text = stringResource(R.string.action_back))
+            }
             Text(
-                text = error,
-                color = VanishXColors.Error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.fillMaxWidth(),
+                text = stringResource(R.string.join_title),
+                style = MaterialTheme.typography.titleLarge,
+                color = VanishXColors.OnSurface,
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        TextButton(onClick = { onAction(JoinRoomAction.Back) }) {
-            Text(text = stringResource(R.string.action_back))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.join_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = VanishXColors.Muted,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = VanishXColors.Surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    OutlinedTextField(
+                        value = uiState.input,
+                        onValueChange = { onAction(JoinRoomAction.InputChanged(it)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(text = stringResource(R.string.join_input_label)) },
+                        singleLine = false,
+                        minLines = 2,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = onScanClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = VanishXColors.Primary,
+                        ),
+                    ) {
+                        Text(text = stringResource(R.string.join_scan_qr))
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { onAction(JoinRoomAction.RequestPreview) },
+                        enabled = !uiState.isJoining,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = VanishXColors.Primary,
+                            contentColor = VanishXColors.OnPrimary,
+                        ),
+                    ) {
+                        Text(text = stringResource(R.string.join_action))
+                    }
+                    uiState.errorMessage?.let { error ->
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = error,
+                            color = VanishXColors.Error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
         }
     }
 }

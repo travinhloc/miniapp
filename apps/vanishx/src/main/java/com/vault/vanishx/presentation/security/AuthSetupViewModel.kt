@@ -21,7 +21,8 @@ data class AuthSetupUiState(
     val pin: String = "",
     val firstPin: String = "",
     val isBusy: Boolean = false,
-    val errorMessage: String? = null,
+    val showMismatch: Boolean = false,
+    val shakeToken: Int = 0,
     val completed: Boolean = false,
 )
 
@@ -53,7 +54,7 @@ class AuthSetupViewModel @Inject constructor(
         if (state.step == AuthSetupStep.Biometric || state.isBusy) return
         if (state.pin.length >= SecurityPinStore.PIN_LENGTH) return
         val next = state.pin + digit
-        _uiState.update { it.copy(pin = next, errorMessage = null) }
+        _uiState.update { it.copy(pin = next, showMismatch = false) }
         if (next.length == SecurityPinStore.PIN_LENGTH) {
             onPinComplete(next)
         }
@@ -61,7 +62,7 @@ class AuthSetupViewModel @Inject constructor(
 
     private fun backspace() {
         _uiState.update {
-            it.copy(pin = it.pin.dropLast(1), errorMessage = null)
+            it.copy(pin = it.pin.dropLast(1), showMismatch = false)
         }
     }
 
@@ -74,6 +75,7 @@ class AuthSetupViewModel @Inject constructor(
                         step = AuthSetupStep.Confirm,
                         firstPin = pin,
                         pin = "",
+                        showMismatch = false,
                     )
                 }
             }
@@ -84,7 +86,8 @@ class AuthSetupViewModel @Inject constructor(
                             step = AuthSetupStep.Enter,
                             pin = "",
                             firstPin = "",
-                            errorMessage = "PIN không khớp. Thử lại.",
+                            showMismatch = true,
+                            shakeToken = it.shakeToken + 1,
                         )
                     }
                 } else {
@@ -94,15 +97,7 @@ class AuthSetupViewModel @Inject constructor(
                                 it.copy(
                                     step = AuthSetupStep.Biometric,
                                     pin = "",
-                                    errorMessage = null,
-                                )
-                            }
-                        }
-                        .onFailure { e ->
-                            _uiState.update {
-                                it.copy(
-                                    pin = "",
-                                    errorMessage = e.message ?: e::class.java.simpleName,
+                                    showMismatch = false,
                                 )
                             }
                         }

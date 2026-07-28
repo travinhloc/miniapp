@@ -8,9 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,9 +17,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vault.vanishx.presentation.theme.VanishXColors
+
+private val KeySize = 56.dp
+private val KeyGap = 10.dp
+private val PadMaxWidth = 280.dp
 
 @Composable
 fun PinPad(
@@ -36,24 +40,28 @@ fun PinPad(
         listOf(null, '0', '⌫'),
     )
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier
+            .widthIn(max = PadMaxWidth)
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(KeyGap),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         rows.forEach { row ->
             Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                horizontalArrangement = Arrangement.spacedBy(KeyGap),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 row.forEach { key ->
                     when (key) {
-                        null -> Spacer(modifier = Modifier.size(72.dp))
-                        '⌫' -> KeyButton(
+                        null -> Spacer(modifier = Modifier.size(KeySize))
+                        '⌫' -> DigitKey(
                             label = "⌫",
                             enabled = enabled,
                             onClick = onBackspace,
+                            tint = VanishXColors.Primary,
+                            elevated = false,
                         )
-                        else -> KeyButton(
+                        else -> DigitKey(
                             label = key.toString(),
                             enabled = enabled,
                             onClick = { onDigit(key) },
@@ -66,24 +74,26 @@ fun PinPad(
 }
 
 @Composable
-private fun KeyButton(
+private fun DigitKey(
     label: String,
     enabled: Boolean,
     onClick: () -> Unit,
+    tint: androidx.compose.ui.graphics.Color = VanishXColors.OnSurface,
+    elevated: Boolean = true,
 ) {
     Box(
         modifier = Modifier
-            .size(72.dp)
+            .size(KeySize)
+            .then(if (elevated) Modifier.shadow(2.dp, CircleShape) else Modifier)
             .clip(CircleShape)
-            .background(VanishXColors.Surface2)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(8.dp),
+            .background(if (elevated) VanishXColors.Surface else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            color = tint,
             textAlign = TextAlign.Center,
         )
     }
