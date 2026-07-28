@@ -71,6 +71,7 @@
 
     <!-- Paywall -->
     <string name="paywall_title">VanishX Pro</string>
+    <string name="paywall_hero_title">Giữ mũi tên,\nmở lại kho.</string>
     <string name="paywall_subtitle">Tin nhắn vẫn được mã hóa trên máy bạn. Pro chỉ mở thêm quyền xem lại tin đã lưu.</string>
     <string name="paywall_benefit_history">Xem lại tin sau khi phòng hết hạn</string>
     <string name="paywall_benefit_recall">Thu hồi tin đã gửi</string>
@@ -201,6 +202,30 @@
     <string name="settings_section_data">Dữ liệu</string>
     <string name="settings_section_about">Giới thiệu</string>
     <string name="settings_identity_loading">Đang tải ID ẩn danh…</string>
+    <string name="settings_identity_title">ID ẩn danh</string>
+    <string name="settings_identity_sub">Trên máy bạn · không SĐT / email</string>
+    <string name="settings_unlock_row_title">Mã PIN mở khóa</string>
+    <string name="settings_unlock_row_sub">4 số · xác nhận 2 lần khi đổi</string>
+    <string name="settings_panic_row_title">Mã PIN khẩn cấp</string>
+    <string name="settings_panic_row_sub">Xóa ngay · khác mã PIN mở khóa</string>
+    <string name="settings_status_on">Bật</string>
+    <string name="settings_status_off">Tắt</string>
+    <string name="settings_pro_row_title">VanishX Pro</string>
+    <string name="settings_pro_row_sub">Xem lại tin · thu hồi · gọi lại phòng</string>
+    <string name="settings_pro_free">Miễn phí</string>
+    <string name="settings_pro_active">Pro</string>
+    <string name="settings_restore_purchases">Khôi phục mua hàng</string>
+    <string name="settings_restore_sub">Lấy lại gói Pro đã mua</string>
+    <string name="settings_history_row_title">Lịch sử trên máy</string>
+    <string name="settings_history_row_sub">Đang mở / Hết hạn / Tất cả</string>
+    <string name="settings_version_title">Phiên bản</string>
+    <string name="settings_version_sub">Chat tự biến mất · mã hóa trên máy</string>
+    <string name="settings_pin_wrong_warning">Sai PIN mở khóa 5 lần → xóa sạch dữ liệu và đặt lại app như mới cài. Mã PIN khẩn cấp cũng xóa toàn bộ tin nhắn và lịch sử đã lưu.</string>
+    <string name="settings_unlock_screen_title">Mã PIN mở khóa</string>
+    <string name="settings_panic_screen_title">Mã PIN khẩn cấp</string>
+    <string name="settings_unlock_form_hint">PIN đúng 4 số. Đổi PIN cần nhập 2 lần khớp.</string>
+    <string name="settings_chevron">›</string>
+    <string name="settings_restore_stub">Chưa hỗ trợ khôi phục mua hàng (stub IAP).</string>
 
     <!-- FCM -->
     <string name="fcm_channel_id">vanishx_mailbox</string>

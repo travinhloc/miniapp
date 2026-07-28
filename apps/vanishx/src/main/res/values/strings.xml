@@ -71,6 +71,7 @@
 
     <!-- Paywall -->
     <string name="paywall_title">VanishX Pro</string>
+    <string name="paywall_hero_title">Keep your arrows,\nunlock the vault.</string>
     <string name="paywall_subtitle">Messages stay encrypted on your device. Pro unlocks viewing saved history.</string>
     <string name="paywall_benefit_history">View messages after a room expires</string>
     <string name="paywall_benefit_recall">Recall sent messages</string>
@@ -201,6 +202,30 @@
     <string name="settings_section_data">Data</string>
     <string name="settings_section_about">About</string>
     <string name="settings_identity_loading">Loading anonymous ID…</string>
+    <string name="settings_identity_title">Anonymous ID</string>
+    <string name="settings_identity_sub">On this device only · no phone / email</string>
+    <string name="settings_unlock_row_title">Unlock PIN</string>
+    <string name="settings_unlock_row_sub">4 digits · confirm twice when changing</string>
+    <string name="settings_panic_row_title">Emergency PIN</string>
+    <string name="settings_panic_row_sub">Wipe instantly · different from unlock PIN</string>
+    <string name="settings_status_on">On</string>
+    <string name="settings_status_off">Off</string>
+    <string name="settings_pro_row_title">VanishX Pro</string>
+    <string name="settings_pro_row_sub">Read history · recall · ping room</string>
+    <string name="settings_pro_free">Free</string>
+    <string name="settings_pro_active">Pro</string>
+    <string name="settings_restore_purchases">Restore purchases</string>
+    <string name="settings_restore_sub">Get back a Pro plan you already bought</string>
+    <string name="settings_history_row_title">On-device history</string>
+    <string name="settings_history_row_sub">Open · Expired · All</string>
+    <string name="settings_version_title">Version</string>
+    <string name="settings_version_sub">Self-vanishing chat · encrypted on device</string>
+    <string name="settings_pin_wrong_warning">Wrong unlock PIN 5 times wipes all data and resets the app. Emergency PIN also wipes all messages and saved history.</string>
+    <string name="settings_unlock_screen_title">Unlock PIN</string>
+    <string name="settings_panic_screen_title">Emergency PIN</string>
+    <string name="settings_unlock_form_hint">PIN must be 4 digits. Changing PIN requires matching entry twice.</string>
+    <string name="settings_chevron">›</string>
+    <string name="settings_restore_stub">Restore purchases is not available yet (IAP stub).</string>
 
     <!-- FCM -->
     <string name="fcm_channel_id">vanishx_mailbox</string>

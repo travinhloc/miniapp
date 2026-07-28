@@ -67,6 +67,8 @@ import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.presentation.components.VanishXAlertDialog
+import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.util.formatRemainingMs
@@ -135,20 +137,14 @@ private fun RoomContent(
     }
 
     if (uiState.showBlockConfirm) {
-        AlertDialog(
-            onDismissRequest = { onAction(RoomAction.DismissBlockConfirm) },
-            title = { Text(text = stringResource(R.string.room_block_title)) },
-            text = { Text(text = stringResource(R.string.room_block_body)) },
-            confirmButton = {
-                TextButton(onClick = { onAction(RoomAction.ConfirmBlock) }) {
-                    Text(text = stringResource(R.string.room_block_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onAction(RoomAction.DismissBlockConfirm) }) {
-                    Text(text = stringResource(R.string.action_back))
-                }
-            },
+        VanishXAlertDialog(
+            title = stringResource(R.string.room_block_title),
+            body = stringResource(R.string.room_block_body),
+            confirmLabel = stringResource(R.string.room_block_confirm),
+            dismissLabel = stringResource(R.string.action_back),
+            tone = VanishXAlertTone.Danger,
+            onConfirm = { onAction(RoomAction.ConfirmBlock) },
+            onDismiss = { onAction(RoomAction.DismissBlockConfirm) },
         )
     }
 
@@ -188,20 +184,14 @@ private fun RoomContent(
     }
 
     if (uiState.showPingConfirm) {
-        AlertDialog(
-            onDismissRequest = { onAction(RoomAction.DismissPing) },
-            title = { Text(text = stringResource(R.string.room_ping_title)) },
-            text = { Text(text = stringResource(R.string.room_ping_body)) },
-            confirmButton = {
-                TextButton(onClick = { onAction(RoomAction.PingRoom) }) {
-                    Text(text = stringResource(R.string.room_ping_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onAction(RoomAction.DismissPing) }) {
-                    Text(text = stringResource(R.string.action_back))
-                }
-            },
+        VanishXAlertDialog(
+            title = stringResource(R.string.room_ping_title),
+            body = stringResource(R.string.room_ping_body),
+            confirmLabel = stringResource(R.string.room_ping_confirm),
+            dismissLabel = stringResource(R.string.action_back),
+            tone = VanishXAlertTone.Accent,
+            onConfirm = { onAction(RoomAction.PingRoom) },
+            onDismiss = { onAction(RoomAction.DismissPing) },
         )
     }
 }
