@@ -17,11 +17,13 @@ import javax.inject.Inject
 data class PaywallUiState(
     val isPro: Boolean = false,
     val showStubActivate: Boolean = false,
+    val infoMessage: String? = null,
 )
 
 sealed interface PaywallAction {
     data object Back : PaywallAction
     data object ActivateProStub : PaywallAction
+    data object RestorePurchases : PaywallAction
 }
 
 @HiltViewModel
@@ -50,6 +52,9 @@ class PaywallViewModel @Inject constructor(
                 if (!isProStubToggleEnabled()) return
                 proEntitlement.setProStub(true)
                 launch { _navigator.emit(BaseDestination.Up()) }
+            }
+            PaywallAction.RestorePurchases -> _uiState.update {
+                it.copy(infoMessage = "Restore purchases is not available yet (IAP stub).")
             }
         }
     }
