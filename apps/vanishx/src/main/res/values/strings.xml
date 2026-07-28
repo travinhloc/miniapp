@@ -5,8 +5,8 @@
     <string name="action_back">Back</string>
 
     <!-- Splash -->
-    <string name="splash_tagline">Temporary chat · anonymous · auto-expires</string>
-    <string name="splash_protecting">Protecting your privacy…</string>
+    <string name="splash_tagline">Private chat · vanishes on its own</string>
+    <string name="splash_protecting">Securing your session…</string>
 
     <!-- Auth setup -->
     <string name="auth_setup_title">Set unlock PIN</string>
