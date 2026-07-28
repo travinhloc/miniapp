@@ -21,25 +21,33 @@
     <string name="auth_setup_bio_hint">Bạn luôn mở khóa bằng PIN được.</string>
 
     <!-- Home -->
-    <string name="home_tagline">Chat tạm · ẩn danh · tự hết hạn</string>
+    <string name="home_tagline">Chat riêng tư · tự biến mất</string>
     <string name="home_create_room">Tạo phòng tạm</string>
     <string name="home_join_room">Vào bằng link / QR / mã</string>
-    <string name="home_security">Bảo mật · PIN / Panic</string>
+    <string name="home_security">Bảo mật</string>
     <string name="home_settings">Cài đặt</string>
-    <string name="home_invite_hint">Dán link mời</string>
+    <string name="home_invite_hint">Dán link mời…</string>
+    <string name="home_invite_empty">Hãy dán link mời</string>
     <string name="home_join_go">Vào</string>
-    <string name="home_scan_qr">Quét QR</string>
+    <string name="home_scan_qr">Quét mã QR</string>
     <string name="home_share_hint">Đã tạo phòng — chia sẻ lời mời</string>
     <string name="home_recent_title">Chat gần đây</string>
+    <string name="home_recent_count">%1$d / %2$d</string>
     <string name="home_recent_empty">Chưa có phòng. Tạo mới hoặc vào bằng link.</string>
     <string name="home_open">Mở</string>
     <string name="home_see_more">Xem thêm</string>
     <string name="home_history">Lịch sử</string>
+    <string name="home_delete_title">Xóa phòng?</string>
+    <string name="home_delete_body">“%1$s” sẽ rời danh sách trên máy này. Xóa sạch toàn bộ vẫn ở Cài đặt.</string>
+    <string name="home_delete_confirm">Xóa</string>
+    <string name="home_delete_cd">Xóa %1$s</string>
     <string name="home_arrow_hint">Tin như mũi tên — phóng đi không thu hồi (Free).</string>
     <string name="home_anonymous_id">ID: %1$s</string>
     <string name="home_pro_stub_on">Pro stub: BẬT (có thu hồi)</string>
     <string name="home_pro_stub_off">Pro stub: TẮT (Free)</string>
     <string name="home_pro_stub_hint">Stub MVP — IAP thật sau. Chỉ staging debug.</string>
+
+    <string name="action_cancel">Hủy</string>
 
     <!-- Badges -->
     <string name="badge_remaining">Còn %1$s</string>
@@ -150,6 +158,10 @@
     <string name="room_left_body">Đối phương đã bị chặn. Tin local của phòng này đã xóa.</string>
     <string name="room_recall">Thu hồi</string>
     <string name="room_recalled_tag">Đã thu hồi · best-effort nếu đã tải máy nhận</string>
+    <string name="room_ttl_chip">Còn %1$s</string>
+    <string name="room_menu_cd">Tuỳ chọn khác</string>
+    <string name="room_send_cd">Gửi tin nhắn</string>
+    <string name="room_sent_checks">✓✓</string>
 
     <!-- Lock -->
     <string name="lock_title">VanishX đã khóa</string>
