@@ -10,9 +10,9 @@ When implementing or discussing **VanishX** in this monorepo:
 1. Product docs are NOT in this repo. Read from sibling path:
    - `../project-note-cursor/vanishx-docs/`
    - Absolute: `/Users/loctra/Workspace/01_Projects/Active/project-note-cursor/vanishx-docs/`
-2. Start with `vanishx-engine-vi.md` (PRD) and the active story under `stories/`.
-3. Core MVP first: crypto, SQLCipher, Firebase mailbox, create/join, send/receive text, TTL/purge, sync-on-open.
-4. Defer unless asked: Panic PIN, App lock, FCM polish, Block/Report, IAP, full UI mockup polish, WebRTC, KMP/iOS.
+2. Start with `vanishx-engine-vi.md` (PRD) and the **active** story under `stories/` (Epic 6: `6.0.epic.md` / `6.1`…).
+3. Core MVP + Epic 5 UI M2 đã ship. Phase hiện tại: **Epic 6** — optimize UX + Production (`vanishx-production-dod.md`).
+4. Defer unless asked: IAP/RevenueCat thật, App Links HTTPS, media, WebRTC, KMP/iOS.
 5. New app module: `apps/vanishx` with `applicationId` `com.vault.vanishx`. Do not put VanishX features in `core/*`.
 6. See `docs/VANISHX.md` for how humans/agents should attach docs in Cursor.
 7. Update product docs in `project-note-cursor`; only update this repo’s pointer files if paths/process change.
