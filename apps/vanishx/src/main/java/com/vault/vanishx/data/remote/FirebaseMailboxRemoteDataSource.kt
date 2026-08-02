@@ -47,6 +47,7 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
                 put(KEY_CREATED_AT, meta.createdAt)
                 put(KEY_EXPIRES_AT, meta.expiresAt)
                 meta.creatorPub?.let { put(KEY_CREATOR_PUB, it) }
+                meta.icebreaker?.let { put(KEY_ICEBREAKER, it) }
             }
             roomRef(roomId).child(PATH_META).setValue(payload).await()
         }
@@ -60,10 +61,12 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
             val createdAt = snapshot.child(KEY_CREATED_AT).getValue(Long::class.java) ?: return@withContext null
             val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java) ?: return@withContext null
             val creatorPub = snapshot.child(KEY_CREATOR_PUB).getValue(String::class.java)
+            val icebreaker = snapshot.child(KEY_ICEBREAKER).getValue(String::class.java)
             RemoteRoomMeta(
                 createdAt = createdAt,
                 expiresAt = expiresAt,
                 creatorPub = creatorPub,
+                icebreaker = icebreaker,
             )
         }
     }
@@ -190,6 +193,7 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         const val KEY_CREATED_AT = "createdAt"
         const val KEY_EXPIRES_AT = "expiresAt"
         const val KEY_CREATOR_PUB = "creatorPub"
+        const val KEY_ICEBREAKER = "icebreaker"
         const val KEY_CIPHERTEXT = "ciphertext"
         const val KEY_SENDER_PUB = "senderPub"
         const val KEY_ROOM_ID = "roomId"

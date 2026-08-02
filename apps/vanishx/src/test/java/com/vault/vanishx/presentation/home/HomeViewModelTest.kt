@@ -1,11 +1,11 @@
 package com.vault.vanishx.presentation.home
 
 import app.cash.turbine.test
+import com.miniapp.core.common.DispatchersProvider
 import com.vault.vanishx.data.invite.PendingInviteStore
 import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
-import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesResult
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
@@ -19,6 +19,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -33,7 +34,6 @@ class HomeViewModelTest {
 
     private val ensureIdentity: EnsureIdentityUseCase = mockk()
     private val syncActiveMailboxes: SyncActiveMailboxesUseCase = mockk()
-    private val consumePendingInvite: ConsumePendingInviteUseCase = mockk()
     private val mailboxRepository: MailboxRepository = mockk(relaxed = true)
     private val pendingInviteStore: PendingInviteStore = mockk(relaxed = true)
     private val proEntitlement: ProEntitlementRepository = mockk(relaxed = true)
@@ -47,7 +47,7 @@ class HomeViewModelTest {
             anonymousId = "vx_home",
             publicKeyBase64 = "pub",
         )
-        coEvery { consumePendingInvite() } returns null
+        every { pendingInviteStore.peek() } returns null
         coEvery { mailboxRepository.getAllRooms() } returns emptyList()
         coEvery { syncActiveMailboxes() } returns SyncActiveMailboxesResult(
             activeCount = 0,
@@ -60,7 +60,6 @@ class HomeViewModelTest {
         viewModel = HomeViewModel(
             ensureIdentity = ensureIdentity,
             syncActiveMailboxes = syncActiveMailboxes,
-            consumePendingInvite = consumePendingInvite,
             mailboxRepository = mailboxRepository,
             pendingInviteStore = pendingInviteStore,
             proEntitlement = proEntitlement,
@@ -108,10 +107,31 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `bootstraps consumes pending invite`() = runTest {
-        advanceUntilIdle()
-        coVerify(exactly = 1) { consumePendingInvite() }
-    }
+    fun `bootstrap routes a pending invite to the Join message request instead of auto-accepting`() =
+        runTest(coroutinesRule.testDispatcher) {
+            every { pendingInviteStore.peek() } returns "vanishx://r/room1?k=key1"
+            // bootstrapIdentity() flows through flowOn(io); queuing io on a Standard dispatcher
+            // (sharing the same scheduler) keeps it from racing ahead of navigator subscription,
+            // matching how a real (suspending) identity lookup behaves versus this test's mock.
+            val queuedProvider = object : DispatchersProvider {
+                override val io = StandardTestDispatcher(coroutinesRule.testDispatcher.scheduler)
+                override val main = coroutinesRule.testDispatcher
+                override val default = io
+            }
+            val vm = HomeViewModel(
+                ensureIdentity = ensureIdentity,
+                syncActiveMailboxes = syncActiveMailboxes,
+                mailboxRepository = mailboxRepository,
+                pendingInviteStore = pendingInviteStore,
+                proEntitlement = proEntitlement,
+                dispatchersProvider = queuedProvider,
+            )
+
+            vm.navigator.test {
+                advanceUntilIdle()
+                awaitItem() shouldBe MailboxDestination.Join
+            }
+        }
 
     @Test
     fun `OpenSettings navigates to settings`() = runTest {

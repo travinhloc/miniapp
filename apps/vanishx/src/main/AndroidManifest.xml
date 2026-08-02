@@ -54,6 +54,13 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".presentation.scan.VanishXScanActivity"
+            android:exported="false"
+            android:stateNotNeeded="true"
+            android:theme="@style/AppTheme"
+            android:windowSoftInputMode="stateAlwaysHidden" />
+
         <service
             android:name=".data.push.VanishxFirebaseMessagingService"
             android:exported="false">

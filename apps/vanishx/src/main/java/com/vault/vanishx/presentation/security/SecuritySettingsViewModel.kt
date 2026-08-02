@@ -28,6 +28,8 @@ data class SecuritySettingsUiState(
     val unlockPinConfirm: String = "",
     val panicPin: String = "",
     val panicPinConfirm: String = "",
+    val flagSecureEnabled: Boolean = true,
+    val autoWipeEnabled: Boolean = false,
     val showProStubToggle: Boolean = false,
     val isProStub: Boolean = false,
     val infoMessage: String? = null,
@@ -48,6 +50,8 @@ sealed interface SecuritySettingsAction {
     data object OpenPaywall : SecuritySettingsAction
     data object RestorePurchases : SecuritySettingsAction
     data object ToggleProStub : SecuritySettingsAction
+    data class SetFlagSecure(val enabled: Boolean) : SecuritySettingsAction
+    data class SetAutoWipe(val enabled: Boolean) : SecuritySettingsAction
     data object Back : SecuritySettingsAction
 }
 
@@ -99,6 +103,14 @@ class SecuritySettingsViewModel @Inject constructor(
             SecuritySettingsAction.ToggleProStub -> {
                 if (!isProStubToggleEnabled()) return
                 proEntitlement.setProStub(!_uiState.value.isProStub)
+            }
+            is SecuritySettingsAction.SetFlagSecure -> {
+                securityPinStore.setFlagSecureEnabled(action.enabled)
+                _uiState.update { it.copy(flagSecureEnabled = action.enabled) }
+            }
+            is SecuritySettingsAction.SetAutoWipe -> {
+                securityPinStore.setAutoWipeEnabled(action.enabled)
+                _uiState.update { it.copy(autoWipeEnabled = action.enabled) }
             }
             SecuritySettingsAction.Back -> launch { _navigator.emit(BaseDestination.Up()) }
         }
@@ -167,6 +179,8 @@ class SecuritySettingsViewModel @Inject constructor(
             anonymousId = anonymousId,
             hasUnlockPin = securityPinStore.hasUnlockPin(),
             hasPanicPin = securityPinStore.hasPanicPin(),
+            flagSecureEnabled = securityPinStore.isFlagSecureEnabled(),
+            autoWipeEnabled = securityPinStore.isAutoWipeEnabled(),
             showProStubToggle = isProStubToggleEnabled(),
             isProStub = proEntitlement.isProNow(),
         )

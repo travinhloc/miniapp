@@ -79,6 +79,7 @@ class JoinRoomUseCase @Inject constructor(
             status = status,
             role = MailboxRoom.ROLE_MEMBER,
             peerPub = remoteMeta?.creatorPub,
+            icebreaker = remoteMeta?.icebreaker,
         )
     }
 }

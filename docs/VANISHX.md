@@ -11,10 +11,12 @@ Docs **không nằm trong repo này**. Nguồn sự thật:
 ## File nên đọc (thứ tự)
 
 1. `vanishx-engine-vi.md` — PRD / core MVP  
-2. `vanishx-project-planning.md` — timeline core  
-3. `stories/README.md` + story đang làm (bắt đầu `1.1.story.md`)  
-4. `mockup/main.html` — UI hướng (polish sau MVP)  
-5. `vanishx-idea-draft.md` — nhật ký quyết định  
+2. `vanishx-project-planning.md` — timeline  
+3. `stories/README.md` + story đang làm (**Epic 7:** `7.0.epic.md` / `7.1` design ✅ → `7.2+` Compose)  
+4. `vanishx-ui-ux-sprint-backlog.md` — Confirm PO 0→5  
+5. `vanishx-production-dod.md` — DoD Production / soft-launch  
+6. `mockup/main.html` — UI M2 Night (Epic 7 gallery)  
+7. `vanishx-idea-draft.md` — nhật ký quyết định  
 
 BMAD lean (stack Android→KMP): `../project-note-cursor/bmad-agent/LEAN-MOBILE.md`
 
@@ -44,11 +46,13 @@ Xem `.cursor/rules/vanishx-docs.mdc` trong repo này.
 - Package: `presentation` / `domain` / `data` / `di` (app-local; reuse `core/*`)
 - Crypto scheme: [`apps/vanishx/CRYPTO.md`](../apps/vanishx/CRYPTO.md)
 - Mailbox (RTDB): [`apps/vanishx/MAILBOX.md`](../apps/vanishx/MAILBOX.md)
-- Build: `./gradlew :apps:vanishx:assembleStagingDebug`
+- Build staging: `./gradlew :apps:vanishx:assembleStagingDebug`
+- Build production: `./gradlew :apps:vanishx:assembleProductionRelease` (sau Epic 6.3–6.4)
 - Reuse `core/*` · không nhét feature VanishX vào `core`
 - Cập nhật docs: sửa bên `project-note-cursor/vanishx-docs`, rồi sync ghi chú ở đây nếu path đổi
 
 ## Core MVP (nhắc nhanh)
 
 Crypto + SQLCipher + Firebase mailbox + create/join + gửi/nhận text + TTL/purge + sync-on-open.  
-**Sau MVP:** Panic, App lock, FCM, Block/Report, IAP, polish UI.
+**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5 UI M2 · **Epic 7** UI/UX sprint 0→5.  
+**Đang mở:** Epic 6 Production (`vanishx-production-dod.md`).

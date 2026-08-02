@@ -7,7 +7,6 @@ import com.vault.vanishx.BuildConfig
 import com.vault.vanishx.data.invite.PendingInviteStore
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
-import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
 import com.vault.vanishx.presentation.history.HistoryDestination
@@ -31,7 +30,6 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val ensureIdentity: EnsureIdentityUseCase,
     private val syncActiveMailboxes: SyncActiveMailboxesUseCase,
-    private val consumePendingInvite: ConsumePendingInviteUseCase,
     private val mailboxRepository: MailboxRepository,
     private val pendingInviteStore: PendingInviteStore,
     private val proEntitlement: ProEntitlementRepository,
@@ -54,13 +52,9 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun bootstrapIdentity() {
-        flow {
-            val identity = ensureIdentity()
-            val joined = consumePendingInvite()
-            emit(identity to joined)
-        }
+        flow { emit(ensureIdentity()) }
             .injectLoading()
-            .onEach { (identity, joinedRoom) ->
+            .onEach { identity ->
                 _uiState.update {
                     it.copy(
                         anonymousId = identity.anonymousId,
@@ -68,8 +62,10 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 refreshRooms()
-                if (joinedRoom != null) {
-                    _navigator.emit(MailboxDestination.Room(joinedRoom.id))
+                // Story 7.6: a pending invite (deep link / post-install) must go through the
+                // Message Request sheet — never auto-accept the handshake on cold start.
+                if (pendingInviteStore.peek() != null) {
+                    _navigator.emit(MailboxDestination.Join)
                 }
             }
             .flowOn(dispatchersProvider.io)
@@ -125,6 +121,18 @@ class HomeViewModel @Inject constructor(
         when (action) {
             HomeAction.CreateRoom -> navigateCreate()
             HomeAction.JoinRoom, HomeAction.ScanQr -> navigateJoin()
+            is HomeAction.PasteInvite -> {
+                val text = action.text.trim()
+                if (text.isEmpty()) {
+                    _uiState.update { it.copy(inviteDraftEmpty = true) }
+                } else {
+                    _uiState.update {
+                        it.copy(inviteDraft = text, inviteDraftEmpty = false, errorMessage = null)
+                    }
+                    pendingInviteStore.save(text)
+                    navigateJoin()
+                }
+            }
             HomeAction.Resume -> syncOnOpen()
             HomeAction.OpenSettings -> navigateSettings()
             HomeAction.OpenHistory -> navigateHistory()

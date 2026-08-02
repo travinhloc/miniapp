@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,9 +50,12 @@ import com.vault.vanishx.presentation.components.SettingsIdentityRow
 import com.vault.vanishx.presentation.components.SettingsLeadingTone
 import com.vault.vanishx.presentation.components.SettingsNavRow
 import com.vault.vanishx.presentation.components.SettingsRowDivider
+import com.vault.vanishx.presentation.components.SettingsSwitchRow
 import com.vault.vanishx.presentation.components.SettingsTopBar
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.MainActivity
+import androidx.compose.ui.platform.LocalContext
 
 private enum class SettingsPanel {
     Root,
@@ -97,7 +101,8 @@ private fun SecuritySettingsContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(VanishXColors.Bg),
+            .background(VanishXColors.Bg)
+            .statusBarsPadding(),
     ) {
         when (panel) {
             SettingsPanel.Root -> {
@@ -205,6 +210,25 @@ private fun SettingsRootPanel(
                 trailingStatus = stringResource(
                     if (uiState.hasPanicPin) R.string.settings_status_on else R.string.settings_status_off,
                 ),
+            )
+            SettingsRowDivider()
+            val activity = LocalContext.current as? MainActivity
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_flag_secure_title),
+                subtitle = stringResource(R.string.settings_flag_secure_sub),
+                checked = uiState.flagSecureEnabled,
+                onCheckedChange = { enabled ->
+                    onAction(SecuritySettingsAction.SetFlagSecure(enabled))
+                    activity?.applyFlagSecure(enabled)
+                },
+            )
+            SettingsRowDivider()
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_auto_wipe_title),
+                subtitle = stringResource(R.string.settings_auto_wipe_sub),
+                checked = uiState.autoWipeEnabled,
+                onCheckedChange = { onAction(SecuritySettingsAction.SetAutoWipe(it)) },
+                leadingTone = SettingsLeadingTone.Warn,
             )
             SettingsDangerNote(text = stringResource(R.string.settings_pin_wrong_warning))
         }

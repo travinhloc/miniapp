@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,6 +33,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
@@ -39,6 +42,8 @@ import com.vault.vanishx.data.security.SecurityPinStore
 import com.vault.vanishx.presentation.components.PinDots
 import com.vault.vanishx.presentation.components.PinPad
 import com.vault.vanishx.presentation.theme.VanishXColors
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 private val ButtonCorner = 8.dp
 private val PinPadMaxWidth = 280.dp
@@ -57,6 +62,19 @@ fun LockScreen(
     val context = LocalContext.current
     val activity = context as? FragmentActivity
 
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        viewModel.onAction(LockAction.ClearPinDraft)
+    }
+
+    LaunchedEffect(uiState.cooldownRemainingMs > 0L) {
+        if (uiState.cooldownRemainingMs <= 0L) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(250L)
+            viewModel.onAction(LockAction.TickCooldown)
+            if (viewModel.uiState.value.cooldownRemainingMs <= 0L) break
+        }
+    }
+
     LaunchedEffect(uiState.unlocked, uiState.wiped) {
         when {
             uiState.wiped -> onWiped()
@@ -64,8 +82,9 @@ fun LockScreen(
         }
     }
 
-    LaunchedEffect(uiState.promptBiometric) {
+    LaunchedEffect(uiState.promptBiometric, uiState.cooldownRemainingMs) {
         val shouldPrompt = uiState.promptBiometric &&
+            uiState.cooldownRemainingMs <= 0L &&
             activity != null &&
             BiometricUnlockHelper.canAuthenticate(activity)
         if (!shouldPrompt) return@LaunchedEffect
@@ -87,6 +106,7 @@ fun LockScreen(
             uiState = uiState,
             showBiometric = activity != null &&
                 uiState.biometricEnabled &&
+                uiState.cooldownRemainingMs <= 0L &&
                 BiometricUnlockHelper.canAuthenticate(activity),
             onAction = viewModel::onAction,
         )
@@ -103,46 +123,72 @@ private fun LockContent(
     showBiometric: Boolean,
     onAction: (LockAction) -> Unit,
 ) {
+    val coolingDown = uiState.cooldownRemainingMs > 0L
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
+            .statusBarsPadding()
             .padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             AuthBrandHeader(
-                title = stringResource(R.string.lock_title),
-                subtitle = stringResource(R.string.lock_subtitle),
+                title = stringResource(
+                    if (coolingDown) R.string.lock_cooldown_title else R.string.lock_title,
+                ),
+                subtitle = stringResource(
+                    if (coolingDown) R.string.lock_cooldown_subtitle else R.string.lock_subtitle,
+                ),
             )
-            PinDots(
-                filled = uiState.pin.length,
-                isError = uiState.showWrongPin,
-                shakeToken = uiState.shakeToken,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = when {
-                    uiState.showWrongPin -> stringResource(
-                        R.string.lock_wrong_pin,
-                        uiState.attemptsLeft,
-                    )
-                    uiState.attemptsLeft in 1 until SecurityPinStore.MAX_UNLOCK_ATTEMPTS ->
-                        stringResource(R.string.lock_attempts_left, uiState.attemptsLeft)
-                    else -> ""
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = when {
-                    uiState.showWrongPin || uiState.attemptsLeft <= LOW_ATTEMPTS_THRESHOLD ->
-                        VanishXColors.Error
-                    else -> VanishXColors.Muted
-                },
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(36.dp),
-            )
+            if (coolingDown) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = formatCooldown(uiState.cooldownRemainingMs),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = VanishXColors.Primary,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(
+                        R.string.lock_cooldown_tier_hint,
+                        uiState.cooldownTierIndex + 1,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = VanishXColors.Muted,
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                PinDots(
+                    filled = uiState.pin.length,
+                    isError = uiState.showWrongPin,
+                    shakeToken = uiState.shakeToken,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = when {
+                        uiState.showWrongPin -> stringResource(
+                            R.string.lock_wrong_pin,
+                            uiState.attemptsLeft,
+                        )
+                        uiState.attemptsLeft in 1 until SecurityPinStore.MAX_UNLOCK_ATTEMPTS ->
+                            stringResource(R.string.lock_attempts_left, uiState.attemptsLeft)
+                        else -> stringResource(R.string.lock_ok_hint)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = when {
+                        uiState.showWrongPin || uiState.attemptsLeft <= LOW_ATTEMPTS_THRESHOLD ->
+                            VanishXColors.Error
+                        else -> VanishXColors.Muted
+                    },
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(36.dp),
+                )
+            }
             uiState.biometricError?.let { error ->
                 Text(
                     text = error,
@@ -153,29 +199,36 @@ private fun LockContent(
             }
         }
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.widthIn(max = PinPadMaxWidth),
-        ) {
-            PinPad(
-                enabled = !uiState.isBusy && !uiState.showBurnOverlay,
-                onDigit = { onAction(LockAction.Digit(it)) },
-                onBackspace = { onAction(LockAction.Backspace) },
-            )
-            if (showBiometric) {
-                Spacer(modifier = Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { onAction(LockAction.RequestBiometric) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(ButtonCorner),
-                    border = BorderStroke(1.dp, VanishXColors.Accent),
-                ) {
-                    Text(
-                        text = stringResource(R.string.lock_use_bio),
-                        color = VanishXColors.Accent,
-                    )
+        if (!coolingDown) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.widthIn(max = PinPadMaxWidth),
+            ) {
+                PinPad(
+                    enabled = !uiState.isBusy && !uiState.showBurnOverlay,
+                    onDigit = { onAction(LockAction.Digit(it)) },
+                    onBackspace = { onAction(LockAction.Backspace) },
+                    onSubmit = { onAction(LockAction.Submit) },
+                    submitEnabled = uiState.pin.length == SecurityPinStore.PIN_LENGTH,
+                    submitLabel = stringResource(R.string.lock_ok),
+                )
+                if (showBiometric) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = { onAction(LockAction.RequestBiometric) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(ButtonCorner),
+                        border = BorderStroke(1.dp, VanishXColors.Accent),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.lock_use_bio),
+                            color = VanishXColors.Accent,
+                        )
+                    }
                 }
             }
+        } else {
+            Spacer(modifier = Modifier.height(1.dp))
         }
     }
 }
@@ -224,5 +277,17 @@ private fun BurnOverlay(isBusy: Boolean) {
                 CircularProgressIndicator(color = VanishXColors.Error)
             }
         }
+    }
+}
+
+private fun formatCooldown(ms: Long): String {
+    val totalSec = TimeUnit.MILLISECONDS.toSeconds(ms).coerceAtLeast(0L)
+    val hours = totalSec / 3600
+    val minutes = (totalSec % 3600) / 60
+    val seconds = totalSec % 60
+    return if (hours > 0) {
+        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format(Locale.US, "%d:%02d", minutes, seconds)
     }
 }

@@ -92,20 +92,72 @@ class SecurityPinStore (
 
     fun failedUnlockAttempts(): Int = prefs.getInt(KEY_FAILED_ATTEMPTS, 0)
 
-    fun recordFailedUnlock(): Int {
+    fun recordFailedUnlock(nowEpochMs: Long = System.currentTimeMillis()): UnlockFailResult {
         val next = failedUnlockAttempts() + 1
         prefs.edit().putInt(KEY_FAILED_ATTEMPTS, next).apply()
-        return next
+        if (next < MAX_UNLOCK_ATTEMPTS) {
+            return UnlockFailResult.Wrong(attemptsLeft = MAX_UNLOCK_ATTEMPTS - next)
+        }
+        prefs.edit().putInt(KEY_FAILED_ATTEMPTS, 0).apply()
+        if (isAutoWipeEnabled()) {
+            return UnlockFailResult.Wipe
+        }
+        val tier = cooldownTier().coerceIn(0, COOLDOWN_DURATIONS_MS.lastIndex)
+        val durationMs = COOLDOWN_DURATIONS_MS[tier]
+        val until = nowEpochMs + durationMs
+        prefs.edit()
+            .putLong(KEY_COOLDOWN_UNTIL, until)
+            .putInt(KEY_COOLDOWN_TIER, (tier + 1).coerceAtMost(COOLDOWN_DURATIONS_MS.lastIndex))
+            .apply()
+        return UnlockFailResult.Cooldown(
+            untilEpochMs = until,
+            durationMs = durationMs,
+            tierIndex = tier,
+        )
     }
 
     fun clearFailedUnlockAttempts() {
-        prefs.edit().remove(KEY_FAILED_ATTEMPTS).apply()
+        prefs.edit()
+            .remove(KEY_FAILED_ATTEMPTS)
+            .remove(KEY_COOLDOWN_UNTIL)
+            .putInt(KEY_COOLDOWN_TIER, 0)
+            .apply()
+    }
+
+    fun cooldownUntilEpochMs(): Long = prefs.getLong(KEY_COOLDOWN_UNTIL, 0L)
+
+    fun cooldownTier(): Int = prefs.getInt(KEY_COOLDOWN_TIER, 0)
+
+    fun isInCooldown(nowEpochMs: Long = System.currentTimeMillis()): Boolean {
+        val until = cooldownUntilEpochMs()
+        return until > nowEpochMs
+    }
+
+    fun remainingCooldownMs(nowEpochMs: Long = System.currentTimeMillis()): Long =
+        (cooldownUntilEpochMs() - nowEpochMs).coerceAtLeast(0L)
+
+    fun clearExpiredCooldown(nowEpochMs: Long = System.currentTimeMillis()) {
+        if (cooldownUntilEpochMs() in 1..nowEpochMs) {
+            prefs.edit().remove(KEY_COOLDOWN_UNTIL).apply()
+        }
     }
 
     fun isBiometricEnabled(): Boolean = prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)
 
     fun setBiometricEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, enabled).apply()
+    }
+
+    fun isFlagSecureEnabled(): Boolean = prefs.getBoolean(KEY_FLAG_SECURE, true)
+
+    fun setFlagSecureEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FLAG_SECURE, enabled).apply()
+    }
+
+    fun isAutoWipeEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_WIPE, false)
+
+    fun setAutoWipeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_WIPE, enabled).apply()
     }
 
     private fun requireValidPin(pin: String) {
@@ -134,6 +186,12 @@ class SecurityPinStore (
         const val PIN_MIN_LENGTH = PIN_LENGTH
         const val PIN_MAX_LENGTH = PIN_LENGTH
         const val MAX_UNLOCK_ATTEMPTS = 5
+        /** Progressive lockout after each failed streak: 60s → 5m → 24h. */
+        val COOLDOWN_DURATIONS_MS: LongArray = longArrayOf(
+            60_000L,
+            5 * 60_000L,
+            24 * 60 * 60_000L,
+        )
         private const val SALT_BYTES = 16
         private const val HMAC_ALG = "HmacSHA256"
         private const val KEY_UNLOCK_SALT = "unlock_salt"
@@ -142,6 +200,10 @@ class SecurityPinStore (
         private const val KEY_PANIC_HASH = "panic_hash"
         private const val KEY_FAILED_ATTEMPTS = "failed_unlock_attempts"
         private const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
+        private const val KEY_FLAG_SECURE = "flag_secure_enabled"
+        private const val KEY_AUTO_WIPE = "auto_wipe_enabled"
+        private const val KEY_COOLDOWN_UNTIL = "cooldown_until_epoch_ms"
+        private const val KEY_COOLDOWN_TIER = "cooldown_tier"
 
         fun createEncryptedPrefs(context: Context): SharedPreferences {
             val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)

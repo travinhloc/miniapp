@@ -2,8 +2,15 @@
 
 package com.vault.vanishx.presentation.mailbox
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +20,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,14 +42,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,15 +63,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -67,9 +85,11 @@ import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.presentation.components.VanishXAlertDialog
 import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
+import com.vault.vanishx.presentation.qr.QrBitmapEncoder
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.util.formatRemainingMs
 import kotlinx.coroutines.delay
@@ -82,11 +102,37 @@ fun RoomScreen(
     navigator: (BaseDestination) -> Unit,
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     viewModel.navigator.collectAsEffect { destination -> navigator(destination) }
+
+    LaunchedEffect(uiState.pingPeerEvent) {
+        val message = when (val event = uiState.pingPeerEvent) {
+            is PingPeerEvent.Sent -> context.getString(R.string.room_ping_peer_sent)
+            is PingPeerEvent.Cooldown ->
+                context.getString(R.string.room_ping_peer_cooldown, event.secondsRemaining)
+            null -> null
+        }
+        if (message != null) {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            viewModel.onAction(RoomAction.ConsumePingPeerEvent)
+        }
+    }
 
     RoomContent(
         uiState = uiState,
         onAction = viewModel::onAction,
+        onCopyInvite = { uri ->
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("VanishX invite", uri))
+            Toast.makeText(context, context.getString(R.string.create_copied), Toast.LENGTH_SHORT).show()
+        },
+        onShareInvite = { uri ->
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, uri)
+            }
+            context.startActivity(Intent.createChooser(intent, context.getString(R.string.create_share)))
+        },
     )
 }
 
@@ -94,17 +140,37 @@ fun RoomScreen(
 private fun RoomContent(
     uiState: RoomUiState,
     onAction: (RoomAction) -> Unit,
+    onCopyInvite: (String) -> Unit,
+    onShareInvite: (String) -> Unit,
 ) {
     val showComposer = !uiState.isLoading &&
         uiState.room?.status == MailboxRoom.STATUS_ACTIVE &&
         !uiState.isExpired
+    val roomHandshakeStatus = handshakeStatus(uiState.room, uiState.isExpired)
+    val isHandshakeWaiting = roomHandshakeStatus == RoomHandshakeStatus.WAITING
+    val isWaitingForPeer = isHandshakeWaiting && uiState.room?.role == MailboxRoom.ROLE_CREATOR
+    val inviteUri = uiState.room?.let { room ->
+        RoomInvite(
+            roomId = room.id,
+            roomKey = room.roomKey,
+            expiresAt = room.expiresAt.takeIf { it > 0L },
+        ).toUriString()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(VanishXColors.Bg),
+            .background(VanishXColors.Bg)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .imePadding(),
     ) {
-        ChatTopBar(uiState = uiState, onAction = onAction)
+        ChatTopBar(
+            uiState = uiState,
+            onAction = onAction,
+            isWaitingForPeer = isWaitingForPeer,
+            handshakeStatus = roomHandshakeStatus,
+        )
 
         when {
             uiState.isLoading -> RoomLoading(modifier = Modifier.weight(1f))
@@ -119,6 +185,11 @@ private fun RoomContent(
                 modifier = Modifier.weight(1f),
             )
             uiState.isExpired -> RoomExpired(modifier = Modifier.weight(1f))
+            isHandshakeWaiting -> HandshakeWaitingBanner(
+                room = uiState.room,
+                onAction = onAction,
+                modifier = Modifier.weight(1f),
+            )
             else -> RoomActiveBody(
                 uiState = uiState,
                 modifier = Modifier.weight(1f),
@@ -131,6 +202,7 @@ private fun RoomContent(
             ChatComposer(
                 draft = uiState.draft,
                 isSending = uiState.isSending,
+                locked = isHandshakeWaiting,
                 onAction = onAction,
             )
         }
@@ -194,12 +266,133 @@ private fun RoomContent(
             onDismiss = { onAction(RoomAction.DismissPing) },
         )
     }
+
+    if (uiState.showInviteSheet && inviteUri != null) {
+        InviteSheet(
+            inviteUri = inviteUri,
+            onCopy = onCopyInvite,
+            onShare = onShareInvite,
+            onDismiss = { onAction(RoomAction.DismissInviteSheet) },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InviteSheet(
+    inviteUri: String,
+    onCopy: (String) -> Unit,
+    onShare: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val qrEncoder = remember { QrBitmapEncoder() }
+    val qrBitmap = remember(inviteUri) { qrEncoder.encode(inviteUri) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(),
+        containerColor = VanishXColors.Surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = RoomUiDimens.spacingMedium, vertical = 4.dp)
+                .padding(bottom = RoomUiDimens.spacingMedium),
+        ) {
+            Text(
+                text = stringResource(R.string.room_invite_waiting_pill),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+                color = VanishXColors.Warn,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(VanishXColors.Warn.copy(alpha = 0.15f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+            Spacer(modifier = Modifier.height(RoomUiDimens.spacingSmall))
+            Text(
+                text = stringResource(R.string.room_invite_title),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+                color = VanishXColors.OnSurface,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.room_invite_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = VanishXColors.Muted,
+            )
+            Spacer(modifier = Modifier.height(RoomUiDimens.spacingMedium))
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    bitmap = qrBitmap.asImageBitmap(),
+                    contentDescription = stringResource(R.string.create_qr_cd),
+                    modifier = Modifier
+                        .size(RoomUiDimens.qrSize)
+                        .clip(RoundedCornerShape(RoomUiDimens.cardCorner))
+                        .background(Color.White)
+                        .padding(RoomUiDimens.spacingSmall),
+                )
+            }
+            Spacer(modifier = Modifier.height(RoomUiDimens.spacingMedium))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = VanishXColors.Surface2,
+                border = BorderStroke(1.dp, VanishXColors.Outline),
+            ) {
+                Text(
+                    text = inviteUri,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    color = VanishXColors.OnSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(RoomUiDimens.spacingMedium))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(RoomUiDimens.spacingSmall),
+            ) {
+                OutlinedButton(
+                    onClick = { onShare(inviteUri) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, VanishXColors.Outline),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = VanishXColors.OnSurface),
+                ) {
+                    Text(text = stringResource(R.string.create_share))
+                }
+                Button(
+                    onClick = { onCopy(inviteUri) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = VanishXColors.Primary,
+                        contentColor = VanishXColors.OnPrimary,
+                    ),
+                ) {
+                    Text(text = stringResource(R.string.create_copy))
+                }
+            }
+        }
+    }
 }
 
 @Composable
 private fun ChatTopBar(
     uiState: RoomUiState,
     onAction: (RoomAction) -> Unit,
+    isWaitingForPeer: Boolean,
+    handshakeStatus: RoomHandshakeStatus,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val showMenu = uiState.room?.status == MailboxRoom.STATUS_ACTIVE && !uiState.isExpired
@@ -250,18 +443,39 @@ private fun ChatTopBar(
                     color = VanishXColors.OnSurface,
                     maxLines = 1,
                 )
-                Text(
-                    text = stringResource(
-                        R.string.join_preview_room_id,
-                        uiState.roomId.takeLast(ROOM_ID_DISPLAY_SUFFIX).uppercase(),
-                    ),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 12.sp,
-                        letterSpacing = 0.4.sp,
-                    ),
-                    color = VanishXColors.Primary,
-                    maxLines = 1,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(
+                            R.string.join_preview_room_id,
+                            uiState.roomId.takeLast(ROOM_ID_DISPLAY_SUFFIX).uppercase(),
+                        ),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp,
+                            letterSpacing = 0.4.sp,
+                        ),
+                        color = VanishXColors.Primary,
+                        maxLines = 1,
+                    )
+                    if (isWaitingForPeer) {
+                        Text(
+                            text = stringResource(R.string.room_waiting_badge),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                            ),
+                            color = VanishXColors.Warn,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(VanishXColors.Warn.copy(alpha = 0.18f))
+                                .clickable { onAction(RoomAction.OpenInviteSheet) }
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+                if (handshakeStatus == RoomHandshakeStatus.LIVE) {
+                    LivePill()
+                }
             }
 
             if (showMenu) {
@@ -333,6 +547,33 @@ private fun RoomAvatar(letter: String) {
                 fontWeight = FontWeight.Medium,
             ),
             color = Color.White,
+        )
+    }
+}
+
+@Composable
+private fun LivePill() {
+    Row(
+        modifier = Modifier
+            .padding(top = 1.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(VanishXColors.Ok.copy(alpha = 0.15f))
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(VanishXColors.Ok),
+        )
+        Text(
+            text = stringResource(R.string.room_live_pill),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Medium),
+            color = VanishXColors.Ok,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -475,6 +716,91 @@ private fun RoomLeft(modifier: Modifier = Modifier) {
                 textAlign = TextAlign.Center,
                 color = VanishXColors.Muted,
             )
+        }
+    }
+}
+
+@Composable
+private fun HandshakeWaitingBanner(
+    room: MailboxRoom?,
+    onAction: (RoomAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isCreator = room?.role == MailboxRoom.ROLE_CREATOR
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(RoomUiDimens.spacingMedium),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(RoomUiDimens.cardCorner),
+            color = VanishXColors.Surface2,
+            border = BorderStroke(1.dp, VanishXColors.Warn.copy(alpha = 0.35f)),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(VanishXColors.Warn),
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.room_handshake_waiting_title),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    textAlign = TextAlign.Center,
+                    color = VanishXColors.OnSurface,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = stringResource(
+                        if (isCreator) {
+                            R.string.room_handshake_waiting_body_creator
+                        } else {
+                            R.string.room_handshake_waiting_body_member
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                    textAlign = TextAlign.Center,
+                    color = VanishXColors.Muted,
+                    modifier = Modifier.widthIn(max = RoomUiDimens.handshakeBannerTextWidth),
+                )
+                Spacer(modifier = Modifier.height(RoomUiDimens.spacingMedium))
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(RoomUiDimens.spacingSmall),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isCreator) {
+                        Button(
+                            onClick = { onAction(RoomAction.OpenInviteSheet) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = VanishXColors.Primary,
+                                contentColor = VanishXColors.OnPrimary,
+                            ),
+                        ) {
+                            Text(text = stringResource(R.string.room_handshake_resend_link))
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = { onAction(RoomAction.PingPeer) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, VanishXColors.Outline),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = VanishXColors.Primary),
+                    ) {
+                        Text(text = stringResource(R.string.room_handshake_ping))
+                    }
+                }
+            }
         }
     }
 }
@@ -637,78 +963,97 @@ private fun ChatComposer(
     draft: String,
     isSending: Boolean,
     onAction: (RoomAction) -> Unit,
+    locked: Boolean = false,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(RoomUiDimens.composerGap),
-    ) {
-        Surface(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(RoomUiDimens.composerPillRadius),
-            color = VanishXColors.Surface,
-            border = BorderStroke(1.dp, VanishXColors.Outline),
+    val inputEnabled = !isSending && !locked
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 12.dp)
+                .alpha(if (locked) RoomUiDimens.composerLockedAlpha else 1f),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(RoomUiDimens.composerGap),
         ) {
-            Row(
-                modifier = Modifier
-                    .height(RoomUiDimens.composerFieldHeight)
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Surface(
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(RoomUiDimens.composerPillRadius),
+                color = VanishXColors.Surface,
+                border = BorderStroke(1.dp, VanishXColors.Outline),
             ) {
-                BasicTextField(
-                    value = draft,
-                    onValueChange = { onAction(RoomAction.DraftChanged(it)) },
-                    enabled = !isSending,
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    textStyle = TextStyle(
-                        color = VanishXColors.OnSurface,
-                        fontSize = 15.sp,
-                        letterSpacing = 0.15.sp,
-                    ),
-                    cursorBrush = SolidColor(VanishXColors.Primary),
-                    singleLine = false,
-                    maxLines = COMPOSER_MAX_LINES,
-                    decorationBox = { inner ->
-                        Box {
-                            if (draft.isEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.room_composer_hint),
-                                    style = TextStyle(
-                                        color = VanishXColors.Muted,
-                                        fontSize = 15.sp,
-                                    ),
-                                )
+                        .height(RoomUiDimens.composerFieldHeight)
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BasicTextField(
+                        value = draft,
+                        onValueChange = { onAction(RoomAction.DraftChanged(it)) },
+                        enabled = inputEnabled,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        textStyle = TextStyle(
+                            color = VanishXColors.OnSurface,
+                            fontSize = 15.sp,
+                            letterSpacing = 0.15.sp,
+                        ),
+                        cursorBrush = SolidColor(VanishXColors.Primary),
+                        singleLine = false,
+                        maxLines = COMPOSER_MAX_LINES,
+                        decorationBox = { inner ->
+                            Box {
+                                if (draft.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.room_composer_hint),
+                                        style = TextStyle(
+                                            color = VanishXColors.Muted,
+                                            fontSize = 15.sp,
+                                        ),
+                                    )
+                                }
+                                inner()
                             }
-                            inner()
-                        }
-                    },
+                        },
+                    )
+                }
+            }
+            IconButton(
+                onClick = { onAction(RoomAction.Send) },
+                enabled = inputEnabled && draft.isNotBlank(),
+                modifier = Modifier
+                    .size(RoomUiDimens.sendButtonSize)
+                    .clip(CircleShape)
+                    .background(
+                        if (inputEnabled && draft.isNotBlank()) {
+                            VanishXColors.Primary
+                        } else {
+                            VanishXColors.Primary.copy(alpha = RoomUiDimens.sendDisabledAlpha)
+                        },
+                    ),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = stringResource(R.string.room_send_cd),
+                    tint = VanishXColors.OnPrimary,
+                    modifier = Modifier.size(22.dp),
                 )
             }
         }
-        IconButton(
-            onClick = { onAction(RoomAction.Send) },
-            enabled = !isSending && draft.isNotBlank(),
-            modifier = Modifier
-                .size(RoomUiDimens.sendButtonSize)
-                .clip(CircleShape)
-                .background(
-                    if (!isSending && draft.isNotBlank()) {
-                        VanishXColors.Primary
-                    } else {
-                        VanishXColors.Primary.copy(alpha = RoomUiDimens.sendDisabledAlpha)
-                    },
-                ),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = stringResource(R.string.room_send_cd),
-                tint = VanishXColors.OnPrimary,
-                modifier = Modifier.size(22.dp),
-            )
+        if (locked) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(VanishXColors.Bg.copy(alpha = RoomUiDimens.composerLockedOverlayAlpha)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.room_composer_locked_hint),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                    color = VanishXColors.Muted,
+                )
+            }
         }
     }
 }
@@ -869,6 +1214,8 @@ private object RoomUiDimens {
     val composerPillRadius = 24.dp
     val composerFieldHeight = 48.dp
     val sendButtonSize = 48.dp
+    val qrSize = 180.dp
+    val handshakeBannerTextWidth = 260.dp
     val bubbleInColor = Color(0xFF21262D)
     val e2eLockTint = Color(0xFF5B9FFF)
     const val dividerAlpha = 0.6f
@@ -878,5 +1225,7 @@ private object RoomUiDimens {
     const val timeAlpha = 0.55f
     const val checkAlpha = 0.85f
     const val recalledAlpha = 0.7f
+    const val composerLockedAlpha = 0.55f
+    const val composerLockedOverlayAlpha = 0.72f
     const val sendDisabledAlpha = 0.35f
 }

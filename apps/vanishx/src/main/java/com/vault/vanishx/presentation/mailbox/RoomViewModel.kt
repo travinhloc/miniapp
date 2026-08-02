@@ -12,6 +12,7 @@ import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.BlockPeerUseCase
 import com.vault.vanishx.domain.usecase.GetRoomUseCase
+import com.vault.vanishx.domain.usecase.PingPeerUseCase
 import com.vault.vanishx.domain.usecase.PingRoomUseCase
 import com.vault.vanishx.domain.usecase.PurgeExpiredRoomUseCase
 import com.vault.vanishx.domain.usecase.RecallRoomMessageUseCase
@@ -57,7 +58,15 @@ data class RoomUiState(
     val showPingConfirm: Boolean = false,
     val pingBusy: Boolean = false,
     val remoteMetaPresent: Boolean? = null,
+    val showInviteSheet: Boolean = false,
+    val pingPeerEvent: PingPeerEvent? = null,
 )
+
+/** One-shot handshake-nudge feedback (story 7.7) — consumed by the screen as a toast. */
+sealed interface PingPeerEvent {
+    data object Sent : PingPeerEvent
+    data class Cooldown(val secondsRemaining: Int) : PingPeerEvent
+}
 
 sealed interface RoomAction {
     data object Back : RoomAction
@@ -76,6 +85,10 @@ sealed interface RoomAction {
     data object OpenPaywall : RoomAction
     data object PingRoom : RoomAction
     data object DismissPing : RoomAction
+    data object OpenInviteSheet : RoomAction
+    data object DismissInviteSheet : RoomAction
+    data object PingPeer : RoomAction
+    data object ConsumePingPeerEvent : RoomAction
 }
 
 @HiltViewModel
@@ -87,6 +100,7 @@ class RoomViewModel @Inject constructor(
     private val syncRoomMailbox: SyncRoomMailboxUseCase,
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
     private val pingRoom: PingRoomUseCase,
+    private val pingPeerUseCase: PingPeerUseCase,
     private val blockPeer: BlockPeerUseCase,
     private val reportRoom: ReportRoomUseCase,
     private val recallRoomMessage: RecallRoomMessageUseCase,
@@ -97,6 +111,7 @@ class RoomViewModel @Inject constructor(
 ) : BaseViewModel() {
 
     private val roomId: String = checkNotNull(savedStateHandle["roomId"])
+    private val openInviteOnLoad: Boolean = savedStateHandle["openInvite"] ?: false
 
     private val _uiState = MutableStateFlow(
         RoomUiState(
@@ -108,6 +123,7 @@ class RoomViewModel @Inject constructor(
 
     private var observeJob: Job? = null
     private var expiryJob: Job? = null
+    private var lastPeerPingAtMs = 0L
 
     init {
         proEntitlement.isPro
@@ -162,7 +178,24 @@ class RoomViewModel @Inject constructor(
             RoomAction.DismissPing -> _uiState.update {
                 it.copy(showPingConfirm = false, remoteMetaPresent = null)
             }
+            RoomAction.OpenInviteSheet -> _uiState.update { it.copy(showInviteSheet = true) }
+            RoomAction.DismissInviteSheet -> _uiState.update { it.copy(showInviteSheet = false) }
+            RoomAction.PingPeer -> pingPeer()
+            RoomAction.ConsumePingPeerEvent -> _uiState.update { it.copy(pingPeerEvent = null) }
             else -> Unit
+        }
+    }
+
+    private fun pingPeer() {
+        val state = _uiState.value
+        if (handshakeStatus(state.room, state.isExpired) != RoomHandshakeStatus.WAITING) return
+        val result = pingPeerUseCase(lastPeerPingAtMs)
+        if (result.sent) {
+            lastPeerPingAtMs = System.currentTimeMillis()
+            _uiState.update { it.copy(pingPeerEvent = PingPeerEvent.Sent) }
+        } else {
+            val seconds = ((result.cooldownRemainingMs + MS_PER_SEC - 1) / MS_PER_SEC).toInt().coerceAtLeast(1)
+            _uiState.update { it.copy(pingPeerEvent = PingPeerEvent.Cooldown(seconds)) }
         }
     }
 
@@ -237,12 +270,16 @@ class RoomViewModel @Inject constructor(
             .onEach { room ->
                 val expired = room?.status == MailboxRoom.STATUS_EXPIRED ||
                     room?.status == MailboxRoom.STATUS_LEFT
+                val openInvite = openInviteOnLoad &&
+                    room?.role == MailboxRoom.ROLE_CREATOR &&
+                    !expired
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         room = room,
                         isExpired = expired,
                         errorMessage = if (room == null) "Room not found" else null,
+                        showInviteSheet = it.showInviteSheet || openInvite,
                     )
                 }
                 when {
@@ -557,4 +594,8 @@ class RoomViewModel @Inject constructor(
         message.contains("Unable to resolve host", ignoreCase = true) ||
             message.contains("network", ignoreCase = true) ||
             message.contains("Firebase Network", ignoreCase = true)
+
+    private companion object {
+        const val MS_PER_SEC = 1_000L
+    }
 }

@@ -4,7 +4,13 @@ data class RemoteRoomMeta(
     val createdAt: Long,
     val expiresAt: Long,
     val creatorPub: String? = null,
-)
+    /** Optional one-line opener the guest sees before accepting (story 7.5). */
+    val icebreaker: String? = null,
+) {
+    companion object {
+        const val MAX_ICEBREAKER_LENGTH = 80
+    }
+}
 
 data class RemoteMailboxMessage(
     val messageId: String,
