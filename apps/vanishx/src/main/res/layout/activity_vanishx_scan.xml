@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#05070A">
+
+    <com.journeyapps.barcodescanner.DecoratedBarcodeView
+        android:id="@+id/zxing_barcode_scanner"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:zxing_preview_scaling_strategy="centerCrop"
+        app:zxing_use_texture_view="false" />
+
+    <TextView
+        android:id="@+id/scan_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="120dp"
+        android:gravity="center"
+        android:paddingHorizontal="16dp"
+        android:shadowColor="#CC000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="6"
+        android:text="@string/join_scan_prompt"
+        android:textColor="#E6EDF3"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_scan_toolbar_scrim"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingTop="16dp"
+        android:paddingBottom="28dp">
+
+        <ImageButton
+            android:id="@+id/btn_scan_close"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_scan_toolbar_button"
+            android:contentDescription="@string/action_back"
+            android:padding="16dp"
+            android:src="@drawable/ic_scan_close" />
+
+        <ImageButton
+            android:id="@+id/btn_scan_torch"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:background="@drawable/bg_scan_toolbar_button"
+            android:contentDescription="@string/join_scan_torch"
+            android:padding="16dp"
+            android:src="@drawable/ic_scan_torch" />
+
+        <ImageButton
+            android:id="@+id/btn_scan_gallery"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_scan_toolbar_button"
+            android:contentDescription="@string/join_scan_gallery"
+            android:padding="16dp"
+            android:src="@drawable/ic_scan_gallery" />
+    </LinearLayout>
+</FrameLayout>

@@ -16,24 +16,24 @@ class SplashGateTest {
     fun `exits early after min when bootstrap already ready`() = runTest {
         val ready = MutableStateFlow(true)
         val job = launch {
-            awaitSplashGate(ready, minDisplayMs = 800L, maxDisplayMs = 1_800L)
+            awaitSplashGate(ready, minDisplayMs = 1_200L, maxDisplayMs = 2_400L)
         }
-        advanceTimeBy(799L)
+        advanceTimeBy(1_199L)
         runCurrent()
         job.isCompleted shouldBe false
         advanceTimeBy(1L)
         runCurrent()
         job.isCompleted shouldBe true
-        testScheduler.currentTime shouldBe 800L
+        testScheduler.currentTime shouldBe 1_200L
     }
 
     @Test
     fun `waits for bootstrap then exits without hitting max`() = runTest {
         val ready = MutableStateFlow(false)
         val job = launch {
-            awaitSplashGate(ready, minDisplayMs = 800L, maxDisplayMs = 1_800L)
+            awaitSplashGate(ready, minDisplayMs = 1_200L, maxDisplayMs = 2_400L)
         }
-        advanceTimeBy(800L)
+        advanceTimeBy(1_200L)
         runCurrent()
         job.isCompleted shouldBe false
 
@@ -41,21 +41,21 @@ class SplashGateTest {
         ready.value = true
         runCurrent()
         job.isCompleted shouldBe true
-        testScheduler.currentTime shouldBe 1_000L
+        testScheduler.currentTime shouldBe 1_400L
     }
 
     @Test
     fun `exits at max even if bootstrap never ready`() = runTest {
         val ready = MutableStateFlow(false)
         val job = launch {
-            awaitSplashGate(ready, minDisplayMs = 800L, maxDisplayMs = 1_800L)
+            awaitSplashGate(ready, minDisplayMs = 1_200L, maxDisplayMs = 2_400L)
         }
-        advanceTimeBy(1_799L)
+        advanceTimeBy(2_399L)
         runCurrent()
         job.isCompleted shouldBe false
         advanceTimeBy(1L)
         runCurrent()
         job.isCompleted shouldBe true
-        testScheduler.currentTime shouldBe 1_800L
+        testScheduler.currentTime shouldBe 2_400L
     }
 }

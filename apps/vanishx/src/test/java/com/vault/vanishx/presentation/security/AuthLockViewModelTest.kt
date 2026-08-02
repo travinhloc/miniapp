@@ -10,7 +10,6 @@ import com.vault.vanishx.test.CoroutineTestRule
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -109,15 +108,18 @@ class LockViewModelTest {
     }
 
     @Test
-    fun `correct pin unlocks`() = runTest {
-        enterPin("1234")
+    fun `correct pin unlocks after OK`() = runTest {
+        enterPinWithoutSubmit("1234")
+        viewModel.uiState.value.unlocked shouldBe false
+        viewModel.onAction(LockAction.Submit)
         viewModel.uiState.value.unlocked shouldBe true
         verify { appLockSession.unlock() }
     }
 
     @Test
     fun `wrong pin shows attempts remaining`() = runTest {
-        enterPin("0000")
+        enterPinWithoutSubmit("0000")
+        viewModel.onAction(LockAction.Submit)
         val state = viewModel.uiState.value
         state.showWrongPin shouldBe true
         state.attemptsLeft shouldBe 4
@@ -125,8 +127,32 @@ class LockViewModelTest {
     }
 
     @Test
-    fun `five wrong pins wipe and burn`() = runTest {
-        repeat(5) { enterPin("0000") }
+    fun `five wrong pins start cooldown without wipe by default`() = runTest {
+        repeat(5) {
+            enterPinWithoutSubmit("0000")
+            viewModel.onAction(LockAction.Submit)
+        }
+        val state = viewModel.uiState.value
+        state.cooldownRemainingMs shouldBe SecurityPinStore.COOLDOWN_DURATIONS_MS[0]
+        state.showBurnOverlay shouldBe false
+        state.wiped shouldBe false
+        coVerify(exactly = 0) { panicWipe() }
+        pinStore.hasUnlockPin() shouldBe true
+    }
+
+    @Test
+    fun `five wrong pins wipe when auto wipe enabled`() = runTest {
+        pinStore.setAutoWipeEnabled(true)
+        viewModel = LockViewModel(
+            securityPinStore = pinStore,
+            appLockSession = appLockSession,
+            panicWipe = panicWipe,
+            dispatchersProvider = coroutinesRule.testDispatcherProvider,
+        )
+        repeat(5) {
+            enterPinWithoutSubmit("0000")
+            viewModel.onAction(LockAction.Submit)
+        }
         advanceUntilIdle()
         viewModel.uiState.test {
             val state = expectMostRecentItem()
@@ -137,7 +163,19 @@ class LockViewModelTest {
         pinStore.hasUnlockPin() shouldBe false
     }
 
-    private fun enterPin(pin: String) {
+    @Test
+    fun `panic pin wipes silently`() = runTest {
+        pinStore.setPanicPin("9999")
+        enterPinWithoutSubmit("9999")
+        viewModel.onAction(LockAction.Submit)
+        advanceUntilIdle()
+        val state = viewModel.uiState.value
+        state.wiped shouldBe true
+        state.showBurnOverlay shouldBe false
+        coVerify(exactly = 1) { panicWipe() }
+    }
+
+    private fun enterPinWithoutSubmit(pin: String) {
         pin.forEach { viewModel.onAction(LockAction.Digit(it)) }
     }
 }

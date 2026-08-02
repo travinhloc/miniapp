@@ -18,20 +18,22 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
+/** Story 7.5: create is one tap, TTL fixed at 24h — no multi-field form. */
+enum class CreateRoomMode {
+    INSTANT,
+    LATER,
+}
+
 data class CreateRoomUiState(
-    val nickname: String = "",
-    val title: String = "",
-    val inviteNote: String = "",
-    val selectedTtl: RoomTtlOption = RoomTtlOption.ONE_HOUR,
+    val mode: CreateRoomMode = CreateRoomMode.INSTANT,
+    val icebreaker: String = "",
     val isCreating: Boolean = false,
     val errorMessage: String? = null,
 )
 
 sealed interface CreateRoomAction {
-    data class NicknameChanged(val value: String) : CreateRoomAction
-    data class TitleChanged(val value: String) : CreateRoomAction
-    data class InviteNoteChanged(val value: String) : CreateRoomAction
-    data class SelectTtl(val ttl: RoomTtlOption) : CreateRoomAction
+    data class SelectMode(val mode: CreateRoomMode) : CreateRoomAction
+    data class IcebreakerChanged(val value: String) : CreateRoomAction
     data object Create : CreateRoomAction
     data object ClearError : CreateRoomAction
     data object Back : CreateRoomAction
@@ -48,16 +50,10 @@ class CreateRoomViewModel @Inject constructor(
 
     fun onAction(action: CreateRoomAction) {
         when (action) {
-            is CreateRoomAction.NicknameChanged -> _uiState.update {
-                it.copy(nickname = action.value.take(NICKNAME_MAX), errorMessage = null)
+            is CreateRoomAction.SelectMode -> _uiState.update { it.copy(mode = action.mode) }
+            is CreateRoomAction.IcebreakerChanged -> _uiState.update {
+                it.copy(icebreaker = action.value.take(ICEBREAKER_MAX), errorMessage = null)
             }
-            is CreateRoomAction.TitleChanged -> _uiState.update {
-                it.copy(title = action.value.take(TITLE_MAX), errorMessage = null)
-            }
-            is CreateRoomAction.InviteNoteChanged -> _uiState.update {
-                it.copy(inviteNote = action.value.take(INVITE_NOTE_MAX), errorMessage = null)
-            }
-            is CreateRoomAction.SelectTtl -> _uiState.update { it.copy(selectedTtl = action.ttl) }
             CreateRoomAction.Create -> create()
             CreateRoomAction.ClearError -> _uiState.update { it.copy(errorMessage = null) }
             CreateRoomAction.Back -> launch { _navigator.emit(BaseDestination.Up()) }
@@ -71,22 +67,27 @@ class CreateRoomViewModel @Inject constructor(
         flow {
             emit(
                 createRoom(
-                    ttl = state.selectedTtl,
-                    title = state.title.takeIf { it.isNotBlank() },
-                    nickname = state.nickname.takeIf { it.isNotBlank() },
+                    ttl = RoomTtlOption.ONE_DAY,
+                    icebreaker = state.icebreaker.takeIf { it.isNotBlank() },
                 ),
             )
         }
             .flowOn(dispatchersProvider.io)
             .onEach { created ->
                 _uiState.update { it.copy(isCreating = false) }
-                val uri = created.invite.toUriString()
-                launch {
-                    _navigator.emit(
-                        BaseDestination.Up(
-                            results = hashMapOf<String, Any>("inviteUri" to uri),
-                        ),
-                    )
+                when (state.mode) {
+                    CreateRoomMode.INSTANT -> launch {
+                        _navigator.emit(
+                            MailboxDestination.Room(roomId = created.room.id, openInvite = true),
+                        )
+                    }
+                    CreateRoomMode.LATER -> launch {
+                        _navigator.emit(
+                            BaseDestination.Up(
+                                results = hashMapOf<String, Any>("inviteUri" to created.invite.toUriString()),
+                            ),
+                        )
+                    }
                 }
             }
             .catch { e ->
@@ -101,8 +102,6 @@ class CreateRoomViewModel @Inject constructor(
     }
 
     private companion object {
-        const val NICKNAME_MAX = 24
-        const val TITLE_MAX = 32
-        const val INVITE_NOTE_MAX = 140
+        const val ICEBREAKER_MAX = 80
     }
 }

@@ -17,6 +17,7 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
     createdAt: number   // epoch ms
     expiresAt: number   // room TTL (must be > now on write)
     creatorPub: string  // optional base64 Ed25519 public key
+    icebreaker: string? // optional · 1..80 chars (Epic 7.5)
   messages/{messageId}/
     ciphertext: string  // base64 — required
     senderPub: string   // base64

@@ -12,10 +12,11 @@ Docs **không nằm trong repo này**. Nguồn sự thật:
 
 1. `vanishx-engine-vi.md` — PRD / core MVP  
 2. `vanishx-project-planning.md` — timeline  
-3. `stories/README.md` + story đang làm (**Epic 6:** `6.0.epic.md` / `6.1.story.md`…)  
-4. `vanishx-production-dod.md` — DoD Production / soft-launch  
-5. `mockup/main.html` — UI M2 Night  
-6. `vanishx-idea-draft.md` — nhật ký quyết định  
+3. `stories/README.md` + story đang làm (**Epic 7:** `7.0.epic.md` / `7.1` design ✅ → `7.2+` Compose)  
+4. `vanishx-ui-ux-sprint-backlog.md` — Confirm PO 0→5  
+5. `vanishx-production-dod.md` — DoD Production / soft-launch  
+6. `mockup/main.html` — UI M2 Night (Epic 7 gallery)  
+7. `vanishx-idea-draft.md` — nhật ký quyết định  
 
 BMAD lean (stack Android→KMP): `../project-note-cursor/bmad-agent/LEAN-MOBILE.md`
 
@@ -53,5 +54,5 @@ Xem `.cursor/rules/vanishx-docs.mdc` trong repo này.
 ## Core MVP (nhắc nhanh)
 
 Crypto + SQLCipher + Firebase mailbox + create/join + gửi/nhận text + TTL/purge + sync-on-open.  
-**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5 UI M2.  
-**Đang mở:** Epic 6 — optimize UX + Production (`vanishx-production-dod.md`).
+**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5 UI M2 · **Epic 7** UI/UX sprint 0→5.  
+**Đang mở:** Epic 6 Production (`vanishx-production-dod.md`).

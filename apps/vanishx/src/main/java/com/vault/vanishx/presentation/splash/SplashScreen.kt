@@ -76,8 +76,8 @@ private const val WAVE_GLOW_ALPHA = 0.35f
 private val LogoMarkShape = RoundedCornerShape(LogoCornerDp.dp)
 
 /** Covers brand-enter (~0.9s) without feeling stuck if identity is already warm. */
-private const val SPLASH_MIN_MS = 800L
-private const val SPLASH_MAX_MS = 1_800L
+private const val SPLASH_MIN_MS = 1_200L
+private const val SPLASH_MAX_MS = 2_400L
 private const val SPLASH_REDUCED_MIN_MS = 0L
 private const val SPLASH_REDUCED_MAX_MS = 400L
 
@@ -279,6 +279,17 @@ fun SplashScreen(
                 color = VanishXColors.Muted,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.width(TaglineMaxWidth),
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = stringResource(R.string.splash_trust),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.8.sp,
+                ),
+                color = VanishXColors.Muted.copy(alpha = 0.85f),
+                textAlign = TextAlign.Center,
             )
         }
 

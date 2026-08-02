@@ -3,6 +3,7 @@ package com.vault.vanishx.domain.usecase
 import com.vault.vanishx.data.crypto.RoomSecretsGenerator
 import com.vault.vanishx.data.push.FakeRoomPushTopics
 import com.vault.vanishx.data.remote.InMemoryMailboxRemoteDataSource
+import com.vault.vanishx.data.remote.RemoteRoomMeta
 import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.model.RoomInvite
@@ -64,5 +65,30 @@ class CreateJoinRoomUseCaseTest {
         room.roomKey shouldBe "k1"
         pushTopics.subscribed shouldBe listOf("r1")
         coVerify { mailboxRepository.upsertRoom(match { it.id == "r1" && it.role == MailboxRoom.ROLE_MEMBER }) }
+    }
+
+    @Test
+    fun `join copies the host icebreaker from remote meta onto the joined room`() = runTest {
+        coEvery { mailboxRepository.getRoom("r2") } returns null
+        coEvery { mailboxRepository.upsertRoom(any()) } returns Unit
+        remote.writeRoomMeta(
+            "r2",
+            RemoteRoomMeta(
+                createdAt = System.currentTimeMillis(),
+                expiresAt = System.currentTimeMillis() + 60_000,
+                creatorPub = "hostPub",
+                icebreaker = "Hi there — still interested?",
+            ),
+        )
+
+        val room = JoinRoomUseCase(
+            mailboxRepository = mailboxRepository,
+            remote = remote,
+            roomPushTopics = pushTopics,
+            blockRepository = mockk(relaxed = true),
+        ).invoke(RoomInvite(roomId = "r2", roomKey = "k2"))
+
+        room.icebreaker shouldBe "Hi there — still interested?"
+        room.peerPub shouldBe "hostPub"
     }
 }

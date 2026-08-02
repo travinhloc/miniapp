@@ -27,10 +27,15 @@ class CreateRoomUseCase @Inject constructor(
         ttl: RoomTtlOption,
         title: String? = null,
         nickname: String? = null,
+        icebreaker: String? = null,
     ): CreatedRoom {
         val identity = identityRepository.ensureIdentity()
         val now = System.currentTimeMillis()
         val expiresAt = now + ttl.durationMs
+        val trimmedIcebreaker = icebreaker
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.take(RemoteRoomMeta.MAX_ICEBREAKER_LENGTH)
         val room = MailboxRoom(
             id = secretsGenerator.newRoomId(),
             roomKey = secretsGenerator.newRoomKey(),
@@ -40,6 +45,7 @@ class CreateRoomUseCase @Inject constructor(
             nickname = nickname?.trim()?.takeIf { it.isNotEmpty() },
             status = MailboxRoom.STATUS_ACTIVE,
             role = MailboxRoom.ROLE_CREATOR,
+            icebreaker = trimmedIcebreaker,
         )
         remote.writeRoomMeta(
             roomId = room.id,
@@ -47,6 +53,7 @@ class CreateRoomUseCase @Inject constructor(
                 createdAt = room.createdAt,
                 expiresAt = room.expiresAt,
                 creatorPub = identity.publicKeyBase64,
+                icebreaker = trimmedIcebreaker,
             ),
         )
         mailboxRepository.upsertRoom(room)

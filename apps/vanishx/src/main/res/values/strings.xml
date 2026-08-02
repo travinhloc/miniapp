@@ -5,8 +5,9 @@
     <string name="action_back">Back</string>
 
     <!-- Splash -->
-    <string name="splash_tagline">Private chat · vanishes on its own</string>
-    <string name="splash_protecting">Securing your session…</string>
+    <string name="splash_tagline">Private chat · vanishes instantly</string>
+    <string name="splash_protecting">Activating encryption…</string>
+    <string name="splash_trust">No phone number · No server</string>
 
     <!-- Auth setup -->
     <string name="auth_setup_title">Set unlock PIN</string>
@@ -22,7 +23,14 @@
 
     <!-- Home -->
     <string name="home_tagline">Private chat · vanishes on its own</string>
-    <string name="home_create_room">Create temporary room</string>
+    <string name="home_create_room">Create secure room</string>
+    <string name="home_paste_link">Paste link</string>
+    <string name="home_radar_title">Protected</string>
+    <string name="home_radar_sub">Encrypted on device</string>
+    <string name="home_privacy_vaporized">Messages vanished today</string>
+    <string name="home_privacy_local">On device · no server logs</string>
+    <string name="home_waiting_badge">Waiting to accept</string>
+    <string name="home_swipe_delete_hint">Swipe left to delete</string>
     <string name="home_join_room">Join with link / QR / code</string>
     <string name="home_security">Security</string>
     <string name="home_settings">Settings</string>
@@ -87,24 +95,22 @@
     <string name="ttl_7d">7d</string>
 
     <!-- Create room -->
-    <string name="create_title">Create room</string>
-    <string name="create_subtitle">Create an invite, then return to Home. Others join via link / QR.</string>
-    <string name="create_nickname_label">Nickname</string>
-    <string name="create_nickname_hint">e.g. Alex</string>
-    <string name="create_room_name_label">Room name</string>
-    <string name="create_room_name_hint">e.g. Weekend plans</string>
-    <string name="create_ttl_label">Expires after</string>
-    <string name="create_invite_note_label">Invite note (optional)</string>
-    <string name="create_invite_note_hint">e.g. Join before 8 PM</string>
-    <string name="create_action">Create</string>
+    <string name="create_title">Create secure room</string>
+    <string name="create_subtitle">One tap · auto-deletes after 24h by default</string>
+    <string name="create_mode_instant_title">Create now</string>
+    <string name="create_mode_instant_desc">Enter the room · show Copy / Share / QR invite · wait for them to accept</string>
+    <string name="create_mode_later_title">Later</string>
+    <string name="create_mode_later_desc">Save the link on Home · send it when you\'re ready</string>
+    <string name="create_icebreaker_label">Icebreaker (optional)</string>
+    <string name="create_icebreaker_hint">e.g. I\'m the one from yesterday\'s listing…</string>
+    <string name="create_icebreaker_help">Shown on the invite — they see it before accepting</string>
+    <string name="create_defaults_note">Defaults: auto nickname · expires in 24 hours (adjustable later in the room)</string>
+    <string name="create_action">Continue</string>
     <string name="create_creating">Creating…</string>
-    <string name="create_share_label">Share invite</string>
     <string name="create_qr_cd">Invite QR code</string>
     <string name="create_copy">Copy</string>
     <string name="create_share">Share</string>
     <string name="create_copied">Invite copied</string>
-    <string name="create_enter_room">Enter room</string>
-    <string name="create_note">Anyone with the link + room key can open the mailbox while it is still valid.</string>
 
     <!-- Join room -->
     <string name="join_title">Join room</string>
@@ -121,7 +127,28 @@
     <string name="join_nickname_label">Nickname</string>
     <string name="join_nickname_hint">e.g. Sam</string>
     <string name="join_enter_room">Enter</string>
-    <string name="join_save_for_later">Save for later</string>
+    <string name="join_save_for_later">Later</string>
+
+    <!-- Join · Message Request (story 7.6) -->
+    <string name="join_request_title">Chat request</string>
+    <string name="join_request_subtitle">Room #%1$s · from host</string>
+    <string name="join_request_icebreaker_label">Icebreaker</string>
+    <string name="join_request_privacy">Auto-deletes in 24h · no history kept on the server</string>
+    <string name="join_nickname_change">Change</string>
+    <string name="join_nickname_save">Save</string>
+    <string name="join_accept_chat">Accept &amp; Chat</string>
+    <string name="join_block">Block</string>
+    <string name="join_blocking">Blocking…</string>
+    <string name="join_block_title">Block this peer?</string>
+    <string name="join_block_body">They will be blocked by public key. You won\'t receive requests from them again on this device, and this request won\'t be accepted.</string>
+    <string name="join_block_confirm">Block</string>
+    <string name="join_later_toast">Saved · not accepted — the host is still waiting</string>
+    <string name="join_blocked_toast">Blocked. This request was not accepted.</string>
+
+    <!-- Join · QR scanner (story 7.6) -->
+    <string name="join_scan_torch">Torch</string>
+    <string name="join_scan_gallery">Choose from gallery</string>
+    <string name="join_scan_gallery_error">Couldn\'t read a QR code from that image</string>
 
     <!-- Room -->
     <string name="room_loading">Loading room…</string>
@@ -163,6 +190,21 @@
     <string name="room_menu_cd">More options</string>
     <string name="room_send_cd">Send message</string>
     <string name="room_sent_checks">✓✓</string>
+    <string name="room_waiting_badge">Waiting</string>
+    <string name="room_invite_title">Invite to room</string>
+    <string name="room_invite_subtitle">Send the link or QR so they can join.</string>
+    <string name="room_invite_waiting_pill">🟡 Waiting for them to accept</string>
+
+    <!-- Chat handshake stub (story 7.7) -->
+    <string name="room_handshake_waiting_title">🟡 Waiting for accept…</string>
+    <string name="room_handshake_waiting_body_creator">They haven\'t accepted yet. Don\'t send first — resend the link or send a Ping.</string>
+    <string name="room_handshake_waiting_body_member">Waiting for the room owner. You can send a Ping to remind them.</string>
+    <string name="room_handshake_resend_link">Resend link</string>
+    <string name="room_handshake_ping">Ping · remind to join</string>
+    <string name="room_composer_locked_hint">Composer locked · waiting for accept</string>
+    <string name="room_live_pill">🟢 Live · accepted, synced via mailbox</string>
+    <string name="room_ping_peer_sent">Ping sent (demo notification).</string>
+    <string name="room_ping_peer_cooldown">Wait %1$ds before pinging again.</string>
 
     <!-- Lock -->
     <string name="lock_title">VanishX is locked</string>
@@ -173,12 +215,17 @@
     <string name="lock_bio_title">Unlock with fingerprint / face</string>
     <string name="lock_bio_subtitle">Confirm it’s you</string>
     <string name="lock_bio_negative">Use PIN</string>
-    <string name="lock_burn_title">Too many attempts</string>
-    <string name="lock_burn_body">All data on this device has been deleted.</string>
-    <string name="lock_burn_progress">Deleting all data…</string>
-    <string name="lock_attempts_left">%1$d attempts left</string>
-    <string name="lock_wrong_pin">Wrong PIN. %1$d attempts left.</string>
+    <string name="lock_attempts_left">%1$d attempts left before temporary lock</string>
+    <string name="lock_wrong_pin">Wrong PIN. %1$d attempts left before temporary lock.</string>
     <string name="lock_use_bio">Fingerprint / face</string>
+    <string name="lock_ok">OK</string>
+    <string name="lock_ok_hint">Enter 4 digits, then tap OK</string>
+    <string name="lock_cooldown_title">Temporarily locked</string>
+    <string name="lock_cooldown_subtitle">Too many wrong attempts. Try again when the timer ends.</string>
+    <string name="lock_cooldown_tier_hint">Cooldownout level %1$d · next is longer (60s → 5m → 24h)</string>
+    <string name="lock_burn_title">Too many attempts</string>
+    <string name="lock_burn_body">Auto-wipe is on. All data on this device has been deleted.</string>
+    <string name="lock_burn_progress">Deleting all data…</string>
 
     <!-- Settings -->
     <string name="security_title">Security</string>
@@ -220,7 +267,11 @@
     <string name="settings_history_row_sub">Open · Expired · All</string>
     <string name="settings_version_title">Version</string>
     <string name="settings_version_sub">Self-vanishing chat · encrypted on device</string>
-    <string name="settings_pin_wrong_warning">Wrong unlock PIN 5 times wipes all data and resets the app. Emergency PIN also wipes all messages and saved history.</string>
+    <string name="settings_pin_wrong_warning">After 5 wrong unlock PINs the app temporarily locks (60s → 5m → 24h). Optional auto-wipe can erase data after 5 wrong attempts. Emergency PIN silently wipes and starts fresh.</string>
+    <string name="settings_flag_secure_title">Block screenshots</string>
+    <string name="settings_flag_secure_sub">Hide app content in recents and block capture (recommended)</string>
+    <string name="settings_auto_wipe_title">Auto-wipe after 5 wrong PINs</string>
+    <string name="settings_auto_wipe_sub">Off by default · when on, wipe instead of cooldown</string>
     <string name="settings_unlock_screen_title">Unlock PIN</string>
     <string name="settings_panic_screen_title">Emergency PIN</string>
     <string name="settings_unlock_form_hint">PIN must be 4 digits. Changing PIN requires matching entry twice.</string>

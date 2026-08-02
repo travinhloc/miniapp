@@ -200,6 +200,48 @@ fun SettingsRowDivider() {
 }
 
 @Composable
+fun SettingsSwitchRow(
+    title: String,
+    subtitle: String?,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: ImageVector = Icons.Filled.Lock,
+    leadingTone: SettingsLeadingTone = SettingsLeadingTone.Primary,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SettingsLeadingIcon(icon = leadingIcon, tone = leadingTone)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+                color = VanishXColors.OnSurface,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                    color = VanishXColors.Muted,
+                )
+            }
+        }
+        androidx.compose.material3.Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
+    }
+}
+
+@Composable
 fun SettingsIdentityChip(
     anonymousId: String,
     modifier: Modifier = Modifier,

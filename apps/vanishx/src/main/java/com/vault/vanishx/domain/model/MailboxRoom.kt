@@ -12,6 +12,8 @@ data class MailboxRoom(
     val role: String = ROLE_MEMBER,
     /** Peer Ed25519 public key (Base64), when known from meta or inbound messages. */
     val peerPub: String? = null,
+    /** Optional one-line opener shown on the invite before the guest accepts (story 7.5). */
+    val icebreaker: String? = null,
 ) {
     companion object {
         const val STATUS_ACTIVE = "active"

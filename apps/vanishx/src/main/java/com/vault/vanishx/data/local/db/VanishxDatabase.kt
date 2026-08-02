@@ -10,7 +10,7 @@ import androidx.room.RoomDatabase
         MessageEntity::class,
         BlockedPeerEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class VanishxDatabase : RoomDatabase() {

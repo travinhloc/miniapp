@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -32,12 +31,15 @@ fun PinPad(
     onDigit: (Char) -> Unit,
     onBackspace: () -> Unit,
     modifier: Modifier = Modifier,
+    onSubmit: (() -> Unit)? = null,
+    submitEnabled: Boolean = false,
+    submitLabel: String = "OK",
 ) {
     val rows = listOf(
-        listOf('1', '2', '3'),
-        listOf('4', '5', '6'),
-        listOf('7', '8', '9'),
-        listOf(null, '0', '⌫'),
+        listOf("1", "2", "3"),
+        listOf("4", "5", "6"),
+        listOf("7", "8", "9"),
+        listOf("OK", "0", "⌫"),
     )
     Column(
         modifier = modifier
@@ -53,8 +55,18 @@ fun PinPad(
             ) {
                 row.forEach { key ->
                     when (key) {
-                        null -> Spacer(modifier = Modifier.size(KeySize))
-                        '⌫' -> DigitKey(
+                        "OK" -> if (onSubmit != null) {
+                            DigitKey(
+                                label = submitLabel,
+                                enabled = enabled && submitEnabled,
+                                onClick = onSubmit,
+                                tint = VanishXColors.Primary,
+                                elevated = false,
+                            )
+                        } else {
+                            Box(modifier = Modifier.size(KeySize))
+                        }
+                        "⌫" -> DigitKey(
                             label = "⌫",
                             enabled = enabled,
                             onClick = onBackspace,
@@ -62,9 +74,9 @@ fun PinPad(
                             elevated = false,
                         )
                         else -> DigitKey(
-                            label = key.toString(),
+                            label = key,
                             enabled = enabled,
-                            onClick = { onDigit(key) },
+                            onClick = { onDigit(key.first()) },
                         )
                     }
                 }
@@ -92,8 +104,12 @@ private fun DigitKey(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.titleLarge,
-            color = tint,
+            style = if (label.length > 1) {
+                MaterialTheme.typography.titleMedium
+            } else {
+                MaterialTheme.typography.titleLarge
+            },
+            color = if (enabled) tint else tint.copy(alpha = 0.35f),
             textAlign = TextAlign.Center,
         )
     }

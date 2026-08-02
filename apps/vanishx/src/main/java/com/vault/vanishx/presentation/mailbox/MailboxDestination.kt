@@ -35,12 +35,20 @@ sealed class MailboxDestination {
         )
     }
 
-    data class Room(val roomId: String) : BaseDestination("mailbox/room/{roomId}") {
+    data class Room(
+        val roomId: String,
+        /** True right after Instant create, so Room auto-opens the invite sheet (story 7.5). */
+        val openInvite: Boolean = false,
+    ) : BaseDestination("mailbox/room/{roomId}?openInvite={openInvite}") {
         override val arguments = listOf(
             navArgument("roomId") { type = NavType.StringType },
+            navArgument("openInvite") {
+                type = NavType.BoolType
+                defaultValue = false
+            },
         )
 
-        override var destination: String = "mailbox/room/$roomId"
+        override var destination: String = "mailbox/room/$roomId?openInvite=$openInvite"
 
         override val deepLinks = listOf(
             "vanishx://open/{roomId}",
