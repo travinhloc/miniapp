@@ -19,7 +19,7 @@ data class SyncMailboxResult(
     val decryptFailures: Int,
 )
 
-@Suppress("LargeClass")
+@Suppress("LargeClass", "LongParameterList")
 class SyncRoomMailboxUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
     private val identityRepository: IdentityRepository,
@@ -27,8 +27,10 @@ class SyncRoomMailboxUseCase @Inject constructor(
     private val cipher: RoomMessageCipher,
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
     private val blockRepository: BlockRepository,
+    private val refreshRoomMeta: RefreshRoomMetaUseCase,
 ) {
     suspend operator fun invoke(roomId: String): SyncMailboxResult {
+        refreshRoomMeta(roomId)
         val room = mailboxRepository.getRoom(roomId)
             ?: error("Room not found")
         val now = System.currentTimeMillis()

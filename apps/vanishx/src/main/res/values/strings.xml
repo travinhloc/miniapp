@@ -59,6 +59,8 @@
 
     <!-- Badges -->
     <string name="badge_remaining">%1$s left</string>
+    <string name="badge_no_expiry">No expiry</string>
+    <string name="badge_waiting_activate">Waiting to start</string>
     <string name="badge_expired">Expired</string>
 
     <!-- History -->
@@ -196,15 +198,40 @@
     <string name="room_invite_waiting_pill">🟡 Waiting for them to accept</string>
 
     <!-- Chat handshake stub (story 7.7) -->
-    <string name="room_handshake_waiting_title">🟡 Waiting for accept…</string>
-    <string name="room_handshake_waiting_body_creator">They haven\'t accepted yet. Don\'t send first — resend the link or send a Ping.</string>
+    <string name="room_handshake_waiting_title">Waiting for accept…</string>
+    <string name="room_handshake_waiting_body_creator">They haven\'t accepted yet. Don\'t send first — share the link or QR below.</string>
     <string name="room_handshake_waiting_body_member">Waiting for the room owner. You can send a Ping to remind them.</string>
+    <string name="room_handshake_nudge">Share this link or QR on any channel. When they open and accept, the room switches to Live.</string>
+    <string name="room_handshake_copy_link">Copy link</string>
+    <string name="room_handshake_show_qr">Larger QR</string>
     <string name="room_handshake_resend_link">Resend link</string>
     <string name="room_handshake_ping">Ping · remind to join</string>
     <string name="room_composer_locked_hint">Composer locked · waiting for accept</string>
-    <string name="room_live_pill">🟢 Live · accepted, synced via mailbox</string>
+    <string name="room_handshake_qr_cd">Invite QR code</string>
+    <string name="room_live_pill">Live</string>
     <string name="room_ping_peer_sent">Ping sent (demo notification).</string>
     <string name="room_ping_peer_cooldown">Wait %1$ds before pinging again.</string>
+
+    <!-- Epic 8 · Bento / Safety / ephemeral -->
+    <string name="room_bento_title">Quick actions</string>
+    <string name="room_bento_burn">Burn room</string>
+    <string name="room_bento_burn_sub">Leave and clear this chat on this device</string>
+    <string name="room_bento_ttl">Room TTL</string>
+    <string name="room_bento_ttl_sub">Change expiry — coming soon</string>
+    <string name="room_bento_ttl_stub">Changing TTL will arrive in a later build.</string>
+    <string name="room_bento_fingerprint">Key fingerprint</string>
+    <string name="room_bento_fingerprint_sub">Verify end-to-end safety numbers</string>
+    <string name="room_bento_block">Block peer</string>
+    <string name="room_bento_report">Report</string>
+    <string name="room_bento_recall">Recall last message</string>
+    <string name="room_safety_title">Safety numbers</string>
+    <string name="room_safety_body">Compare this fingerprint with your peer on another channel. Matching numbers mean the same room key.</string>
+    <string name="room_safety_fingerprint_label">Room key fingerprint</string>
+    <string name="room_safety_close">Done</string>
+    <string name="room_burn_title">Burn this room?</string>
+    <string name="room_burn_body">You leave the room and clear local messages. This cannot be undone on this device.</string>
+    <string name="room_burn_confirm">Burn now</string>
+    <string name="room_e2e_tap_hint">Tap for safety numbers</string>
 
     <!-- Lock -->
     <string name="lock_title">VanishX is locked</string>

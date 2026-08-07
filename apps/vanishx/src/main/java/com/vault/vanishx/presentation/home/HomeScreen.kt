@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions", "MagicNumber")
+
 package com.vault.vanishx.presentation.home
 
 import android.Manifest
@@ -773,10 +775,11 @@ private fun SessionCard(
     modifier: Modifier = Modifier,
 ) {
     val ringColor = ttlRingColor(room.ttlFraction, room.isExpired)
-    val remainingLabel = if (room.isExpired) {
-        stringResource(R.string.badge_expired)
-    } else {
-        stringResource(R.string.badge_remaining, formatRemainingMs(room.remainingMs))
+    val remainingLabel = when {
+        room.isExpired -> stringResource(R.string.badge_expired)
+        room.hasRoomClock -> stringResource(R.string.badge_remaining, formatRemainingMs(room.remainingMs))
+        room.isWaiting -> stringResource(R.string.badge_waiting_activate)
+        else -> stringResource(R.string.badge_no_expiry)
     }
     val swipeHint = stringResource(R.string.home_swipe_delete_hint)
 

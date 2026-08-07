@@ -50,6 +50,7 @@ sealed interface LockAction {
 }
 
 @HiltViewModel
+@Suppress("LargeClass", "TooManyFunctions", "ComplexCondition", "MagicNumber")
 class LockViewModel @Inject constructor(
     private val securityPinStore: SecurityPinStore,
     private val appLockSession: AppLockSession,

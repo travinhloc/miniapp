@@ -15,7 +15,9 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 /rooms/{roomId}
   meta/
     createdAt: number   // epoch ms
-    expiresAt: number   // room TTL (must be > now on write)
+    expiresAt: number   // 0 = pending activate (Free) or forever (Pro Host); else absolute ms
+    hostPro: boolean    // Pro Host → no room clock
+    activatedAt: number? // set when guest first enters (activate)
     creatorPub: string  // optional base64 Ed25519 public key
     icebreaker: string? // optional · 1..80 chars (Epic 7.5)
   messages/{messageId}/

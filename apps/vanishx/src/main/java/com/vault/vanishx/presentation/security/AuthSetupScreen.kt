@@ -1,3 +1,5 @@
+@file:Suppress("MultipleEmitters")
+
 package com.vault.vanishx.presentation.security
 
 import androidx.compose.foundation.background

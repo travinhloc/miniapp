@@ -46,9 +46,10 @@ class JoinRoomViewModelTest {
             roomId,
             RemoteRoomMeta(
                 createdAt = System.currentTimeMillis(),
-                expiresAt = System.currentTimeMillis() + 60_000,
+                expiresAt = 0L,
                 creatorPub = creatorPub,
                 icebreaker = icebreaker,
+                hostPro = false,
             ),
         )
     }

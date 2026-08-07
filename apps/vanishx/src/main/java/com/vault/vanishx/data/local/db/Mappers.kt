@@ -14,6 +14,8 @@ fun MailboxRoomEntity.toDomain(): MailboxRoom = MailboxRoom(
     role = role,
     peerPub = peerPub,
     icebreaker = icebreaker,
+    hostPro = hostPro,
+    activatedAt = activatedAt,
 )
 
 fun MailboxRoom.toEntity(): MailboxRoomEntity = MailboxRoomEntity(
@@ -27,6 +29,8 @@ fun MailboxRoom.toEntity(): MailboxRoomEntity = MailboxRoomEntity(
     role = role,
     peerPub = peerPub,
     icebreaker = icebreaker,
+    hostPro = hostPro,
+    activatedAt = activatedAt,
 )
 
 fun MessageEntity.toDomain(): ChatMessage = ChatMessage(

@@ -1,6 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 
 .tmp-template/
+.tmp/
 local.properties
 miniapp/
 

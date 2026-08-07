@@ -26,7 +26,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
-@Suppress("TooManyFunctions", "ComplexMethod")
+@Suppress("TooManyFunctions", "ComplexMethod", "LargeClass")
 class HomeViewModel @Inject constructor(
     private val ensureIdentity: EnsureIdentityUseCase,
     private val syncActiveMailboxes: SyncActiveMailboxesUseCase,

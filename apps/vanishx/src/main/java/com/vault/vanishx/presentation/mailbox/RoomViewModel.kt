@@ -16,6 +16,7 @@ import com.vault.vanishx.domain.usecase.PingPeerUseCase
 import com.vault.vanishx.domain.usecase.PingRoomUseCase
 import com.vault.vanishx.domain.usecase.PurgeExpiredRoomUseCase
 import com.vault.vanishx.domain.usecase.RecallRoomMessageUseCase
+import com.vault.vanishx.domain.usecase.RefreshRoomMetaUseCase
 import com.vault.vanishx.domain.usecase.ReportRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
@@ -59,6 +60,9 @@ data class RoomUiState(
     val pingBusy: Boolean = false,
     val remoteMetaPresent: Boolean? = null,
     val showInviteSheet: Boolean = false,
+    val showBentoSheet: Boolean = false,
+    val showSafetySheet: Boolean = false,
+    val showBurnConfirm: Boolean = false,
     val pingPeerEvent: PingPeerEvent? = null,
 )
 
@@ -89,6 +93,14 @@ sealed interface RoomAction {
     data object DismissInviteSheet : RoomAction
     data object PingPeer : RoomAction
     data object ConsumePingPeerEvent : RoomAction
+    data object OpenBentoSheet : RoomAction
+    data object DismissBentoSheet : RoomAction
+    data object OpenSafetySheet : RoomAction
+    data object DismissSafetySheet : RoomAction
+    data object OpenBurnConfirm : RoomAction
+    data object DismissBurnConfirm : RoomAction
+    data object ConfirmBurn : RoomAction
+    data object StubChangeTtl : RoomAction
 }
 
 @HiltViewModel
@@ -96,6 +108,7 @@ sealed interface RoomAction {
 class RoomViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getRoom: GetRoomUseCase,
+    private val refreshRoomMeta: RefreshRoomMetaUseCase,
     private val sendRoomMessage: SendRoomMessageUseCase,
     private val syncRoomMailbox: SyncRoomMailboxUseCase,
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
@@ -182,6 +195,25 @@ class RoomViewModel @Inject constructor(
             RoomAction.DismissInviteSheet -> _uiState.update { it.copy(showInviteSheet = false) }
             RoomAction.PingPeer -> pingPeer()
             RoomAction.ConsumePingPeerEvent -> _uiState.update { it.copy(pingPeerEvent = null) }
+            RoomAction.OpenBentoSheet -> _uiState.update {
+                it.copy(showBentoSheet = true, errorMessage = null)
+            }
+            RoomAction.DismissBentoSheet -> _uiState.update { it.copy(showBentoSheet = false) }
+            RoomAction.OpenSafetySheet -> _uiState.update {
+                it.copy(showSafetySheet = true, showBentoSheet = false)
+            }
+            RoomAction.DismissSafetySheet -> _uiState.update { it.copy(showSafetySheet = false) }
+            RoomAction.OpenBurnConfirm -> _uiState.update {
+                it.copy(showBurnConfirm = true, showBentoSheet = false, errorMessage = null)
+            }
+            RoomAction.DismissBurnConfirm -> _uiState.update { it.copy(showBurnConfirm = false) }
+            RoomAction.ConfirmBurn -> confirmBurn()
+            RoomAction.StubChangeTtl -> _uiState.update {
+                it.copy(
+                    showBentoSheet = false,
+                    infoMessage = "Changing TTL will arrive in a later build.",
+                )
+            }
             else -> Unit
         }
     }
@@ -265,7 +297,10 @@ class RoomViewModel @Inject constructor(
 
     private fun bootstrap() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        flow { emit(getRoom(roomId)) }
+        flow {
+            refreshRoomMeta(roomId)
+            emit(getRoom(roomId))
+        }
             .flowOn(dispatchersProvider.io)
             .onEach { room ->
                 val expired = room?.status == MailboxRoom.STATUS_EXPIRED ||
@@ -520,6 +555,45 @@ class RoomViewModel @Inject constructor(
             }
             .catch { e ->
                 Timber.e(e, "Block peer failed")
+                _uiState.update {
+                    it.copy(
+                        isBlocking = false,
+                        errorMessage = friendlyError(e),
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun confirmBurn() {
+        if (_uiState.value.isBlocking) return
+        val room = _uiState.value.room ?: return
+        _uiState.update {
+            it.copy(isBlocking = true, showBurnConfirm = false, errorMessage = null)
+        }
+        flow {
+            mailboxRepository.deleteMessagesForRoom(roomId)
+            mailboxRepository.upsertRoom(room.copy(status = MailboxRoom.STATUS_LEFT))
+            emit(Unit)
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach {
+                observeJob?.cancel()
+                expiryJob?.cancel()
+                _uiState.update {
+                    it.copy(
+                        isBlocking = false,
+                        isExpired = true,
+                        messages = emptyList(),
+                        draft = "",
+                        room = it.room?.copy(status = MailboxRoom.STATUS_LEFT),
+                        infoMessage = "Room burned on this device.",
+                    )
+                }
+                _navigator.emit(BaseDestination.Up())
+            }
+            .catch { e ->
+                Timber.e(e, "Burn room failed")
                 _uiState.update {
                     it.copy(
                         isBlocking = false,

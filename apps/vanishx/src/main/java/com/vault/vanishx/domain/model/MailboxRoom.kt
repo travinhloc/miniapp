@@ -4,6 +4,10 @@ data class MailboxRoom(
     val id: String,
     val roomKey: String,
     val createdAt: Long = 0L,
+    /**
+     * Absolute expiry epoch ms when [hostPro] is false and the guest has entered.
+     * `0` = no clock yet (Free waiting) or forever (Pro Host).
+     */
     val expiresAt: Long = 0L,
     val title: String? = null,
     /** Local display nickname for this device. */
@@ -14,6 +18,10 @@ data class MailboxRoom(
     val peerPub: String? = null,
     /** Optional one-line opener shown on the invite before the guest accepts (story 7.5). */
     val icebreaker: String? = null,
+    /** Host entitlement at create — Pro Host rooms never get a room clock. */
+    val hostPro: Boolean = false,
+    /** Epoch ms when the guest first entered the room (activate). `0` = not yet. */
+    val activatedAt: Long = 0L,
 ) {
     companion object {
         const val STATUS_ACTIVE = "active"
@@ -23,8 +31,13 @@ data class MailboxRoom(
         const val ROLE_MEMBER = "member"
     }
 
+    /** Free Host after guest enter — countdown applies. */
+    fun hasRoomClock(): Boolean = !hostPro && expiresAt > 0L
+
+    fun isPendingActivation(): Boolean = !hostPro && activatedAt <= 0L
+
     fun resolvedStatus(nowMs: Long = System.currentTimeMillis()): String =
-        if (expiresAt > 0L && nowMs >= expiresAt) STATUS_EXPIRED else status
+        if (hasRoomClock() && nowMs >= expiresAt) STATUS_EXPIRED else status
 }
 
 enum class RoomTtlOption(val durationMs: Long) {

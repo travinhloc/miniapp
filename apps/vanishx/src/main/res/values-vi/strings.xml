@@ -59,6 +59,8 @@
 
     <!-- Badges -->
     <string name="badge_remaining">Còn %1$s</string>
+    <string name="badge_no_expiry">Không hết hạn</string>
+    <string name="badge_waiting_activate">Chưa bắt đầu đếm</string>
     <string name="badge_expired">Hết hạn</string>
 
     <!-- History -->
@@ -196,15 +198,40 @@
     <string name="room_invite_waiting_pill">🟡 Đang chờ chấp nhận</string>
 
     <!-- Chat handshake stub (story 7.7) -->
-    <string name="room_handshake_waiting_title">🟡 Đang chờ chấp nhận…</string>
-    <string name="room_handshake_waiting_body_creator">Đối phương chưa chấp nhận. Đừng gửi tin trước — gửi lại link hoặc Ping.</string>
+    <string name="room_handshake_waiting_title">Đang chờ chấp nhận…</string>
+    <string name="room_handshake_waiting_body_creator">Đối phương chưa chấp nhận. Đừng gửi tin trước — chia sẻ link hoặc mã QR bên dưới.</string>
     <string name="room_handshake_waiting_body_member">Đang chờ chủ phòng. Bạn có thể gửi Ping để nhắc.</string>
+    <string name="room_handshake_nudge">Chia sẻ link/QR này qua bất kỳ kênh nào. Khi họ mở và chấp nhận, phòng chuyển sang Live ngay.</string>
+    <string name="room_handshake_copy_link">Sao chép link</string>
+    <string name="room_handshake_show_qr">QR lớn hơn</string>
     <string name="room_handshake_resend_link">Gửi lại link</string>
     <string name="room_handshake_ping">Ping · nhắc vào phòng</string>
     <string name="room_composer_locked_hint">Composer khoá · chờ chấp nhận</string>
-    <string name="room_live_pill">🟢 Đang hoạt động · đã chấp nhận, đồng bộ qua hộp thư</string>
+    <string name="room_handshake_qr_cd">Mã QR mời vào phòng</string>
+    <string name="room_live_pill">Live</string>
     <string name="room_ping_peer_sent">Đã gửi Ping (thông báo minh hoạ).</string>
     <string name="room_ping_peer_cooldown">Đợi %1$d giây rồi Ping lại.</string>
+
+    <!-- Epic 8 · Bento / Safety / ephemeral -->
+    <string name="room_bento_title">Thao tác nhanh</string>
+    <string name="room_bento_burn">Hủy phòng</string>
+    <string name="room_bento_burn_sub">Rời phòng và xóa chat trên máy này</string>
+    <string name="room_bento_ttl">TTL phòng</string>
+    <string name="room_bento_ttl_sub">Đổi hạn — sắp có</string>
+    <string name="room_bento_ttl_stub">Đổi TTL sẽ có trong bản sau.</string>
+    <string name="room_bento_fingerprint">Vân tay khóa</string>
+    <string name="room_bento_fingerprint_sub">Đối chiếu mã an toàn đầu cuối</string>
+    <string name="room_bento_block">Chặn đối phương</string>
+    <string name="room_bento_report">Báo cáo</string>
+    <string name="room_bento_recall">Thu hồi tin vừa gửi</string>
+    <string name="room_safety_title">Mã an toàn</string>
+    <string name="room_safety_body">Đối chiếu mã này với đối phương qua kênh khác. Trùng mã = cùng khóa phòng.</string>
+    <string name="room_safety_fingerprint_label">Vân tay khóa phòng</string>
+    <string name="room_safety_close">Xong</string>
+    <string name="room_burn_title">Hủy phòng này?</string>
+    <string name="room_burn_body">Bạn sẽ rời phòng và xóa tin nhắn cục bộ. Không hoàn tác trên máy này.</string>
+    <string name="room_burn_confirm">Hủy ngay</string>
+    <string name="room_e2e_tap_hint">Chạm để xem mã an toàn</string>
 
     <!-- Lock -->
     <string name="lock_title">VanishX đã khóa</string>

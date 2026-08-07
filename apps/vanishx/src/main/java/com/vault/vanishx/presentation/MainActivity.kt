@@ -49,6 +49,7 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var appLockSession: AppLockSession
 
+    @Suppress("LongMethod", "ComplexMethod", "MagicNumber")
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.Transparent.toArgb()),

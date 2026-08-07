@@ -2,10 +2,18 @@ package com.vault.vanishx.data.remote
 
 data class RemoteRoomMeta(
     val createdAt: Long,
+    /**
+     * `0` while Free Host waits for guest enter, or forever for Pro Host.
+     * After Free activate: absolute epoch ms (> now).
+     */
     val expiresAt: Long,
     val creatorPub: String? = null,
     /** Optional one-line opener the guest sees before accepting (story 7.5). */
     val icebreaker: String? = null,
+    /** True when the room creator had Pro at create — no room clock. */
+    val hostPro: Boolean = false,
+    /** Set when the guest first enters the room (activate). */
+    val activatedAt: Long? = null,
 ) {
     companion object {
         const val MAX_ICEBREAKER_LENGTH = 80

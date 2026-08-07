@@ -72,9 +72,11 @@ class RoomViewModelTest {
         every { proEntitlement.isProNow() } returns false
         every { remote.observeMessages("room1") } returns emptyFlow()
 
+        val refreshRoomMeta: com.vault.vanishx.domain.usecase.RefreshRoomMetaUseCase = mockk(relaxed = true)
         return RoomViewModel(
             savedStateHandle = SavedStateHandle(mapOf("roomId" to "room1")),
             getRoom = getRoom,
+            refreshRoomMeta = refreshRoomMeta,
             sendRoomMessage = sendRoomMessage,
             syncRoomMailbox = syncRoomMailbox,
             purgeExpiredRoom = purgeExpiredRoom,

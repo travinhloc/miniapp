@@ -21,6 +21,8 @@ data class MailboxRoomEntity(
     val role: String,
     val peerPub: String? = null,
     val icebreaker: String? = null,
+    val hostPro: Boolean = false,
+    val activatedAt: Long = 0L,
 )
 
 @Entity(tableName = "messages")

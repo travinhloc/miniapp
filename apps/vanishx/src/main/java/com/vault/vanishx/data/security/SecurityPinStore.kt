@@ -92,6 +92,7 @@ class SecurityPinStore (
 
     fun failedUnlockAttempts(): Int = prefs.getInt(KEY_FAILED_ATTEMPTS, 0)
 
+    @Suppress("ReturnCount")
     fun recordFailedUnlock(nowEpochMs: Long = System.currentTimeMillis()): UnlockFailResult {
         val next = failedUnlockAttempts() + 1
         prefs.edit().putInt(KEY_FAILED_ATTEMPTS, next).apply()
