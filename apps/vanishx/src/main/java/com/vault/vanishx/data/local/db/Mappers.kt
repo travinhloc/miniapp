@@ -41,6 +41,7 @@ fun MessageEntity.toDomain(): ChatMessage = ChatMessage(
     expiresAt = expiresAt,
     direction = direction,
     recalled = recalled,
+    sensitive = sensitive,
 )
 
 fun ChatMessage.toEntity(): MessageEntity = MessageEntity(
@@ -51,4 +52,5 @@ fun ChatMessage.toEntity(): MessageEntity = MessageEntity(
     expiresAt = expiresAt,
     direction = direction,
     recalled = recalled,
+    sensitive = sensitive,
 )

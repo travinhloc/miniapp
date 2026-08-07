@@ -57,4 +57,7 @@ interface BlockedPeerDao {
 
     @Query("SELECT peerPub FROM blocked_peers")
     suspend fun listPeerPubs(): List<String>
+
+    @Query("DELETE FROM blocked_peers WHERE peerPub = :peerPub")
+    suspend fun delete(peerPub: String)
 }

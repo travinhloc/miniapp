@@ -146,6 +146,9 @@
     <string name="join_block_confirm">Block</string>
     <string name="join_later_toast">Saved · not accepted — the host is still waiting</string>
     <string name="join_blocked_toast">Blocked. This request was not accepted.</string>
+    <string name="join_error_peer_blocked">You blocked this host on this device. Unblock to join their rooms again.</string>
+    <string name="join_unblock_and_chat">Unblock &amp; Chat</string>
+    <string name="join_peer_blocked_hint">This host is on your block list.</string>
 
     <!-- Join · QR scanner (story 7.6) -->
     <string name="join_scan_torch">Torch</string>
@@ -232,6 +235,12 @@
     <string name="room_burn_body">You leave the room and clear local messages. This cannot be undone on this device.</string>
     <string name="room_burn_confirm">Burn now</string>
     <string name="room_e2e_tap_hint">Tap for safety numbers</string>
+    <string name="room_composer_sensitive">Sensitive</string>
+    <string name="room_sensitive_masked">••••••••••</string>
+    <string name="room_sensitive_hold">Hold to view</string>
+    <string name="room_sensitive_badge">Sensitive</string>
+    <string name="room_screenshot_banner">Screenshot detected on this device. Peers are not notified in this version.</string>
+    <string name="room_screenshot_dismiss_cd">Dismiss</string>
 
     <!-- Lock -->
     <string name="lock_title">VanishX is locked</string>

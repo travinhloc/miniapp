@@ -146,6 +146,9 @@
     <string name="join_block_confirm">Chặn</string>
     <string name="join_later_toast">Đã lưu · chưa chấp nhận — Host vẫn đang chờ</string>
     <string name="join_blocked_toast">Đã chặn. Lời mời này chưa được chấp nhận.</string>
+    <string name="join_error_peer_blocked">Bạn đã chặn Host này trên máy. Bỏ chặn để vào phòng của họ.</string>
+    <string name="join_unblock_and_chat">Bỏ chặn &amp; Chat</string>
+    <string name="join_peer_blocked_hint">Host này đang trong danh sách chặn.</string>
 
     <!-- Join · Quét QR (story 7.6) -->
     <string name="join_scan_torch">Đèn pin</string>
@@ -232,6 +235,12 @@
     <string name="room_burn_body">Bạn sẽ rời phòng và xóa tin nhắn cục bộ. Không hoàn tác trên máy này.</string>
     <string name="room_burn_confirm">Hủy ngay</string>
     <string name="room_e2e_tap_hint">Chạm để xem mã an toàn</string>
+    <string name="room_composer_sensitive">Nhạy cảm</string>
+    <string name="room_sensitive_masked">••••••••••</string>
+    <string name="room_sensitive_hold">Giữ để xem</string>
+    <string name="room_sensitive_badge">Nhạy cảm</string>
+    <string name="room_screenshot_banner">Phát hiện chụp màn hình trên máy này. Bản này chưa báo đối phương.</string>
+    <string name="room_screenshot_dismiss_cd">Đóng</string>
 
     <!-- Lock -->
     <string name="lock_title">VanishX đã khóa</string>

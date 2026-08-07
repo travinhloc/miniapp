@@ -6,6 +6,7 @@ import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteMailboxMessage
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.MessagePlaintextCodec
 import com.vault.vanishx.domain.repository.BlockRepository
 import com.vault.vanishx.domain.repository.IdentityRepository
 import com.vault.vanishx.domain.repository.MailboxRepository
@@ -207,14 +208,16 @@ class SyncRoomMailboxUseCase @Inject constructor(
         if (shouldRememberPeer(room, direction, remoteMessage.senderPub)) {
             mailboxRepository.upsertRoom(room.copy(peerPub = remoteMessage.senderPub))
         }
+        val decoded = MessagePlaintextCodec.decode(plaintext)
         mailboxRepository.upsertMessage(
             ChatMessage(
                 id = remoteMessage.messageId,
                 roomId = room.id,
-                body = plaintext,
+                body = decoded.text,
                 sentAt = remoteMessage.createdAt,
                 expiresAt = remoteMessage.expiresAt,
                 direction = direction,
+                sensitive = decoded.sensitive,
             ),
         )
         runCatching { remote.deleteMessage(room.id, remoteMessage.messageId) }

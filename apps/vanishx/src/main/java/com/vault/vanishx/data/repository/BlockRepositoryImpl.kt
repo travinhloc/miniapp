@@ -23,4 +23,10 @@ class BlockRepositoryImpl @Inject constructor(
             )
         }
     }
+
+    override suspend fun unblock(peerPub: String) {
+        localDatabase.withDatabase { db ->
+            db.blockedPeerDao().delete(peerPub)
+        }
+    }
 }

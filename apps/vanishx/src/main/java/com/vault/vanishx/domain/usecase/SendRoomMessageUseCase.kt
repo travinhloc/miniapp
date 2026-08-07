@@ -5,6 +5,7 @@ import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteMailboxMessage
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.MessagePlaintextCodec
 import com.vault.vanishx.domain.repository.IdentityRepository
 import com.vault.vanishx.domain.repository.MailboxRepository
 import java.util.UUID
@@ -16,7 +17,11 @@ class SendRoomMessageUseCase @Inject constructor(
     private val remote: MailboxRemoteDataSource,
     private val cipher: RoomMessageCipher,
 ) {
-    suspend operator fun invoke(roomId: String, plaintext: String): ChatMessage {
+    suspend operator fun invoke(
+        roomId: String,
+        plaintext: String,
+        sensitive: Boolean = false,
+    ): ChatMessage {
         val text = plaintext.trim()
         require(text.isNotEmpty()) { "Message is empty" }
 
@@ -34,7 +39,8 @@ class SendRoomMessageUseCase @Inject constructor(
         val identity = identityRepository.ensureIdentity()
         val now = System.currentTimeMillis()
         val messageId = "m_${UUID.randomUUID().toString().replace("-", "").take(MESSAGE_ID_CHARS)}"
-        val ciphertext = cipher.encrypt(roomId, room.roomKey, text)
+        val payload = MessagePlaintextCodec.encode(text, sensitive)
+        val ciphertext = cipher.encrypt(roomId, room.roomKey, payload)
         val wireExpiresAt = wireExpiresAt(resolved, now)
         val remoteMessage = RemoteMailboxMessage(
             messageId = messageId,
@@ -52,6 +58,7 @@ class SendRoomMessageUseCase @Inject constructor(
             sentAt = now,
             expiresAt = wireExpiresAt,
             direction = ChatMessage.DIRECTION_OUT,
+            sensitive = sensitive,
         )
         mailboxRepository.upsertMessage(local)
         return local

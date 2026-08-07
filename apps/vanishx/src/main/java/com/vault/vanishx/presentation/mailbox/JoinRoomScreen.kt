@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -38,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -54,11 +56,16 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
+import com.vault.vanishx.data.security.AppLockSession
 import com.vault.vanishx.presentation.components.VanishXAlertDialog
 import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.scan.VanishXScanActivity
 import com.vault.vanishx.presentation.theme.VanishXColors
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.components.ActivityComponent
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -67,9 +74,16 @@ fun JoinRoomScreen(
     navigator: (BaseDestination) -> Unit,
 ) = BaseScreen {
     val context = LocalContext.current
+    val appLockSession = remember(context) {
+        EntryPointAccessors.fromActivity(
+            context as android.app.Activity,
+            AppLockEntryPoint::class.java,
+        ).appLockSession()
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        appLockSession.endExternalUi()
         val contents = result.contents
         if (!contents.isNullOrBlank()) {
             viewModel.onAction(JoinRoomAction.Scanned(contents))
@@ -90,6 +104,7 @@ fun JoinRoomScreen(
         onAction = viewModel::onAction,
         onScanClick = {
             if (cameraPermission.status.isGranted) {
+                appLockSession.beginExternalUi()
                 scanLauncher.launch(
                     ScanOptions().apply {
                         setDesiredBarcodeFormats(ScanOptions.QR_CODE)
@@ -139,14 +154,21 @@ private fun MessageRequestSheet(
     uiState: JoinRoomUiState,
     onAction: (JoinRoomAction) -> Unit,
 ) {
+    val busy = uiState.isJoining || uiState.isBlocking
     ModalBottomSheet(
-        onDismissRequest = { onAction(JoinRoomAction.DismissPreview) },
-        sheetState = rememberModalBottomSheetState(),
+        onDismissRequest = {
+            if (!busy) onAction(JoinRoomAction.DismissPreview)
+        },
+        sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+            confirmValueChange = { !busy },
+        ),
         containerColor = VanishXColors.Surface,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp),
         ) {
@@ -192,7 +214,9 @@ private fun MessageRequestSheet(
             MessageRequestActions(
                 isJoining = uiState.isJoining,
                 isBlocking = uiState.isBlocking,
+                isPeerBlocked = preview.isPeerBlocked,
                 onAccept = { onAction(JoinRoomAction.AcceptAndChat) },
+                onUnblockAndChat = { onAction(JoinRoomAction.UnblockAndChat) },
                 onLater = { onAction(JoinRoomAction.SaveForLater) },
                 onBlock = { onAction(JoinRoomAction.OpenBlockConfirm) },
             )
@@ -200,7 +224,7 @@ private fun MessageRequestSheet(
             uiState.errorMessage?.let { error ->
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = error,
+                    text = joinErrorText(error),
                     color = VanishXColors.Error,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -309,35 +333,69 @@ private fun NicknameRow(
 private fun MessageRequestActions(
     isJoining: Boolean,
     isBlocking: Boolean,
+    isPeerBlocked: Boolean,
     onAccept: () -> Unit,
+    onUnblockAndChat: () -> Unit,
     onLater: () -> Unit,
     onBlock: () -> Unit,
 ) {
     val busy = isJoining || isBlocking
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
-            onClick = onAccept,
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = VanishXColors.Primary,
-                contentColor = VanishXColors.OnPrimary,
-            ),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(6.dp))
+        if (isPeerBlocked) {
             Text(
-                text = if (isJoining) {
-                    stringResource(R.string.join_joining)
-                } else {
-                    stringResource(R.string.join_accept_chat)
-                },
+                text = stringResource(R.string.join_peer_blocked_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = VanishXColors.NeonAmber,
             )
+            Button(
+                onClick = onUnblockAndChat,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VanishXColors.Primary,
+                    contentColor = VanishXColors.OnPrimary,
+                ),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (isJoining) {
+                        stringResource(R.string.join_joining)
+                    } else {
+                        stringResource(R.string.join_unblock_and_chat)
+                    },
+                )
+            }
+        } else {
+            Button(
+                onClick = onAccept,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VanishXColors.Primary,
+                    contentColor = VanishXColors.OnPrimary,
+                ),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (isJoining) {
+                        stringResource(R.string.join_joining)
+                    } else {
+                        stringResource(R.string.join_accept_chat)
+                    },
+                )
+            }
         }
         OutlinedButton(
             onClick = onLater,
@@ -347,21 +405,23 @@ private fun MessageRequestActions(
         ) {
             Text(text = stringResource(R.string.join_save_for_later))
         }
-        OutlinedButton(
-            onClick = onBlock,
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, VanishXColors.Error.copy(alpha = 0.35f)),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = VanishXColors.Error),
-        ) {
-            Text(
-                text = if (isBlocking) {
-                    stringResource(R.string.join_blocking)
-                } else {
-                    stringResource(R.string.join_block)
-                },
-            )
+        if (!isPeerBlocked) {
+            OutlinedButton(
+                onClick = onBlock,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, VanishXColors.Error.copy(alpha = 0.35f)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = VanishXColors.Error),
+            ) {
+                Text(
+                    text = if (isBlocking) {
+                        stringResource(R.string.join_blocking)
+                    } else {
+                        stringResource(R.string.join_block)
+                    },
+                )
+            }
         }
     }
 }
@@ -447,7 +507,7 @@ private fun JoinRoomContent(
                     uiState.errorMessage?.let { error ->
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = error,
+                            text = joinErrorText(error),
                             color = VanishXColors.Error,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -457,3 +517,17 @@ private fun JoinRoomContent(
         }
     }
 }
+
+@EntryPoint
+@InstallIn(ActivityComponent::class)
+interface AppLockEntryPoint {
+    fun appLockSession(): AppLockSession
+}
+
+@Composable
+private fun joinErrorText(error: String): String =
+    when {
+        error.contains("Peer is blocked", ignoreCase = true) ->
+            stringResource(R.string.join_error_peer_blocked)
+        else -> error
+    }

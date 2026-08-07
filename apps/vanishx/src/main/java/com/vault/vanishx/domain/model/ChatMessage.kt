@@ -8,6 +8,8 @@ data class ChatMessage(
     val expiresAt: Long,
     val direction: String,
     val recalled: Boolean = false,
+    /** Opt-in Confide-style blur; peer learns flag from encrypted envelope. */
+    val sensitive: Boolean = false,
 ) {
     companion object {
         const val DIRECTION_OUT = "out"

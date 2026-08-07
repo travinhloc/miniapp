@@ -51,6 +51,8 @@ data class RoomUiState(
     val isExpired: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
     val draft: String = "",
+    val draftSensitive: Boolean = false,
+    val showScreenshotBanner: Boolean = false,
     val showBlockConfirm: Boolean = false,
     val showReportDialog: Boolean = false,
     val reportReason: String = "",
@@ -77,6 +79,9 @@ sealed interface RoomAction {
     data object Refresh : RoomAction
     data object Send : RoomAction
     data class DraftChanged(val value: String) : RoomAction
+    data object ToggleDraftSensitive : RoomAction
+    data object ScreenshotDetected : RoomAction
+    data object DismissScreenshotBanner : RoomAction
     data object ClearFeedback : RoomAction
     data object OpenBlockConfirm : RoomAction
     data object DismissBlockConfirm : RoomAction
@@ -158,6 +163,15 @@ class RoomViewModel @Inject constructor(
             RoomAction.Send -> send()
             is RoomAction.DraftChanged -> _uiState.update {
                 it.copy(draft = action.value, errorMessage = null)
+            }
+            RoomAction.ToggleDraftSensitive -> _uiState.update {
+                it.copy(draftSensitive = !it.draftSensitive)
+            }
+            RoomAction.ScreenshotDetected -> _uiState.update {
+                it.copy(showScreenshotBanner = true)
+            }
+            RoomAction.DismissScreenshotBanner -> _uiState.update {
+                it.copy(showScreenshotBanner = false)
             }
             RoomAction.ClearFeedback -> _uiState.update {
                 it.copy(errorMessage = null, infoMessage = null)
@@ -506,15 +520,17 @@ class RoomViewModel @Inject constructor(
     private fun send() {
         if (_uiState.value.isExpired || _uiState.value.isSending) return
         val draft = _uiState.value.draft
+        val sensitive = _uiState.value.draftSensitive
         if (draft.isBlank()) return
         _uiState.update { it.copy(isSending = true, errorMessage = null) }
-        flow { emit(sendRoomMessage(roomId, draft)) }
+        flow { emit(sendRoomMessage(roomId, draft, sensitive)) }
             .flowOn(dispatchersProvider.io)
             .onEach { sent ->
                 _uiState.update { state ->
                     state.copy(
                         isSending = false,
                         draft = "",
+                        draftSensitive = false,
                         messages = (state.messages + sent).distinctBy { it.id }.sortedBy { it.sentAt },
                     )
                 }

@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import com.miniapp.core.mvvm.BaseDestination
 import com.vault.vanishx.presentation.home.homeNavGraph
+import com.vault.vanishx.presentation.mailbox.MailboxDestination
 
 @Composable
 fun AppNavGraph(
@@ -46,6 +47,14 @@ fun NavHostController.navigate(destination: BaseDestination) {
                 previousBackStackEntry?.savedStateHandle?.set(key, value)
             }
             navigateUp()
+        }
+        is MailboxDestination.Room -> {
+            navigate(route = destination.destination) {
+                popUpTo(MailboxDestination.Join.destination) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
         }
         else -> navigate(route = destination.destination)
     }

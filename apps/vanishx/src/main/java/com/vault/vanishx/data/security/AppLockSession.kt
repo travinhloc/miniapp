@@ -12,6 +12,10 @@ class AppLockSession @Inject constructor() {
     var isUnlocked: Boolean = false
         private set
 
+    /** >0 while an external UI (e.g. QR scanner Activity) should not trigger lock-on-stop. */
+    @Volatile
+    private var suppressStopLockCount: Int = 0
+
     fun unlock() {
         isUnlocked = true
     }
@@ -19,4 +23,16 @@ class AppLockSession @Inject constructor() {
     fun lock() {
         isUnlocked = false
     }
+
+    fun beginExternalUi() {
+        suppressStopLockCount += 1
+    }
+
+    fun endExternalUi() {
+        if (suppressStopLockCount > 0) {
+            suppressStopLockCount -= 1
+        }
+    }
+
+    fun shouldLockOnStop(): Boolean = suppressStopLockCount == 0
 }
