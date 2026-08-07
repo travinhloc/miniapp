@@ -3,8 +3,8 @@ package com.vault.vanishx.domain.usecase
 import com.vault.vanishx.data.invite.PendingInviteStore
 import com.vault.vanishx.data.push.FakeRoomPushTopics
 import com.vault.vanishx.data.remote.InMemoryMailboxRemoteDataSource
+import com.vault.vanishx.data.remote.RemoteRoomMeta
 import com.vault.vanishx.data.push.RoomPushTopics
-import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.MailboxRepository
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -37,13 +37,22 @@ class ConsumePendingInviteUseCaseTest {
 
     @Test
     fun `invoke joins and returns room`() = runTest {
-        val store: PendingInviteStore = mockk()
+        val store: PendingInviteStore = mockk(relaxed = true)
         val mailboxRepository: MailboxRepository = mockk(relaxed = true)
         val remote = InMemoryMailboxRemoteDataSource()
         val pushTopics = FakeRoomPushTopics()
         every { store.consume() } returns "vanishx://r/room1?k=key1&e=${System.currentTimeMillis() + 60_000}"
         coEvery { mailboxRepository.getRoom("room1") } returns null
         coEvery { mailboxRepository.upsertRoom(any()) } returns Unit
+        remote.writeRoomMeta(
+            "room1",
+            RemoteRoomMeta(
+                createdAt = System.currentTimeMillis(),
+                expiresAt = 0L,
+                creatorPub = "hostPub",
+                hostPro = false,
+            ),
+        )
 
         val join = JoinRoomUseCase(mailboxRepository, remote, pushTopics, mockk(relaxed = true))
         val room = ConsumePendingInviteUseCase(store, join).invoke()
