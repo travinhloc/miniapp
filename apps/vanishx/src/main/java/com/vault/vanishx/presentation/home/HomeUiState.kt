@@ -48,6 +48,7 @@ sealed interface HomeAction {
     data object DismissShareHint : HomeAction
 }
 
+@Suppress("ComplexMethod")
 fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomItem {
     val resolved = resolvedStatus(nowMs)
     val expired = resolved == MailboxRoom.STATUS_EXPIRED

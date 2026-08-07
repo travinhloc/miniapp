@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vault.vanishx.presentation.theme.VanishXColors
 
@@ -38,7 +37,7 @@ internal fun RoomAvatar(
 ) {
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.size(if (pulse) size * 1.55f else size),
+        modifier = Modifier.size(if (pulse) size * RoomUiDimens.avatarPulseScale else size),
     ) {
         if (pulse) {
             WaitingRadarRings(color = neonColor, baseSize = size)
@@ -76,12 +75,15 @@ internal fun WaitingRadarRings(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = LinearEasing),
+            animation = tween(
+                durationMillis = RoomUiDimens.radarDurationMs,
+                easing = LinearEasing,
+            ),
             repeatMode = RepeatMode.Restart,
         ),
         label = "radarProgress",
     )
-    val lag = ((progress + 0.45f) % 1f)
+    val lag = ((progress + RoomUiDimens.radarLagOffset) % 1f)
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         RadarRing(progress = progress, color = color, baseSize = baseSize)
         RadarRing(progress = lag, color = color, baseSize = baseSize)
@@ -94,8 +96,8 @@ private fun RadarRing(
     color: Color,
     baseSize: Dp,
 ) {
-    val scale = 1f + progress * 0.85f
-    val alpha = (1f - progress).coerceIn(0f, 1f) * 0.55f
+    val scale = 1f + progress * RoomUiDimens.radarScaleExtra
+    val alpha = (1f - progress).coerceIn(0f, 1f) * RoomUiDimens.radarAlphaFactor
     Box(
         modifier = Modifier
             .size(baseSize)
@@ -104,7 +106,7 @@ private fun RadarRing(
                 scaleY = scale
                 this.alpha = alpha
             }
-            .border(width = 2.dp, color = color, shape = CircleShape),
+            .border(width = RoomUiDimens.radarBorder, color = color, shape = CircleShape),
     )
 }
 
@@ -114,10 +116,13 @@ internal fun WaitingBadgeGlow(
 ) {
     val transition = rememberInfiniteTransition(label = "waitingBadge")
     val glow by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.75f,
+        initialValue = RoomUiDimens.badgeGlowMin,
+        targetValue = RoomUiDimens.badgeGlowMax,
         animationSpec = infiniteRepeatable(
-            animation = tween(1100, easing = FastOutSlowInEasing),
+            animation = tween(
+                durationMillis = RoomUiDimens.badgeGlowDurationMs,
+                easing = FastOutSlowInEasing,
+            ),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "waitingGlow",

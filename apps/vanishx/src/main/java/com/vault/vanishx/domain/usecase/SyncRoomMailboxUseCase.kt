@@ -19,7 +19,7 @@ data class SyncMailboxResult(
     val decryptFailures: Int,
 )
 
-@Suppress("LargeClass")
+@Suppress("LargeClass", "LongParameterList")
 class SyncRoomMailboxUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
     private val identityRepository: IdentityRepository,

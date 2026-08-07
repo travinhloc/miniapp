@@ -1,3 +1,5 @@
+@file:Suppress("ComplexCondition", "MagicNumber")
+
 package com.vault.vanishx.presentation.mailbox.chat
 
 import androidx.compose.animation.core.FastOutSlowInEasing

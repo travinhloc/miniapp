@@ -101,7 +101,7 @@ class JoinRoomUseCase @Inject constructor(
     ): MailboxRoom {
         val now = System.currentTimeMillis()
         val expiresAt = remoteMeta.expiresAt
-        val status = if (expiresAt > 0L && !remoteMeta.hostPro && now >= expiresAt) {
+        val status = if (isRemoteRoomExpired(expiresAt, remoteMeta.hostPro, now)) {
             MailboxRoom.STATUS_EXPIRED
         } else {
             MailboxRoom.STATUS_ACTIVE
@@ -119,5 +119,10 @@ class JoinRoomUseCase @Inject constructor(
             hostPro = remoteMeta.hostPro,
             activatedAt = remoteMeta.activatedAt ?: 0L,
         )
+    }
+
+    private fun isRemoteRoomExpired(expiresAt: Long, hostPro: Boolean, nowMs: Long): Boolean {
+        if (hostPro || expiresAt <= 0L) return false
+        return nowMs >= expiresAt
     }
 }

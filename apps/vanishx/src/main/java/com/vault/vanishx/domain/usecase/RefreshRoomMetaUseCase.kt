@@ -11,22 +11,33 @@ class RefreshRoomMetaUseCase @Inject constructor(
     private val remote: MailboxRemoteDataSource,
 ) {
     suspend operator fun invoke(roomId: String): MailboxRoom? {
-        val local = mailboxRepository.getRoom(roomId) ?: return null
-        val meta = runCatching { remote.readRoomMeta(roomId) }.getOrNull() ?: return local
-        val updated = local.copy(
-            expiresAt = meta.expiresAt,
-            hostPro = meta.hostPro,
-            activatedAt = meta.activatedAt ?: local.activatedAt,
-            icebreaker = meta.icebreaker ?: local.icebreaker,
-            peerPub = local.peerPub ?: meta.creatorPub,
-            status = local.copy(
-                expiresAt = meta.expiresAt,
-                hostPro = meta.hostPro,
-            ).resolvedStatus(),
-        )
-        if (updated != local) {
-            mailboxRepository.upsertRoom(updated)
+        val local = mailboxRepository.getRoom(roomId)
+        val meta = if (local != null) {
+            runCatching { remote.readRoomMeta(roomId) }.getOrNull()
+        } else {
+            null
         }
-        return updated
+        val result = when {
+            local == null -> null
+            meta == null -> local
+            else -> {
+                val updated = local.copy(
+                    expiresAt = meta.expiresAt,
+                    hostPro = meta.hostPro,
+                    activatedAt = meta.activatedAt ?: local.activatedAt,
+                    icebreaker = meta.icebreaker ?: local.icebreaker,
+                    peerPub = local.peerPub ?: meta.creatorPub,
+                    status = local.copy(
+                        expiresAt = meta.expiresAt,
+                        hostPro = meta.hostPro,
+                    ).resolvedStatus(),
+                )
+                if (updated != local) {
+                    mailboxRepository.upsertRoom(updated)
+                }
+                updated
+            }
+        }
+        return result
     }
 }

@@ -62,7 +62,7 @@ internal fun RoomHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(VanishXColors.Glass)
-            .border(BorderStroke(1.dp, VanishXColors.GlassBorder.copy(alpha = 0.12f))),
+            .border(BorderStroke(1.dp, VanishXColors.GlassBorder.copy(alpha = RoomUiDimens.glassBorderAlpha))),
     ) {
         Row(
             modifier = Modifier
@@ -139,8 +139,8 @@ internal fun RoomHeader(
         }
         HorizontalDivider(
             color = when {
-                isWaiting -> VanishXColors.NeonAmber.copy(alpha = 0.35f)
-                isLive -> VanishXColors.NeonGreen.copy(alpha = 0.28f)
+                isWaiting -> VanishXColors.NeonAmber.copy(alpha = RoomUiDimens.headerNeonDividerWaiting)
+                isLive -> VanishXColors.NeonGreen.copy(alpha = RoomUiDimens.headerNeonDividerLive)
                 else -> VanishXColors.Outline.copy(alpha = RoomUiDimens.dividerAlpha)
             },
             thickness = 1.dp,
@@ -161,10 +161,17 @@ private fun WaitingBadge(onClick: () -> Unit) {
             modifier = Modifier
                 .padding(start = 8.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(VanishXColors.NeonAmber.copy(alpha = 0.12f + glow * 0.22f))
+                .background(
+                    VanishXColors.NeonAmber.copy(
+                        alpha = RoomUiDimens.waitingBadgeBgBase + glow * RoomUiDimens.waitingBadgeBgGlow,
+                    ),
+                )
                 .border(
                     1.dp,
-                    VanishXColors.NeonAmber.copy(alpha = 0.45f + glow * 0.4f),
+                    VanishXColors.NeonAmber.copy(
+                        alpha = RoomUiDimens.waitingBadgeBorderBase +
+                            glow * RoomUiDimens.waitingBadgeBorderGlow,
+                    ),
                     RoundedCornerShape(6.dp),
                 )
                 .clickable(onClick = onClick)
@@ -177,10 +184,13 @@ private fun WaitingBadge(onClick: () -> Unit) {
 private fun LivePill() {
     val transition = rememberInfiniteTransition(label = "livePill")
     val glow by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.85f,
+        initialValue = RoomUiDimens.liveGlowMin,
+        targetValue = RoomUiDimens.liveGlowMax,
         animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = FastOutSlowInEasing),
+            animation = tween(
+                durationMillis = RoomUiDimens.liveGlowDurationMs,
+                easing = FastOutSlowInEasing,
+            ),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "liveGlow",
@@ -188,12 +198,24 @@ private fun LivePill() {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(VanishXColors.NeonGreen.copy(alpha = 0.12f + glow * 0.1f))
-            .border(1.dp, VanishXColors.NeonGreen.copy(alpha = 0.4f + glow * 0.35f), RoundedCornerShape(20.dp))
+            .background(
+                VanishXColors.NeonGreen.copy(
+                    alpha = RoomUiDimens.livePillBgBase + glow * RoomUiDimens.livePillBgGlow,
+                ),
+            )
+            .border(
+                1.dp,
+                VanishXColors.NeonGreen.copy(
+                    alpha = RoomUiDimens.livePillBorderBase + glow * RoomUiDimens.livePillBorderGlow,
+                ),
+                RoundedCornerShape(20.dp),
+            )
             .drawBehind {
                 drawCircle(
-                    color = VanishXColors.NeonGreen.copy(alpha = 0.12f * glow),
-                    radius = size.maxDimension * 0.55f,
+                    color = VanishXColors.NeonGreen.copy(
+                        alpha = RoomUiDimens.livePillHaloAlpha * glow,
+                    ),
+                    radius = size.maxDimension * RoomUiDimens.livePillHaloScale,
                     center = center.copy(x = 10.dp.toPx()),
                 )
             }

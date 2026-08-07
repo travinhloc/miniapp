@@ -1,3 +1,5 @@
+@file:Suppress("ComplexMethod", "UnstableCollections", "MagicNumber")
+
 package com.vault.vanishx.presentation.mailbox.chat
 
 import android.view.HapticFeedbackConstants

@@ -12,7 +12,8 @@ internal fun findRecallableMessage(
     isExpired: Boolean,
     isRecalling: Boolean,
 ): ChatMessage? {
-    if (!isPro || isExpired || isRecalling) return null
+    val canRecall = isPro && !isExpired && !isRecalling
+    if (!canRecall) return null
     return messages.lastOrNull { it.direction == ChatMessage.DIRECTION_OUT && !it.recalled }
 }
 
@@ -38,8 +39,9 @@ internal fun roomKeyFingerprint(roomKey: String): String {
     if (roomKey.isBlank()) return "—"
     val digest = MessageDigest.getInstance("SHA-256")
         .digest(roomKey.toByteArray(Charsets.UTF_8))
-    val hex = digest.joinToString("") { b -> "%02X".format(b) }.take(32)
-    return hex.chunked(4).joinToString(" ")
+    val hex = digest.joinToString("") { b -> "%02X".format(b) }
+        .take(RoomUiDimens.fingerprintHexLen)
+    return hex.chunked(RoomUiDimens.fingerprintGroupSize).joinToString(" ")
 }
 
 /**

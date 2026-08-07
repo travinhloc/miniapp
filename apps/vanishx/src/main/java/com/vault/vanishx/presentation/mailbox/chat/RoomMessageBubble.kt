@@ -1,3 +1,5 @@
+@file:Suppress("ComplexMethod", "MagicNumber")
+
 package com.vault.vanishx.presentation.mailbox.chat
 
 import androidx.compose.foundation.background

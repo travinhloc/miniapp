@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions", "MagicNumber")
+
 package com.vault.vanishx.presentation.home
 
 import android.Manifest
