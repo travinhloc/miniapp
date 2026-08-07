@@ -50,7 +50,8 @@ See [`MAILBOX.md`](MAILBOX.md) — RTDB schema, rules, Anonymous Auth, remote da
 | Room key | 32 random bytes → URL-safe Base64 (E2EE in 2.3) |
 | Invite URI | `vanishx://r/{roomId}?k={roomKey}&e={expiresAtMs}` |
 | QR | ZXing encode + JourneyApps scan |
-| TTL Free | 1h / 6h / 24h / 7d |
+| TTL Free Host | Clock starts when guest **enters** · default 24h |
+| TTL Pro Host | No room clock (chat forever) |
 
 **Tradeoff:** room key is in the query string (capability URL). Convenient for QR/share; anyone with the link has the key. HTTPS App Links / key fragmentation can harden later (3.1).
 
@@ -64,7 +65,7 @@ Local `rooms` row stores `roomKey` + `role` (`creator` \| `member`) in SQLCipher
 | Key | Invite `roomKey` (32 raw bytes, URL-safe Base64) |
 | AAD | UTF-8 `roomId` |
 | Wire | `vx1.` + URL-safe Base64(IV ‖ ciphertext ‖ tag) |
-| Message TTL | Same as room `expiresAt` |
+| Message TTL | Room clock when set; Pro Host uses long wire TTL |
 | Receive | Sync on room open + RTDB listener while screen visible |
 | After ingest | `remove()` remote node (transient mailbox) |
 

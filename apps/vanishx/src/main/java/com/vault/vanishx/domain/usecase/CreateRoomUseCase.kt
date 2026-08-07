@@ -9,6 +9,7 @@ import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.domain.model.RoomTtlOption
 import com.vault.vanishx.domain.repository.IdentityRepository
 import com.vault.vanishx.domain.repository.MailboxRepository
+import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import javax.inject.Inject
 
 data class CreatedRoom(
@@ -16,13 +17,22 @@ data class CreatedRoom(
     val invite: RoomInvite,
 )
 
+/**
+ * Creates a room. Room clock is **not** started here:
+ * - Free Host: `expiresAt = 0` until guest enters (activate)
+ * - Pro Host: no room clock forever (`hostPro = true`, `expiresAt = 0`)
+ *
+ * [ttl] is reserved for Free activate duration (currently always [RoomTtlOption.ONE_DAY] at join).
+ */
 class CreateRoomUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
     private val identityRepository: IdentityRepository,
     private val remote: MailboxRemoteDataSource,
     private val secretsGenerator: RoomSecretsGenerator,
     private val roomPushTopics: RoomPushTopics,
+    private val proEntitlement: ProEntitlementRepository,
 ) {
+    @Suppress("UnusedParameter")
     suspend operator fun invoke(
         ttl: RoomTtlOption,
         title: String? = null,
@@ -31,7 +41,7 @@ class CreateRoomUseCase @Inject constructor(
     ): CreatedRoom {
         val identity = identityRepository.ensureIdentity()
         val now = System.currentTimeMillis()
-        val expiresAt = now + ttl.durationMs
+        val hostPro = proEntitlement.isProNow()
         val trimmedIcebreaker = icebreaker
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
@@ -40,20 +50,24 @@ class CreateRoomUseCase @Inject constructor(
             id = secretsGenerator.newRoomId(),
             roomKey = secretsGenerator.newRoomKey(),
             createdAt = now,
-            expiresAt = expiresAt,
+            expiresAt = 0L,
             title = title?.trim()?.takeIf { it.isNotEmpty() },
             nickname = nickname?.trim()?.takeIf { it.isNotEmpty() },
             status = MailboxRoom.STATUS_ACTIVE,
             role = MailboxRoom.ROLE_CREATOR,
             icebreaker = trimmedIcebreaker,
+            hostPro = hostPro,
+            activatedAt = 0L,
         )
         remote.writeRoomMeta(
             roomId = room.id,
             meta = RemoteRoomMeta(
                 createdAt = room.createdAt,
-                expiresAt = room.expiresAt,
+                expiresAt = 0L,
                 creatorPub = identity.publicKeyBase64,
                 icebreaker = trimmedIcebreaker,
+                hostPro = hostPro,
+                activatedAt = null,
             ),
         )
         mailboxRepository.upsertRoom(room)
@@ -63,7 +77,7 @@ class CreateRoomUseCase @Inject constructor(
             invite = RoomInvite(
                 roomId = room.id,
                 roomKey = room.roomKey,
-                expiresAt = room.expiresAt,
+                expiresAt = null,
             ),
         )
     }

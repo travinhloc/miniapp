@@ -27,17 +27,21 @@ class SendRoomMessageUseCase @Inject constructor(
             mailboxRepository.upsertRoom(resolved)
             error("Room expired")
         }
+        if (resolved.isPendingActivation()) {
+            error("Room not activated yet")
+        }
 
         val identity = identityRepository.ensureIdentity()
         val now = System.currentTimeMillis()
         val messageId = "m_${UUID.randomUUID().toString().replace("-", "").take(MESSAGE_ID_CHARS)}"
         val ciphertext = cipher.encrypt(roomId, room.roomKey, text)
+        val wireExpiresAt = wireExpiresAt(resolved, now)
         val remoteMessage = RemoteMailboxMessage(
             messageId = messageId,
             ciphertext = ciphertext,
             senderPub = identity.publicKeyBase64,
             createdAt = now,
-            expiresAt = room.expiresAt,
+            expiresAt = wireExpiresAt,
         )
         remote.writeMessage(roomId, remoteMessage)
 
@@ -46,14 +50,23 @@ class SendRoomMessageUseCase @Inject constructor(
             roomId = roomId,
             body = text,
             sentAt = now,
-            expiresAt = room.expiresAt,
+            expiresAt = wireExpiresAt,
             direction = ChatMessage.DIRECTION_OUT,
         )
         mailboxRepository.upsertMessage(local)
         return local
     }
 
+    private fun wireExpiresAt(room: MailboxRoom, nowMs: Long): Long =
+        when {
+            room.hasRoomClock() -> room.expiresAt
+            room.hostPro -> nowMs + ETERNAL_MESSAGE_TTL_MS
+            else -> error("Room not activated yet")
+        }
+
     private companion object {
         const val MESSAGE_ID_CHARS = 16
+        /** RTDB rules require expiresAt > now; Pro rooms use a long wire TTL. */
+        const val ETERNAL_MESSAGE_TTL_MS = 365L * 24 * 60 * 60 * 1000 * 10
     }
 }

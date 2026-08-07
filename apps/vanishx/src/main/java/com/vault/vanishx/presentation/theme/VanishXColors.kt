@@ -18,4 +18,10 @@ object VanishXColors {
     val Error = Color(0xFFF85149)
     val Warn = Color(0xFFD29922)
     val Ok = Color(0xFF3FB950)
+
+    /** Epic 8 glass / neon tokens (scrim-based — no blur dependency). */
+    val Glass = Color(0xCC161B22)
+    val GlassBorder = Color(0x66FFFFFF)
+    val NeonAmber = Color(0xFFFFB020)
+    val NeonGreen = Color(0xFF3DFF8A)
 }

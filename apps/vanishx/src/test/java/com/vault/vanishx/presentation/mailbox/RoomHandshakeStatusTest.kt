@@ -10,12 +10,14 @@ class RoomHandshakeStatusTest {
         status: String = MailboxRoom.STATUS_ACTIVE,
         role: String = MailboxRoom.ROLE_CREATOR,
         peerPub: String? = null,
+        activatedAt: Long = 0L,
     ) = MailboxRoom(
         id = "room1",
         roomKey = "key1",
         status = status,
         role = role,
         peerPub = peerPub,
+        activatedAt = activatedAt,
     )
 
     @Test
@@ -47,6 +49,16 @@ class RoomHandshakeStatusTest {
     fun `active room with peerPub is LIVE`() {
         val result = handshakeStatus(
             room = room(peerPub = "peerPubKey"),
+            isExpired = false,
+        )
+
+        result shouldBe RoomHandshakeStatus.LIVE
+    }
+
+    @Test
+    fun `active room with activatedAt is LIVE without peerPub`() {
+        val result = handshakeStatus(
+            room = room(peerPub = null, activatedAt = 1_700_000_000_000L),
             isExpired = false,
         )
 

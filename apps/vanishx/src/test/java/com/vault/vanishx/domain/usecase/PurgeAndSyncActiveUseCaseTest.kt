@@ -101,6 +101,7 @@ class PurgeAndSyncActiveUseCaseTest {
             cipher = cipher,
             purgeExpiredRoom = purge,
             blockRepository = mockk(relaxed = true),
+            refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
         ).invoke("room1")
 
         result.ingested shouldBe 0

@@ -7,12 +7,18 @@
         ".read": "auth != null",
         ".write": "auth != null",
         "meta": {
-          ".validate": "!newData.exists() || (newData.hasChildren(['createdAt', 'expiresAt']) && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && newData.child('expiresAt').val() > now)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['createdAt', 'expiresAt', 'hostPro']) && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber() && (newData.child('expiresAt').val() == 0 || newData.child('expiresAt').val() > now) && newData.child('hostPro').isBoolean())",
           "createdAt": {
             ".validate": "newData.isNumber()"
           },
           "expiresAt": {
-            ".validate": "newData.isNumber() && newData.val() > now"
+            ".validate": "newData.isNumber() && (newData.val() == 0 || newData.val() > now)"
+          },
+          "hostPro": {
+            ".validate": "newData.isBoolean()"
+          },
+          "activatedAt": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
           },
           "creatorPub": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 512"

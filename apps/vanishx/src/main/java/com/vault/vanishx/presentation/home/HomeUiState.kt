@@ -12,6 +12,8 @@ data class HomeRoomItem(
     /** 0f..1f remaining fraction of room lifetime (1 = full). */
     val ttlFraction: Float = 1f,
     val initials: String = "?",
+    /** False for Pro Host rooms or Free rooms not yet activated. */
+    val hasRoomClock: Boolean = false,
 )
 
 data class HomeUiState(
@@ -49,17 +51,27 @@ sealed interface HomeAction {
 fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomItem {
     val resolved = resolvedStatus(nowMs)
     val expired = resolved == MailboxRoom.STATUS_EXPIRED
-    val remaining = if (expiresAt > 0L) (expiresAt - nowMs).coerceAtLeast(0L) else 0L
+    val clock = hasRoomClock()
+    val remaining = if (clock) (expiresAt - nowMs).coerceAtLeast(0L) else 0L
     val lifetime = when {
+        !clock -> 1f
+        activatedAt > 0L && expiresAt > activatedAt -> (expiresAt - activatedAt).toFloat()
         expiresAt > createdAt && createdAt > 0L -> (expiresAt - createdAt).toFloat()
         expiresAt > nowMs -> (expiresAt - nowMs + remaining).toFloat().coerceAtLeast(1f)
         else -> 1f
     }
-    val fraction = if (lifetime > 0f) (remaining / lifetime).coerceIn(0f, 1f) else 0f
+    val fraction = when {
+        !clock -> 1f
+        lifetime > 0f -> (remaining / lifetime).coerceIn(0f, 1f)
+        else -> 0f
+    }
     val label = nickname?.takeIf { it.isNotBlank() }
         ?: title?.takeIf { it.isNotBlank() }
         ?: "···${id.takeLast(ROOM_ID_SUFFIX_LEN)}"
-    val waiting = role == MailboxRoom.ROLE_CREATOR && peerPub.isNullOrBlank() && !expired
+    val waiting = role == MailboxRoom.ROLE_CREATOR &&
+        activatedAt <= 0L &&
+        peerPub.isNullOrBlank() &&
+        !expired
     return HomeRoomItem(
         id = id,
         displayName = label,
@@ -69,6 +81,7 @@ fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomIt
         isWaiting = waiting,
         ttlFraction = fraction,
         initials = initialsFrom(label),
+        hasRoomClock = clock,
     )
 }
 

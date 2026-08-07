@@ -46,8 +46,10 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
             val payload = buildMap<String, Any> {
                 put(KEY_CREATED_AT, meta.createdAt)
                 put(KEY_EXPIRES_AT, meta.expiresAt)
+                put(KEY_HOST_PRO, meta.hostPro)
                 meta.creatorPub?.let { put(KEY_CREATOR_PUB, it) }
                 meta.icebreaker?.let { put(KEY_ICEBREAKER, it) }
+                meta.activatedAt?.takeIf { it > 0L }?.let { put(KEY_ACTIVATED_AT, it) }
             }
             roomRef(roomId).child(PATH_META).setValue(payload).await()
         }
@@ -62,11 +64,15 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
             val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java) ?: return@withContext null
             val creatorPub = snapshot.child(KEY_CREATOR_PUB).getValue(String::class.java)
             val icebreaker = snapshot.child(KEY_ICEBREAKER).getValue(String::class.java)
+            val hostPro = snapshot.child(KEY_HOST_PRO).getValue(Boolean::class.java) ?: false
+            val activatedAt = snapshot.child(KEY_ACTIVATED_AT).getValue(Long::class.java)
             RemoteRoomMeta(
                 createdAt = createdAt,
                 expiresAt = expiresAt,
                 creatorPub = creatorPub,
                 icebreaker = icebreaker,
+                hostPro = hostPro,
+                activatedAt = activatedAt,
             )
         }
     }
@@ -192,6 +198,8 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         const val PATH_REPORTS = "reports"
         const val KEY_CREATED_AT = "createdAt"
         const val KEY_EXPIRES_AT = "expiresAt"
+        const val KEY_HOST_PRO = "hostPro"
+        const val KEY_ACTIVATED_AT = "activatedAt"
         const val KEY_CREATOR_PUB = "creatorPub"
         const val KEY_ICEBREAKER = "icebreaker"
         const val KEY_CIPHERTEXT = "ciphertext"

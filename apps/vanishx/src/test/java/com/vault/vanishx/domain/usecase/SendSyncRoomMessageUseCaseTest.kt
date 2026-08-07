@@ -31,6 +31,7 @@ class SendSyncRoomMessageUseCaseTest {
         createdAt = 1L,
         expiresAt = System.currentTimeMillis() + 3_600_000L,
         role = MailboxRoom.ROLE_CREATOR,
+        activatedAt = 1L,
     )
 
     @Test
@@ -103,6 +104,7 @@ class SendSyncRoomMessageUseCaseTest {
                 com.vault.vanishx.data.push.FakeRoomPushTopics(),
             ),
             blockRepository = mockk(relaxed = true),
+            refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
         ).invoke("room1")
 
         result.ingested shouldBe 1
