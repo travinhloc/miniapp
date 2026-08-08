@@ -30,4 +30,19 @@ interface MailboxRemoteDataSource {
      * to detach the listener.
      */
     fun observeMessages(roomId: String): kotlinx.coroutines.flow.Flow<List<RemoteMailboxMessage>>
+
+    // Epic 9 engagement metadata (no plaintext)
+    suspend fun setPresence(roomId: String, deviceId: String, online: Boolean)
+    fun observePresence(roomId: String): kotlinx.coroutines.flow.Flow<List<RemotePresence>>
+
+    suspend fun setReadWatermark(roomId: String, deviceId: String, messageId: String)
+    fun observeReadWatermarks(roomId: String): kotlinx.coroutines.flow.Flow<List<RemoteReadWatermark>>
+
+    suspend fun setTyping(roomId: String, deviceId: String, atMs: Long)
+    suspend fun clearTyping(roomId: String, deviceId: String)
+    fun observeTyping(roomId: String): kotlinx.coroutines.flow.Flow<List<RemoteTyping>>
+
+    suspend fun setReaction(roomId: String, messageId: String, deviceId: String, emoji: String)
+    suspend fun clearReaction(roomId: String, messageId: String, deviceId: String)
+    fun observeReactions(roomId: String): kotlinx.coroutines.flow.Flow<List<RemoteReaction>>
 }

@@ -195,6 +195,11 @@
     <string name="room_menu_cd">More options</string>
     <string name="room_send_cd">Send message</string>
     <string name="room_sent_checks">✓✓</string>
+    <string name="room_sent_check">✓</string>
+    <string name="room_reply_missing">Message disappeared</string>
+    <string name="room_peer_online">Online</string>
+    <string name="room_peer_away">Away</string>
+    <string name="room_typing">Typing…</string>
     <string name="room_waiting_badge">Waiting</string>
     <string name="room_invite_title">Invite to room</string>
     <string name="room_invite_subtitle">Send the link or QR so they can join.</string>
@@ -241,6 +246,31 @@
     <string name="room_sensitive_badge">Sensitive</string>
     <string name="room_screenshot_banner">Screenshot detected on this device. Peers are not notified in this version.</string>
     <string name="room_screenshot_dismiss_cd">Dismiss</string>
+    <string name="room_scroll_to_bottom">Jump down</string>
+    <string name="room_day_today">Today</string>
+    <string name="room_day_yesterday">Yesterday</string>
+    <string name="room_rename_title">Room name</string>
+    <string name="room_rename_hint">Display name</string>
+    <string name="room_rename_save">Save</string>
+    <string name="room_rename_placeholder">Tap to name room</string>
+    <string name="room_rename_required">Enter a room name</string>
+    <string name="room_rename_too_long">Name is too long</string>
+    <string name="room_action_reply">Reply</string>
+    <string name="room_action_copy">Copy</string>
+    <string name="room_action_copied">Copied</string>
+    <string name="room_action_details">Details</string>
+    <string name="room_action_delete">Delete</string>
+    <string name="room_action_recall">Recall</string>
+    <string name="room_delete_title">Delete on this device?</string>
+    <string name="room_delete_body">Removes the message only for you. To remove it for both sides, use Recall.</string>
+    <string name="room_delete_confirm">Delete for me</string>
+    <string name="room_copy_blocked_sensitive">Hold to view before copying a sensitive message</string>
+    <string name="room_details_sent_at">Sent at %1$s</string>
+    <string name="room_details_status_sent">Status: sent</string>
+    <string name="room_details_status_read">Status: read</string>
+    <string name="room_details_status_received">Status: received</string>
+    <string name="room_reply_banner">Replying</string>
+    <string name="room_reply_clear_cd">Cancel reply</string>
 
     <!-- Lock -->
     <string name="lock_title">VanishX is locked</string>

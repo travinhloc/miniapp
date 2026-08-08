@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber")
+@file:Suppress("MagicNumber", "ComplexMethod")
 
 package com.vault.vanishx.presentation.mailbox.chat
 
@@ -48,6 +48,7 @@ internal fun RoomComposer(
     onAction: (RoomAction) -> Unit,
     locked: Boolean = false,
     draftSensitive: Boolean = false,
+    replySnippet: String? = null,
 ) {
     val inputEnabled = !isSending && !locked
     Column(
@@ -56,6 +57,37 @@ internal fun RoomComposer(
             .background(VanishXColors.Glass)
             .border(BorderStroke(1.dp, VanishXColors.GlassBorder.copy(alpha = 0.1f))),
     ) {
+        if (!locked && !replySnippet.isNullOrBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.room_reply_banner),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = VanishXColors.Primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = replySnippet,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = VanishXColors.Muted,
+                        maxLines = 1,
+                    )
+                }
+                IconButton(onClick = { onAction(RoomAction.ClearReply) }) {
+                    Text(
+                        text = "✕",
+                        color = VanishXColors.Muted,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+        }
         if (!locked) {
             FilterChip(
                 selected = draftSensitive,

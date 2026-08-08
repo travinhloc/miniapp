@@ -35,6 +35,7 @@ data class MessageEntity(
     val direction: String,
     val recalled: Boolean = false,
     val sensitive: Boolean = false,
+    val replyToId: String? = null,
 )
 
 @Entity(tableName = "blocked_peers")

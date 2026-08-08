@@ -50,6 +50,39 @@
             }
           }
         },
+        "presence": {
+          "$deviceId": {
+            ".validate": "!newData.exists() || (newData.hasChildren(['online', 'updatedAt']) && newData.child('online').isBoolean() && newData.child('updatedAt').isNumber())",
+            "online": { ".validate": "newData.isBoolean()" },
+            "updatedAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "read": {
+          "$deviceId": {
+            ".validate": "!newData.exists() || (newData.hasChildren(['messageId', 'updatedAt']) && newData.child('messageId').isString() && newData.child('messageId').val().length > 0 && newData.child('messageId').val().length <= 64 && newData.child('updatedAt').isNumber())",
+            "messageId": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64" },
+            "updatedAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "typing": {
+          "$deviceId": {
+            ".validate": "!newData.exists() || (newData.hasChildren(['at']) && newData.child('at').isNumber())",
+            "at": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "reactions": {
+          "$messageId": {
+            "$deviceId": {
+              ".validate": "!newData.exists() || (newData.hasChildren(['emoji', 'at']) && newData.child('emoji').isString() && newData.child('emoji').val().length > 0 && newData.child('emoji').val().length <= 8 && newData.child('at').isNumber())",
+              "emoji": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 8" },
+              "at": { ".validate": "newData.isNumber()" },
+              "$other": { ".validate": false }
+            }
+          }
+        },
         "$other": {
           ".validate": false
         }

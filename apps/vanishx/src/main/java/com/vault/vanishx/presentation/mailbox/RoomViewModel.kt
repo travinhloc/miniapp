@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions", "LongMethod", "ReturnCount")
+
 package com.vault.vanishx.presentation.mailbox
 
 import androidx.lifecycle.SavedStateHandle
@@ -6,31 +8,43 @@ import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
+import com.vault.vanishx.data.remote.RemotePresence
+import com.vault.vanishx.data.remote.RemoteReaction
+import com.vault.vanishx.data.remote.RemoteReadWatermark
+import com.vault.vanishx.data.remote.RemoteTyping
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.RecallPolicy
+import com.vault.vanishx.domain.model.firebaseSafeKey
+import com.vault.vanishx.domain.repository.IdentityRepository
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.BlockPeerUseCase
+import com.vault.vanishx.domain.usecase.DeleteLocalMessageUseCase
 import com.vault.vanishx.domain.usecase.GetRoomUseCase
 import com.vault.vanishx.domain.usecase.PingPeerUseCase
 import com.vault.vanishx.domain.usecase.PingRoomUseCase
 import com.vault.vanishx.domain.usecase.PurgeExpiredRoomUseCase
 import com.vault.vanishx.domain.usecase.RecallRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.RefreshRoomMetaUseCase
+import com.vault.vanishx.domain.usecase.RenameRoomUseCase
 import com.vault.vanishx.domain.usecase.ReportRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
 import com.vault.vanishx.presentation.paywall.PaywallDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -65,6 +79,21 @@ data class RoomUiState(
     val showBentoSheet: Boolean = false,
     val showSafetySheet: Boolean = false,
     val showBurnConfirm: Boolean = false,
+    val showRenameDialog: Boolean = false,
+    val renameDraft: String = "",
+    val actionMessageId: String? = null,
+    val deleteConfirmMessageId: String? = null,
+    val detailsMessageId: String? = null,
+    val replyToMessageId: String? = null,
+    /** messageId → emoji → count (local until RTDB sync). */
+    val reactionsByMessage: Map<String, Map<String, Int>> = emptyMap(),
+    val myReactionByMessage: Map<String, String> = emptyMap(),
+    val peerOnline: Boolean? = null,
+    val peerTyping: Boolean = false,
+    val peerReadWatermarkId: String? = null,
+    val myDeviceId: String = "",
+    val toastMessage: String? = null,
+    val pendingClipboard: String? = null,
     val pingPeerEvent: PingPeerEvent? = null,
 )
 
@@ -106,6 +135,23 @@ sealed interface RoomAction {
     data object DismissBurnConfirm : RoomAction
     data object ConfirmBurn : RoomAction
     data object StubChangeTtl : RoomAction
+    data object OpenRenameDialog : RoomAction
+    data object DismissRenameDialog : RoomAction
+    data class RenameDraftChanged(val value: String) : RoomAction
+    data object ConfirmRename : RoomAction
+    data class OpenMessageActions(val messageId: String) : RoomAction
+    data object DismissMessageActions : RoomAction
+    data class CopyMessage(val messageId: String) : RoomAction
+    data class ReplyToMessage(val messageId: String) : RoomAction
+    data object ClearReply : RoomAction
+    data class ReactToMessage(val messageId: String, val emoji: String) : RoomAction
+    data class OpenDeleteForMe(val messageId: String) : RoomAction
+    data object DismissDeleteForMe : RoomAction
+    data object ConfirmDeleteForMe : RoomAction
+    data class OpenMessageDetails(val messageId: String) : RoomAction
+    data object DismissMessageDetails : RoomAction
+    data object ConsumeToast : RoomAction
+    data object ConsumeClipboard : RoomAction
 }
 
 @HiltViewModel
@@ -122,7 +168,10 @@ class RoomViewModel @Inject constructor(
     private val blockPeer: BlockPeerUseCase,
     private val reportRoom: ReportRoomUseCase,
     private val recallRoomMessage: RecallRoomMessageUseCase,
+    private val renameRoom: RenameRoomUseCase,
+    private val deleteLocalMessage: DeleteLocalMessageUseCase,
     private val mailboxRepository: MailboxRepository,
+    private val identityRepository: IdentityRepository,
     private val proEntitlement: ProEntitlementRepository,
     private val remote: MailboxRemoteDataSource,
     private val dispatchersProvider: DispatchersProvider,
@@ -141,7 +190,9 @@ class RoomViewModel @Inject constructor(
 
     private var observeJob: Job? = null
     private var expiryJob: Job? = null
+    private var engagementJob: Job? = null
     private var lastPeerPingAtMs = 0L
+    private var presenceDeviceId: String = ""
 
     init {
         proEntitlement.isPro
@@ -153,6 +204,13 @@ class RoomViewModel @Inject constructor(
     override fun onCleared() {
         observeJob?.cancel()
         expiryJob?.cancel()
+        engagementJob?.cancel()
+        val deviceId = presenceDeviceId.ifBlank { _uiState.value.myDeviceId }
+        if (deviceId.isNotBlank()) {
+            CoroutineScope(dispatchersProvider.io).launch {
+                runCatching { remote.setPresence(roomId, deviceId, online = false) }
+            }
+        }
         super.onCleared()
     }
 
@@ -161,8 +219,11 @@ class RoomViewModel @Inject constructor(
             RoomAction.Back -> launch { _navigator.emit(BaseDestination.Up()) }
             RoomAction.Refresh -> sync(showLoading = true)
             RoomAction.Send -> send()
-            is RoomAction.DraftChanged -> _uiState.update {
-                it.copy(draft = action.value, errorMessage = null)
+            is RoomAction.DraftChanged -> {
+                _uiState.update {
+                    it.copy(draft = action.value, errorMessage = null)
+                }
+                publishTyping(action.value)
             }
             RoomAction.ToggleDraftSensitive -> _uiState.update {
                 it.copy(draftSensitive = !it.draftSensitive)
@@ -228,8 +289,146 @@ class RoomViewModel @Inject constructor(
                     infoMessage = "Changing TTL will arrive in a later build.",
                 )
             }
+            RoomAction.OpenRenameDialog -> _uiState.update { state ->
+                state.copy(
+                    showRenameDialog = true,
+                    renameDraft = state.room?.title.orEmpty().ifBlank {
+                        state.room?.nickname.orEmpty()
+                    },
+                    errorMessage = null,
+                )
+            }
+            RoomAction.DismissRenameDialog -> _uiState.update {
+                it.copy(showRenameDialog = false, renameDraft = "")
+            }
+            is RoomAction.RenameDraftChanged -> _uiState.update {
+                it.copy(renameDraft = action.value)
+            }
+            RoomAction.ConfirmRename -> confirmRename()
+            is RoomAction.OpenMessageActions -> _uiState.update {
+                it.copy(actionMessageId = action.messageId)
+            }
+            RoomAction.DismissMessageActions -> _uiState.update {
+                it.copy(actionMessageId = null)
+            }
+            is RoomAction.CopyMessage -> copyMessage(action.messageId)
+            is RoomAction.ReplyToMessage -> _uiState.update {
+                it.copy(replyToMessageId = action.messageId)
+            }
+            RoomAction.ClearReply -> _uiState.update { it.copy(replyToMessageId = null) }
+            is RoomAction.ReactToMessage -> react(action.messageId, action.emoji)
+            is RoomAction.OpenDeleteForMe -> _uiState.update {
+                it.copy(deleteConfirmMessageId = action.messageId)
+            }
+            RoomAction.DismissDeleteForMe -> _uiState.update {
+                it.copy(deleteConfirmMessageId = null)
+            }
+            RoomAction.ConfirmDeleteForMe -> confirmDeleteForMe()
+            is RoomAction.OpenMessageDetails -> _uiState.update {
+                it.copy(detailsMessageId = action.messageId)
+            }
+            RoomAction.DismissMessageDetails -> _uiState.update {
+                it.copy(detailsMessageId = null)
+            }
+            RoomAction.ConsumeToast -> _uiState.update { it.copy(toastMessage = null) }
+            RoomAction.ConsumeClipboard -> _uiState.update { it.copy(pendingClipboard = null) }
             else -> Unit
         }
+    }
+
+    private fun copyMessage(messageId: String) {
+        val message = _uiState.value.messages.firstOrNull { it.id == messageId } ?: return
+        if (message.recalled || message.body.isBlank()) return
+        if (message.sensitive) {
+            _uiState.update {
+                it.copy(toastMessage = "sensitive_copy_blocked")
+            }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                pendingClipboard = message.body,
+                toastMessage = "copied",
+            )
+        }
+    }
+
+    private fun react(messageId: String, emoji: String) {
+        val previous = _uiState.value.myReactionByMessage[messageId]
+        val cleared = previous == emoji
+        _uiState.update { state ->
+            val counts = state.reactionsByMessage[messageId].orEmpty().toMutableMap()
+            val prior = state.myReactionByMessage[messageId]
+            if (prior != null) {
+                val next = (counts[prior] ?: 1) - 1
+                if (next <= 0) counts.remove(prior) else counts[prior] = next
+            }
+            val myNext = state.myReactionByMessage.toMutableMap()
+            if (prior == emoji) {
+                myNext.remove(messageId)
+            } else {
+                counts[emoji] = (counts[emoji] ?: 0) + 1
+                myNext[messageId] = emoji
+            }
+            state.copy(
+                reactionsByMessage = state.reactionsByMessage + (messageId to counts),
+                myReactionByMessage = myNext,
+            )
+        }
+        val deviceId = _uiState.value.myDeviceId.ifBlank { presenceDeviceId }
+        if (deviceId.isBlank()) return
+        viewModelScope.launch(dispatchersProvider.io) {
+            runCatching {
+                if (cleared) {
+                    remote.clearReaction(roomId, messageId, deviceId)
+                } else {
+                    remote.setReaction(roomId, messageId, deviceId, emoji)
+                }
+            }.onFailure { Timber.w(it, "Reaction sync failed") }
+        }
+    }
+
+    private fun confirmDeleteForMe() {
+        val messageId = _uiState.value.deleteConfirmMessageId ?: return
+        flow { emit(deleteLocalMessage(roomId, messageId)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach {
+                _uiState.update { state ->
+                    state.copy(
+                        deleteConfirmMessageId = null,
+                        messages = state.messages.filterNot { it.id == messageId },
+                    )
+                }
+            }
+            .catch { e ->
+                _uiState.update {
+                    it.copy(
+                        deleteConfirmMessageId = null,
+                        errorMessage = friendlyError(e),
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun confirmRename() {
+        val draft = _uiState.value.renameDraft
+        flow { emit(renameRoom(roomId, draft)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { room ->
+                _uiState.update {
+                    it.copy(
+                        room = room,
+                        showRenameDialog = false,
+                        renameDraft = "",
+                        infoMessage = null,
+                    )
+                }
+            }
+            .catch { e ->
+                _uiState.update { it.copy(errorMessage = friendlyError(e)) }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun pingPeer() {
@@ -278,7 +477,13 @@ class RoomViewModel @Inject constructor(
     }
 
     private fun recall(messageId: String) {
-        if (!_uiState.value.isPro || _uiState.value.isRecalling || _uiState.value.isExpired) return
+        val state = _uiState.value
+        if (state.isRecalling || state.isExpired) return
+        val target = state.messages.firstOrNull { it.id == messageId } ?: return
+        if (!RecallPolicy.canRecallOutbound(target.sentAt, state.isPro)) {
+            launch { _navigator.emit(PaywallDestination.Paywall) }
+            return
+        }
         _uiState.update { it.copy(isRecalling = true, errorMessage = null) }
         flow { emit(recallRoomMessage(roomId, messageId)) }
             .flowOn(dispatchersProvider.io)
@@ -339,6 +544,7 @@ class RoomViewModel @Inject constructor(
                         scheduleExpiry(room)
                         sync(showLoading = false)
                         startObserving()
+                        maybeStartEngagement(room)
                     }
                 }
             }
@@ -371,11 +577,15 @@ class RoomViewModel @Inject constructor(
     private fun onLiveExpiry() {
         if (_uiState.value.isExpired) return
         observeJob?.cancel()
+        engagementJob?.cancel()
+        setPresenceOffline()
         _uiState.update {
             it.copy(
                 isExpired = true,
                 room = it.room?.copy(status = MailboxRoom.STATUS_EXPIRED),
                 draft = "",
+                peerOnline = null,
+                peerTyping = false,
             )
         }
         purgeAndShowExpired()
@@ -441,12 +651,16 @@ class RoomViewModel @Inject constructor(
                 if (expired) {
                     observeJob?.cancel()
                     expiryJob?.cancel()
+                    engagementJob?.cancel()
+                    setPresenceOffline()
                     _uiState.update {
                         it.copy(
                             isSyncing = false,
                             isExpired = true,
                             room = roomNow,
                             messages = emptyList(),
+                            peerOnline = null,
+                            peerTyping = false,
                         )
                     }
                     return@onEach
@@ -463,6 +677,7 @@ class RoomViewModel @Inject constructor(
                         },
                     )
                 }
+                maybeStartEngagement(roomNow ?: _uiState.value.room)
             }
             .catch { e ->
                 Timber.e(e, "Mailbox sync failed")
@@ -488,11 +703,15 @@ class RoomViewModel @Inject constructor(
                 ) {
                     observeJob?.cancel()
                     expiryJob?.cancel()
+                    engagementJob?.cancel()
+                    setPresenceOffline()
                     _uiState.update {
                         it.copy(
                             isExpired = true,
                             room = roomNow,
                             messages = emptyList(),
+                            peerOnline = null,
+                            peerTyping = false,
                         )
                     }
                     return@onEach
@@ -508,6 +727,7 @@ class RoomViewModel @Inject constructor(
                         },
                     )
                 }
+                maybeStartEngagement(roomNow ?: _uiState.value.room)
             }
             .catch { e ->
                 Timber.e(e, "Mailbox observe failed")
@@ -523,14 +743,16 @@ class RoomViewModel @Inject constructor(
         val sensitive = _uiState.value.draftSensitive
         if (draft.isBlank()) return
         _uiState.update { it.copy(isSending = true, errorMessage = null) }
-        flow { emit(sendRoomMessage(roomId, draft, sensitive)) }
+        flow { emit(sendRoomMessage(roomId, draft, sensitive, _uiState.value.replyToMessageId)) }
             .flowOn(dispatchersProvider.io)
             .onEach { sent ->
+                clearTypingRemote()
                 _uiState.update { state ->
                     state.copy(
                         isSending = false,
                         draft = "",
                         draftSensitive = false,
+                        replyToMessageId = null,
                         messages = (state.messages + sent).distinctBy { it.id }.sortedBy { it.sentAt },
                     )
                 }
@@ -557,6 +779,8 @@ class RoomViewModel @Inject constructor(
             .onEach {
                 observeJob?.cancel()
                 expiryJob?.cancel()
+                engagementJob?.cancel()
+                setPresenceOffline()
                 _uiState.update {
                     it.copy(
                         isBlocking = false,
@@ -564,6 +788,8 @@ class RoomViewModel @Inject constructor(
                         messages = emptyList(),
                         draft = "",
                         room = it.room?.copy(status = MailboxRoom.STATUS_LEFT),
+                        peerOnline = null,
+                        peerTyping = false,
                         infoMessage = "Peer blocked. You left this room.",
                     )
                 }
@@ -596,6 +822,8 @@ class RoomViewModel @Inject constructor(
             .onEach {
                 observeJob?.cancel()
                 expiryJob?.cancel()
+                engagementJob?.cancel()
+                setPresenceOffline()
                 _uiState.update {
                     it.copy(
                         isBlocking = false,
@@ -603,6 +831,8 @@ class RoomViewModel @Inject constructor(
                         messages = emptyList(),
                         draft = "",
                         room = it.room?.copy(status = MailboxRoom.STATUS_LEFT),
+                        peerOnline = null,
+                        peerTyping = false,
                         infoMessage = "Room burned on this device.",
                     )
                 }
@@ -649,6 +879,145 @@ class RoomViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun maybeStartEngagement(room: MailboxRoom?) {
+        if (handshakeStatus(room, _uiState.value.isExpired) != RoomHandshakeStatus.LIVE) return
+        startEngagement()
+    }
+
+    private fun startEngagement() {
+        if (engagementJob?.isActive == true) return
+        engagementJob = viewModelScope.launch(dispatchersProvider.io) {
+            val identity = runCatching { identityRepository.ensureIdentity() }
+                .getOrElse {
+                    Timber.w(it, "Engagement identity failed")
+                    return@launch
+                }
+            val deviceId = firebaseSafeKey(identity.publicKeyBase64)
+            presenceDeviceId = deviceId
+            _uiState.update { it.copy(myDeviceId = deviceId) }
+            runCatching { remote.setPresence(roomId, deviceId, online = true) }
+                .onFailure { Timber.w(it, "setPresence failed") }
+
+            launch {
+                remote.observePresence(roomId)
+                    .catch { e -> Timber.w(e, "observePresence failed") }
+                    .collect { list -> applyPresence(list, deviceId) }
+            }
+            launch {
+                remote.observeReadWatermarks(roomId)
+                    .catch { e -> Timber.w(e, "observeReadWatermarks failed") }
+                    .collect { list -> applyReadWatermarks(list, deviceId) }
+            }
+            launch {
+                remote.observeTyping(roomId)
+                    .catch { e -> Timber.w(e, "observeTyping failed") }
+                    .collect { list -> applyTyping(list, deviceId) }
+            }
+            launch {
+                remote.observeReactions(roomId)
+                    .catch { e -> Timber.w(e, "observeReactions failed") }
+                    .collect { list -> applyReactions(list, deviceId) }
+            }
+            launch {
+                _uiState
+                    .map { state ->
+                        val live = handshakeStatus(state.room, state.isExpired) ==
+                            RoomHandshakeStatus.LIVE
+                        val lastId = state.messages.lastOrNull()?.id
+                        live to lastId
+                    }
+                    .distinctUntilChanged()
+                    .collect { (live, lastId) ->
+                        if (live && !lastId.isNullOrBlank()) {
+                            runCatching {
+                                remote.setReadWatermark(roomId, deviceId, lastId)
+                            }.onFailure { Timber.w(it, "setReadWatermark failed") }
+                        }
+                    }
+            }
+        }
+    }
+
+    private fun applyPresence(list: List<RemotePresence>, myDeviceId: String) {
+        val now = System.currentTimeMillis()
+        val peerOnline = list.any { presence ->
+            presence.deviceId != myDeviceId &&
+                (presence.online || now - presence.updatedAt <= PRESENCE_GRACE_MS)
+        }
+        _uiState.update { it.copy(peerOnline = peerOnline) }
+    }
+
+    private fun applyReadWatermarks(list: List<RemoteReadWatermark>, myDeviceId: String) {
+        val peerMark = list
+            .filter { it.deviceId != myDeviceId }
+            .maxByOrNull { it.updatedAt }
+            ?.messageId
+        _uiState.update { it.copy(peerReadWatermarkId = peerMark) }
+    }
+
+    private fun applyTyping(list: List<RemoteTyping>, myDeviceId: String) {
+        val now = System.currentTimeMillis()
+        val peerTyping = list.any { typing ->
+            typing.deviceId != myDeviceId && now - typing.at <= TYPING_TTL_MS
+        }
+        _uiState.update { it.copy(peerTyping = peerTyping) }
+    }
+
+    private fun applyReactions(list: List<RemoteReaction>, myDeviceId: String) {
+        val counts = mutableMapOf<String, MutableMap<String, Int>>()
+        val mine = mutableMapOf<String, String>()
+        list.forEach { reaction ->
+            val perMessage = counts.getOrPut(reaction.messageId) { mutableMapOf() }
+            perMessage[reaction.emoji] = (perMessage[reaction.emoji] ?: 0) + 1
+            if (reaction.deviceId == myDeviceId) {
+                mine[reaction.messageId] = reaction.emoji
+            }
+        }
+        _uiState.update {
+            it.copy(
+                reactionsByMessage = counts.mapValues { (_, v) -> v.toMap() },
+                myReactionByMessage = mine,
+            )
+        }
+    }
+
+    private fun publishTyping(draft: String) {
+        val deviceId = _uiState.value.myDeviceId.ifBlank { presenceDeviceId }
+        if (deviceId.isBlank()) return
+        if (handshakeStatus(_uiState.value.room, _uiState.value.isExpired) !=
+            RoomHandshakeStatus.LIVE
+        ) {
+            return
+        }
+        viewModelScope.launch(dispatchersProvider.io) {
+            runCatching {
+                if (draft.isBlank()) {
+                    remote.clearTyping(roomId, deviceId)
+                } else {
+                    remote.setTyping(roomId, deviceId, System.currentTimeMillis())
+                }
+            }.onFailure { Timber.w(it, "Typing sync failed") }
+        }
+    }
+
+    private fun clearTypingRemote() {
+        val deviceId = _uiState.value.myDeviceId.ifBlank { presenceDeviceId }
+        if (deviceId.isBlank()) return
+        viewModelScope.launch(dispatchersProvider.io) {
+            runCatching { remote.clearTyping(roomId, deviceId) }
+                .onFailure { Timber.w(it, "clearTyping failed") }
+        }
+    }
+
+    private fun setPresenceOffline() {
+        val deviceId = presenceDeviceId.ifBlank { _uiState.value.myDeviceId }
+        if (deviceId.isBlank()) return
+        viewModelScope.launch(dispatchersProvider.io) {
+            runCatching { remote.setPresence(roomId, deviceId, online = false) }
+                .onFailure { Timber.w(it, "setPresence offline failed") }
+        }
+    }
+
     private fun friendlyError(error: Throwable): String {
         val message = error.message.orEmpty()
         return mapFriendlyError(message) ?: message.ifBlank { error::class.java.simpleName }
@@ -663,8 +1032,10 @@ class RoomViewModel @Inject constructor(
         message.contains("Peer is blocked", ignoreCase = true) -> "This peer is blocked"
         message.contains("Reason too long", ignoreCase = true) -> "Report reason is too long"
         message.contains("Pro required", ignoreCase = true) ->
-            "Recall is a Pro feature (enable Pro stub on Home in staging debug)."
+            "Recall after 24h needs Pro (enable Pro stub on Home in staging debug)."
         message.contains("Only your own", ignoreCase = true) -> "You can only recall your own messages"
+        message.contains("Room title required", ignoreCase = true) -> "Enter a room name"
+        message.contains("Room title too long", ignoreCase = true) -> "Name is too long"
         else -> null
     }
 
@@ -687,5 +1058,7 @@ class RoomViewModel @Inject constructor(
 
     private companion object {
         const val MS_PER_SEC = 1_000L
+        const val PRESENCE_GRACE_MS = 60_000L
+        const val TYPING_TTL_MS = 3_000L
     }
 }

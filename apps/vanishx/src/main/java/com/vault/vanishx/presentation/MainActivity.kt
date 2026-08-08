@@ -1,3 +1,5 @@
+@file:Suppress("ComplexCondition")
+
 package com.vault.vanishx.presentation
 
 import android.content.Intent

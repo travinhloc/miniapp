@@ -1,26 +1,46 @@
+@file:Suppress("TooManyFunctions")
+
 package com.vault.vanishx.presentation.mailbox.chat
 
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.RecallPolicy
 import java.security.MessageDigest
 import java.text.DateFormat
+import java.util.Calendar
 import java.util.Date
+import java.util.concurrent.TimeUnit
+
+internal sealed interface RoomTimelineItem {
+    data class DaySeparator(val dayStartMs: Long, val kind: DaySeparatorKind) : RoomTimelineItem
+    data class Message(val message: ChatMessage) : RoomTimelineItem
+}
+
+internal enum class DaySeparatorKind {
+    TODAY,
+    YESTERDAY,
+    DATE,
+}
 
 internal fun findRecallableMessage(
     messages: List<ChatMessage>,
     isPro: Boolean,
     isExpired: Boolean,
     isRecalling: Boolean,
+    nowMs: Long = System.currentTimeMillis(),
 ): ChatMessage? {
-    val canRecall = isPro && !isExpired && !isRecalling
-    if (!canRecall) return null
-    return messages.lastOrNull { it.direction == ChatMessage.DIRECTION_OUT && !it.recalled }
+    if (isExpired || isRecalling) return null
+    return messages.lastOrNull { message ->
+        message.direction == ChatMessage.DIRECTION_OUT &&
+            !message.recalled &&
+            RecallPolicy.canRecallOutbound(message.sentAt, isPro, nowMs)
+    }
 }
 
 internal fun resolveRoomTitle(room: MailboxRoom?): String {
     if (room == null) return ""
-    return room.nickname?.takeIf { it.isNotBlank() }
-        ?: room.title?.takeIf { it.isNotBlank() }
+    return room.title?.takeIf { it.isNotBlank() }
+        ?: room.nickname?.takeIf { it.isNotBlank() }
         ?: "···${room.id.takeLast(ROOM_ID_DISPLAY_SUFFIX)}"
 }
 
@@ -30,6 +50,49 @@ internal fun resolveAvatarLetter(title: String): String =
 internal fun formatMessageTime(epochMs: Long): String {
     val format = DateFormat.getTimeInstance(DateFormat.SHORT)
     return format.format(Date(epochMs))
+}
+
+internal fun formatDaySeparatorDate(dayStartMs: Long): String {
+    val format = DateFormat.getDateInstance(DateFormat.MEDIUM)
+    return format.format(Date(dayStartMs))
+}
+
+internal fun dayStartMs(epochMs: Long): Long {
+    val cal = Calendar.getInstance()
+    cal.timeInMillis = epochMs
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return cal.timeInMillis
+}
+
+internal fun daySeparatorKind(dayStartMs: Long, nowMs: Long): DaySeparatorKind {
+    val todayStart = dayStartMs(nowMs)
+    val yesterdayStart = todayStart - TimeUnit.DAYS.toMillis(1)
+    return when (dayStartMs) {
+        todayStart -> DaySeparatorKind.TODAY
+        yesterdayStart -> DaySeparatorKind.YESTERDAY
+        else -> DaySeparatorKind.DATE
+    }
+}
+
+internal fun buildRoomTimeline(
+    messages: List<ChatMessage>,
+    nowMs: Long = System.currentTimeMillis(),
+): List<RoomTimelineItem> {
+    if (messages.isEmpty()) return emptyList()
+    val items = ArrayList<RoomTimelineItem>(messages.size * 2)
+    var lastDayStart = Long.MIN_VALUE
+    for (message in messages) {
+        val start = dayStartMs(message.sentAt)
+        if (start != lastDayStart) {
+            items += RoomTimelineItem.DaySeparator(start, daySeparatorKind(start, nowMs))
+            lastDayStart = start
+        }
+        items += RoomTimelineItem.Message(message)
+    }
+    return items
 }
 
 /**
@@ -62,3 +125,14 @@ internal fun roomExpiryProgress(
 
 internal fun shouldShowBubbleAura(expiryProgress: Float): Boolean =
     expiryProgress >= (1f - RoomUiDimens.auraThresholdFraction)
+
+internal fun isMessageAtOrBeforeWatermark(
+    messageId: String,
+    watermarkId: String?,
+    messages: List<ChatMessage>,
+): Boolean {
+    if (watermarkId.isNullOrBlank()) return false
+    val watermarkIndex = messages.indexOfFirst { it.id == watermarkId }
+    val messageIndex = messages.indexOfFirst { it.id == messageId }
+    return watermarkIndex >= 0 && messageIndex >= 0 && messageIndex <= watermarkIndex
+}

@@ -42,6 +42,7 @@ fun MessageEntity.toDomain(): ChatMessage = ChatMessage(
     direction = direction,
     recalled = recalled,
     sensitive = sensitive,
+    replyToId = replyToId,
 )
 
 fun ChatMessage.toEntity(): MessageEntity = MessageEntity(
@@ -53,4 +54,5 @@ fun ChatMessage.toEntity(): MessageEntity = MessageEntity(
     direction = direction,
     recalled = recalled,
     sensitive = sensitive,
+    replyToId = replyToId,
 )

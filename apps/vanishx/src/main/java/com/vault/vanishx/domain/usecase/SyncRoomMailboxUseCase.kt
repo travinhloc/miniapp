@@ -218,6 +218,7 @@ class SyncRoomMailboxUseCase @Inject constructor(
                 expiresAt = remoteMessage.expiresAt,
                 direction = direction,
                 sensitive = decoded.sensitive,
+                replyToId = decoded.replyToId,
             ),
         )
         runCatching { remote.deleteMessage(room.id, remoteMessage.messageId) }

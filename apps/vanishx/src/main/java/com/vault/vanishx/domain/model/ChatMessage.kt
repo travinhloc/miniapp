@@ -10,6 +10,8 @@ data class ChatMessage(
     val recalled: Boolean = false,
     /** Opt-in Confide-style blur; peer learns flag from encrypted envelope. */
     val sensitive: Boolean = false,
+    /** Parent message id when this is a reply (E9-3). */
+    val replyToId: String? = null,
 ) {
     companion object {
         const val DIRECTION_OUT = "out"

@@ -45,6 +45,9 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE roomId = :roomId")
     suspend fun deleteByRoom(roomId: String): Int
+
+    @Query("DELETE FROM messages WHERE id = :id")
+    suspend fun deleteById(id: String): Int
 }
 
 @Dao

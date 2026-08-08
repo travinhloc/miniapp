@@ -3,6 +3,9 @@
 package com.vault.vanishx.presentation.mailbox.chat
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -23,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,10 +34,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +55,7 @@ import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.util.formatRemainingMs
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 @Suppress("UnstableCollections")
@@ -59,6 +66,9 @@ internal fun RoomMessageList(
     isExpired: Boolean,
     onOpenSafety: () -> Unit,
     modifier: Modifier = Modifier,
+    reactionsByMessage: Map<String, Map<String, Int>> = emptyMap(),
+    peerReadWatermarkId: String? = null,
+    onLongPressMessage: (ChatMessage) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -66,6 +76,32 @@ internal fun RoomMessageList(
     val view = LocalView.current
     var wasExpired by remember { mutableStateOf(isExpired) }
     val dissolve = remember { Animatable(1f) }
+    val scope = rememberCoroutineScope()
+    val timeline = remember(messages, nowMs) { buildRoomTimeline(messages, nowMs) }
+    val ttlOffset = if (showTtl) 1 else 0
+    val messageIndexById = remember(timeline) {
+        buildMap {
+            timeline.forEachIndexed { index, item ->
+                if (item is RoomTimelineItem.Message) {
+                    put(item.message.id, index)
+                }
+            }
+        }
+    }
+
+    val isAtBottom by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val total = info.totalItemsCount
+            if (total == 0) {
+                true
+            } else {
+                val last = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
+                last.index >= total - 1
+            }
+        }
+    }
+    var stickToBottom by remember { mutableStateOf(true) }
 
     LaunchedEffect(showTtl, expiresAt) {
         if (!showTtl) return@LaunchedEffect
@@ -84,9 +120,15 @@ internal fun RoomMessageList(
         wasExpired = isExpired
     }
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.lastIndex + if (showTtl) 1 else 0)
+    LaunchedEffect(listState.isScrollInProgress, isAtBottom) {
+        if (!listState.isScrollInProgress) {
+            stickToBottom = isAtBottom
+        }
+    }
+
+    LaunchedEffect(messages.size, messages.lastOrNull()?.id) {
+        if (messages.isNotEmpty() && stickToBottom) {
+            listState.animateScrollToItem(ttlOffset + timeline.lastIndex)
         }
     }
 
@@ -103,34 +145,160 @@ internal fun RoomMessageList(
             E2eEmptyCard(onClick = onOpenSafety)
         }
     } else {
-        LazyColumn(
-            state = listState,
-            modifier = modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    alpha = dissolve.value
-                    scaleX = 0.96f + 0.04f * dissolve.value
-                    scaleY = 0.96f + 0.04f * dissolve.value
-                },
-            contentPadding = PaddingValues(
-                horizontal = RoomUiDimens.spacingMedium,
-                vertical = RoomUiDimens.spacingSmall,
-            ),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            if (showTtl) {
-                val ttlAt = expiresAt!!
-                item(key = "ttl-chip") {
-                    TtlChip(remainingMs = (ttlAt - nowMs).coerceAtLeast(0L))
+        Box(modifier = modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = dissolve.value
+                        scaleX = 0.96f + 0.04f * dissolve.value
+                        scaleY = 0.96f + 0.04f * dissolve.value
+                    },
+                contentPadding = PaddingValues(
+                    horizontal = RoomUiDimens.spacingMedium,
+                    vertical = RoomUiDimens.spacingSmall,
+                ),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (showTtl) {
+                    val ttlAt = expiresAt!!
+                    item(key = "ttl-chip") {
+                        TtlChip(remainingMs = (ttlAt - nowMs).coerceAtLeast(0L))
+                    }
+                }
+                items(
+                    items = timeline,
+                    key = { item ->
+                        when (item) {
+                            is RoomTimelineItem.DaySeparator -> "day-${item.dayStartMs}"
+                            is RoomTimelineItem.Message -> item.message.id
+                        }
+                    },
+                ) { item ->
+                    when (item) {
+                        is RoomTimelineItem.DaySeparator -> DaySeparatorChip(item)
+                        is RoomTimelineItem.Message -> {
+                            val msg = item.message
+                            val parent = msg.replyToId?.let { id ->
+                                messages.firstOrNull { it.id == id }
+                            }
+                            val replyQuote = msg.replyToId?.let {
+                                when {
+                                    parent == null -> ReplyQuoteUi(
+                                        parentExists = false,
+                                        snippet = "",
+                                    )
+                                    parent.recalled -> ReplyQuoteUi(
+                                        parentExists = false,
+                                        snippet = "",
+                                    )
+                                    parent.sensitive -> ReplyQuoteUi(
+                                        parentExists = true,
+                                        snippet = "••••",
+                                    )
+                                    else -> ReplyQuoteUi(
+                                        parentExists = true,
+                                        snippet = parent.body.take(80),
+                                    )
+                                }
+                            }
+                            val readReceipt = msg.direction == ChatMessage.DIRECTION_OUT &&
+                                isMessageAtOrBeforeWatermark(msg.id, peerReadWatermarkId, messages)
+                            RoomMessageBubble(
+                                message = msg,
+                                showAura = showAura,
+                                auraIntensity = expiryProgress,
+                                reactionCounts = reactionsByMessage[msg.id].orEmpty(),
+                                replyQuote = replyQuote,
+                                readReceipt = readReceipt,
+                                onLongPress = { onLongPressMessage(msg) },
+                                onReplyQuoteClick = msg.replyToId?.let { id ->
+                                    {
+                                        val index = messageIndexById[id]
+                                        if (index != null) {
+                                            scope.launch {
+                                                stickToBottom = false
+                                                listState.animateScrollToItem(ttlOffset + index)
+                                            }
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
                 }
             }
-            items(messages, key = { it.id }) { message ->
-                RoomMessageBubble(
-                    message = message,
-                    showAura = showAura,
-                    auraIntensity = expiryProgress,
-                )
+
+            AnimatedVisibility(
+                visible = !isAtBottom,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = 12.dp),
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = VanishXColors.Surface2,
+                    border = BorderStroke(1.dp, VanishXColors.Primary.copy(alpha = 0.45f)),
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.clickable {
+                        scope.launch {
+                            listState.animateScrollToItem(ttlOffset + timeline.lastIndex)
+                        }
+                    },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = VanishXColors.Primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.room_scroll_to_bottom),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = VanishXColors.OnSurface,
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun DaySeparatorChip(item: RoomTimelineItem.DaySeparator) {
+    val label = when (item.kind) {
+        DaySeparatorKind.TODAY -> stringResource(R.string.room_day_today)
+        DaySeparatorKind.YESTERDAY -> stringResource(R.string.room_day_yesterday)
+        DaySeparatorKind.DATE -> formatDaySeparatorDate(item.dayStartMs)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = VanishXColors.Surface2.copy(alpha = 0.85f),
+            border = BorderStroke(1.dp, VanishXColors.GlassBorder.copy(alpha = 0.35f)),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+                color = VanishXColors.Muted,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            )
         }
     }
 }
@@ -220,6 +388,9 @@ internal fun RoomActiveBody(
     isSyncing: Boolean,
     onOpenSafety: () -> Unit,
     modifier: Modifier = Modifier,
+    reactionsByMessage: Map<String, Map<String, Int>> = emptyMap(),
+    peerReadWatermarkId: String? = null,
+    onLongPressMessage: (ChatMessage) -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         RoomMessageList(
@@ -228,6 +399,9 @@ internal fun RoomActiveBody(
             activatedAt = activatedAt,
             isExpired = isExpired,
             onOpenSafety = onOpenSafety,
+            reactionsByMessage = reactionsByMessage,
+            peerReadWatermarkId = peerReadWatermarkId,
+            onLongPressMessage = onLongPressMessage,
             modifier = Modifier.weight(1f),
         )
 

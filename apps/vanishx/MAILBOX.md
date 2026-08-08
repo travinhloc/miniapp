@@ -25,6 +25,17 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
     senderPub: string   // base64
     createdAt: number
     expiresAt: number   // message TTL (must be > now on write)
+  presence/{deviceId}/          // Epic 9 — no plaintext
+    online: boolean
+    updatedAt: number
+  read/{deviceId}/              // read watermark
+    messageId: string
+    updatedAt: number
+  typing/{deviceId}/            // ephemeral (~3s client TTL)
+    at: number
+  reactions/{messageId}/{deviceId}/
+    emoji: string               // ≤8 chars
+    at: number
 
 /reports/{reportId}     // UGC (story 3.3) — client write-only
   roomId: string
@@ -38,9 +49,12 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 
 `roomId` is a capability secret from the invite (MVP: knowing the path ⇒ can read while authenticated).
 
+`deviceId` = Firebase-safe form of the device Ed25519 pubkey (`firebaseSafeKey`).
+
 ## Client API
 
 - `MailboxRemoteDataSource` — write / read / delete message / **deleteAllMessages** / **writeReport** + write room meta
+- Engagement (Epic 9): **setPresence** / **observePresence** · **setReadWatermark** / **observeReadWatermarks** · **setTyping** / **clearTyping** / **observeTyping** · **setReaction** / **clearReaction** / **observeReactions**
 - `FirebaseMailboxRemoteDataSource` — RTDB implementation
 - Expired room (4.1): `PurgeExpiredRoomUseCase` clears local SQLCipher messages + remote `messages/` node (meta kept)
 - Home resume (4.1): `SyncActiveMailboxesUseCase` re-resolves TTL, purges expired, syncs active rooms
