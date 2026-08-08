@@ -68,6 +68,11 @@ fun LockScreen(
         viewModel.onAction(LockAction.ClearPinDraft)
     }
 
+    LaunchedEffect(Unit) {
+        // Activity-scoped VM survives unlock; reset so a later lock cycle can unlock again.
+        viewModel.onAction(LockAction.PrepareChallenge)
+    }
+
     LaunchedEffect(uiState.cooldownRemainingMs > 0L) {
         if (uiState.cooldownRemainingMs <= 0L) return@LaunchedEffect
         while (true) {
