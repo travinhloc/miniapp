@@ -12,11 +12,12 @@ Docs **không nằm trong repo này**. Nguồn sự thật:
 
 1. `vanishx-engine-vi.md` — PRD / core MVP  
 2. `vanishx-project-planning.md` — timeline  
-3. `stories/README.md` + story đang làm (**Epic 7:** `7.0.epic.md` / `7.1` design ✅ → `7.2+` Compose)  
-4. `vanishx-ui-ux-sprint-backlog.md` — Confirm PO 0→5  
-5. `vanishx-production-dod.md` — DoD Production / soft-launch  
-6. `mockup/main.html` — UI M2 Night (Epic 7 gallery)  
-7. `vanishx-idea-draft.md` — nhật ký quyết định  
+3. `stories/README.md` + story đang làm (**Epic 9:** `9.0.epic.md` / `9.1`…)  
+4. `stories/completed/` — epic/story Done (1–5, 7, 8)  
+5. `vanishx-ui-ux-sprint-backlog.md` — Confirm PO / Chat backlog  
+6. `vanishx-production-dod.md` + `stories/R.0.epic.md` — Epic R Release Prod / soft-launch  
+7. `mockup/main.html` — UI M2 Night gallery  
+8. `vanishx-idea-draft.md` — nhật ký quyết định  
 
 BMAD lean (stack Android→KMP): `../project-note-cursor/bmad-agent/LEAN-MOBILE.md`
 
@@ -33,7 +34,7 @@ Rồi trong chat `@vanishx-docs` hoặc `@vanishx-engine-vi.md`.
 Khi làm VanishX trong `miniapp`, attach:
 ```
 @../project-note-cursor/vanishx-docs/vanishx-engine-vi.md
-@../project-note-cursor/vanishx-docs/stories/1.1.story.md
+@../project-note-cursor/vanishx-docs/stories/9.0.epic.md
 ```
 (hoặc kéo folder `vanishx-docs` vào chat)
 
@@ -47,12 +48,12 @@ Xem `.cursor/rules/vanishx-docs.mdc` trong repo này.
 - Crypto scheme: [`apps/vanishx/CRYPTO.md`](../apps/vanishx/CRYPTO.md)
 - Mailbox (RTDB): [`apps/vanishx/MAILBOX.md`](../apps/vanishx/MAILBOX.md)
 - Build staging: `./gradlew :apps:vanishx:assembleStagingDebug`
-- Build production: `./gradlew :apps:vanishx:assembleProductionRelease` (sau Epic 6.3–6.4)
+- Build production: `./gradlew :apps:vanishx:assembleProductionRelease` (Epic R.1–R.2)
 - Reuse `core/*` · không nhét feature VanishX vào `core`
 - Cập nhật docs: sửa bên `project-note-cursor/vanishx-docs`, rồi sync ghi chú ở đây nếu path đổi
 
 ## Core MVP (nhắc nhanh)
 
 Crypto + SQLCipher + Firebase mailbox + create/join + gửi/nhận text + TTL/purge + sync-on-open.  
-**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5 UI M2 · **Epic 7** UI/UX sprint 0→5.  
-**Đang mở:** Epic 6 Production (`vanishx-production-dod.md`).
+**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5–8 (archive: `stories/completed/`).  
+**Đang mở:** Epic 9 Engagement · Epic 6 Optimize · Epic R Release Prod (`vanishx-production-dod.md`).
