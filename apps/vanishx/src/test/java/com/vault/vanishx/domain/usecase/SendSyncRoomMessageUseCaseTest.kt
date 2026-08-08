@@ -60,6 +60,33 @@ class SendSyncRoomMessageUseCaseTest {
     }
 
     @Test
+    fun `send sensitive encodes envelope then stores plain local body`() = runTest {
+        val mailboxRepository: MailboxRepository = mockk(relaxed = true)
+        val identityRepository: IdentityRepository = mockk()
+        val remote = InMemoryMailboxRemoteDataSource()
+        val cipher = RoomMessageCipher()
+
+        coEvery { mailboxRepository.getRoom("room1") } returns room
+        coEvery { identityRepository.ensureIdentity() } returns Identity("vx_a", "pubA")
+
+        val sent = SendRoomMessageUseCase(
+            mailboxRepository = mailboxRepository,
+            identityRepository = identityRepository,
+            remote = remote,
+            cipher = cipher,
+        ).invoke("room1", "hidden note", sensitive = true)
+
+        sent.body shouldBe "hidden note"
+        sent.sensitive shouldBe true
+        val remoteMsg = remote.listMessages("room1").single()
+        val decrypted = cipher.decrypt("room1", roomKey, remoteMsg.ciphertext)
+        decrypted.startsWith("{\"v\":1,") shouldBe true
+        coVerify {
+            mailboxRepository.upsertMessage(match { it.sensitive && it.body == "hidden note" })
+        }
+    }
+
+    @Test
     fun `sync decrypts peer message then removes remote`() = runTest {
         val mailboxRepository: MailboxRepository = mockk(relaxed = true)
         val identityRepository: IdentityRepository = mockk()
@@ -112,6 +139,56 @@ class SendSyncRoomMessageUseCaseTest {
         coVerify {
             mailboxRepository.upsertMessage(
                 match { it.body == "from peer" && it.direction == ChatMessage.DIRECTION_IN },
+            )
+        }
+    }
+
+    @Test
+    fun `sync decodes sensitive envelope from peer`() = runTest {
+        val mailboxRepository: MailboxRepository = mockk(relaxed = true)
+        val identityRepository: IdentityRepository = mockk()
+        val remote = InMemoryMailboxRemoteDataSource()
+        val cipher = RoomMessageCipher()
+
+        coEvery { mailboxRepository.getRoom("room1") } returns room
+        coEvery { mailboxRepository.getMessage(any()) } returns null
+        coEvery { mailboxRepository.getMessages("room1") } returns emptyList()
+        coEvery { identityRepository.ensureIdentity() } returns Identity("vx_me", "pubMe")
+        coEvery { mailboxRepository.deleteExpiredMessages(any()) } returns 0
+
+        val wire = cipher.encrypt(
+            "room1",
+            roomKey,
+            com.vault.vanishx.domain.model.MessagePlaintextCodec.encode("peek", sensitive = true),
+        )
+        remote.writeMessage(
+            "room1",
+            com.vault.vanishx.data.remote.RemoteMailboxMessage(
+                messageId = "m2",
+                ciphertext = wire,
+                senderPub = "pubPeer",
+                createdAt = 3L,
+                expiresAt = room.expiresAt,
+            ),
+        )
+
+        SyncRoomMailboxUseCase(
+            mailboxRepository = mailboxRepository,
+            identityRepository = identityRepository,
+            remote = remote,
+            cipher = cipher,
+            purgeExpiredRoom = PurgeExpiredRoomUseCase(
+                mailboxRepository,
+                remote,
+                com.vault.vanishx.data.push.FakeRoomPushTopics(),
+            ),
+            blockRepository = mockk(relaxed = true),
+            refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
+        ).invoke("room1")
+
+        coVerify {
+            mailboxRepository.upsertMessage(
+                match { it.body == "peek" && it.sensitive && it.direction == ChatMessage.DIRECTION_IN },
             )
         }
     }

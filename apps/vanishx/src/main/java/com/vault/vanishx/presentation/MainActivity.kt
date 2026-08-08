@@ -16,6 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -76,7 +78,10 @@ class MainActivity : FragmentActivity() {
                 var lockTick by remember { mutableIntStateOf(0) }
 
                 LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-                    if (!isChangingConfigurations && securityPinStore.hasUnlockPin()) {
+                    if (!isChangingConfigurations &&
+                        securityPinStore.hasUnlockPin() &&
+                        appLockSession.shouldLockOnStop()
+                    ) {
                         appLockSession.lock()
                         lockTick++
                     }
@@ -106,15 +111,25 @@ class MainActivity : FragmentActivity() {
                             !appLockSession.isUnlocked
                         Box(modifier = Modifier.fillMaxSize()) {
                             AppNavGraph(navController = rememberNavController())
+                            // Dialog sits above ModalBottomSheet windows (Join Message Request).
                             if (showLock) {
-                                LockScreen(
-                                    onUnlocked = { lockTick++ },
-                                    onWiped = {
-                                        // Silent panic / wipe → AuthSetup (empty Home after new PIN)
-                                        lockTick++
-                                        phase = RootPhase.AuthSetup
-                                    },
-                                )
+                                Dialog(
+                                    onDismissRequest = {},
+                                    properties = DialogProperties(
+                                        dismissOnBackPress = false,
+                                        dismissOnClickOutside = false,
+                                        usePlatformDefaultWidth = false,
+                                        decorFitsSystemWindows = false,
+                                    ),
+                                ) {
+                                    LockScreen(
+                                        onUnlocked = { lockTick++ },
+                                        onWiped = {
+                                            lockTick++
+                                            phase = RootPhase.AuthSetup
+                                        },
+                                    )
+                                }
                             }
                         }
                     }

@@ -39,6 +39,8 @@ data class JoinInvitePreview(
     val icebreaker: String? = null,
     /** Host's Ed25519 public key, known once meta is readable — required to Block pre-accept. */
     val creatorPub: String? = null,
+    /** True when creatorPub is on the local block list. */
+    val isPeerBlocked: Boolean = false,
 )
 
 data class JoinRoomUiState(
@@ -66,6 +68,7 @@ sealed interface JoinRoomAction {
     data class Scanned(val value: String) : JoinRoomAction
     data object RequestPreview : JoinRoomAction
     data object AcceptAndChat : JoinRoomAction
+    data object UnblockAndChat : JoinRoomAction
     data object SaveForLater : JoinRoomAction
     data object OpenBlockConfirm : JoinRoomAction
     data object DismissBlockConfirm : JoinRoomAction
@@ -130,7 +133,8 @@ class JoinRoomViewModel @Inject constructor(
                 showPreview(action.value)
             }
             JoinRoomAction.RequestPreview -> showPreview(_uiState.value.input)
-            JoinRoomAction.AcceptAndChat -> acceptAndChat()
+            JoinRoomAction.AcceptAndChat -> acceptAndChat(unblockFirst = false)
+            JoinRoomAction.UnblockAndChat -> acceptAndChat(unblockFirst = true)
             JoinRoomAction.SaveForLater -> saveForLater()
             JoinRoomAction.OpenBlockConfirm -> _uiState.update {
                 it.copy(showBlockConfirm = true, errorMessage = null)
@@ -160,18 +164,21 @@ class JoinRoomViewModel @Inject constructor(
         flow { emit(runCatching { remote.readRoomMeta(invite.roomId) }.getOrNull()) }
             .flowOn(dispatchersProvider.io)
             .onEach { meta ->
+                val creatorPub = meta?.creatorPub
+                val blocked = !creatorPub.isNullOrBlank() && blockRepository.isBlocked(creatorPub)
                 _uiState.update {
                     it.copy(
                         isPreviewLoading = false,
-                        preview = invite.toPreview(trimmed, meta),
+                        preview = invite.toPreview(trimmed, meta, isPeerBlocked = blocked),
                         nickname = it.nickname.ifBlank { GuestNicknameGenerator.generate(invite.roomId) },
+                        errorMessage = if (blocked) PEER_BLOCKED_ERROR else null,
                     )
                 }
             }
             .launchIn(viewModelScope)
     }
 
-    private fun acceptAndChat() {
+    private fun acceptAndChat(unblockFirst: Boolean) {
         if (_uiState.value.isJoining) return
         val raw = _uiState.value.preview?.rawInvite ?: _uiState.value.input.trim()
         if (raw.isEmpty()) {
@@ -179,8 +186,14 @@ class JoinRoomViewModel @Inject constructor(
             return
         }
         val nickname = _uiState.value.nickname.takeIf { it.isNotBlank() }
+        val creatorPub = _uiState.value.preview?.creatorPub
         _uiState.update { it.copy(isJoining = true, errorMessage = null) }
-        flow { emit(joinRoom(raw, nickname)) }
+        flow {
+            if (unblockFirst && !creatorPub.isNullOrBlank()) {
+                blockRepository.unblock(creatorPub)
+            }
+            emit(joinRoom(raw, nickname))
+        }
             .flowOn(dispatchersProvider.io)
             .onEach { room ->
                 pendingInviteStore.clear()
@@ -192,6 +205,9 @@ class JoinRoomViewModel @Inject constructor(
                     it.copy(
                         isJoining = false,
                         errorMessage = e.message ?: e::class.java.simpleName,
+                        preview = it.preview?.copy(
+                            isPeerBlocked = e.message?.contains(PEER_BLOCKED_ERROR, ignoreCase = true) == true,
+                        ),
                     )
                 }
             }
@@ -246,13 +262,18 @@ class JoinRoomViewModel @Inject constructor(
 
     private companion object {
         const val NICKNAME_MAX = 24
+        const val PEER_BLOCKED_ERROR = "Peer is blocked"
     }
 }
 
 private const val PREVIEW_TITLE_SUFFIX = 6
 private const val PREVIEW_ID_SUFFIX = 4
 
-private fun RoomInvite.toPreview(rawInvite: String, meta: RemoteRoomMeta?): JoinInvitePreview {
+private fun RoomInvite.toPreview(
+    rawInvite: String,
+    meta: RemoteRoomMeta?,
+    isPeerBlocked: Boolean = false,
+): JoinInvitePreview {
     val now = System.currentTimeMillis()
     val resolvedExpiresAt = expiresAt?.takeIf { it > 0L } ?: meta?.expiresAt?.takeIf { it > 0L }
     val remaining = resolvedExpiresAt?.let { exp -> if (exp > now) formatRemainingMs(exp - now) else null }
@@ -263,5 +284,6 @@ private fun RoomInvite.toPreview(rawInvite: String, meta: RemoteRoomMeta?): Join
         remainingLabel = remaining,
         icebreaker = meta?.icebreaker,
         creatorPub = meta?.creatorPub,
+        isPeerBlocked = isPeerBlocked,
     )
 }

@@ -10,8 +10,8 @@ When implementing or discussing **VanishX** in this monorepo:
 1. Product docs are NOT in this repo. Read from sibling path:
    - `../project-note-cursor/vanishx-docs/`
    - Absolute: `/Users/loctra/Workspace/01_Projects/Active/project-note-cursor/vanishx-docs/`
-2. Start with `vanishx-engine-vi.md` (PRD) and the **active** story under `stories/` (**Epic 7:** `7.0.epic.md` / Compose `7.2+`; design `7.1` Done).
-3. Core MVP + Epic 5 UI M2 đã ship. Phase UI hiện tại: **Epic 7** sprint 0→5 (`vanishx-ui-ux-sprint-backlog.md`). Epic 6 = Production song song.
+2. Start with `vanishx-engine-vi.md` (PRD) and the **active** story under `stories/` (**Epic 9:** `9.0.epic.md` / `9.1`…). Done archive: `stories/completed/` (Epic 1–5, 7, 8).
+3. Core MVP + Epic 5–8 đã ship. Phase UI: **Epic 9** Chat Engagement. Epic 6 = Optimize · **Epic R** = Release Prod (DoD; ngoài chuỗi số — sau E9 dùng 11…).
 4. Defer unless asked: IAP/RevenueCat thật, App Links HTTPS, media, WebRTC, KMP/iOS · History/Paywall deep (🅿️).
 5. New app module: `apps/vanishx` with `applicationId` `com.vault.vanishx`. Do not put VanishX features in `core/*`.
 6. See `docs/VANISHX.md` for how humans/agents should attach docs in Cursor.

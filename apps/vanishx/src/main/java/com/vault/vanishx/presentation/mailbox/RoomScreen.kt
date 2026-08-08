@@ -2,11 +2,14 @@
 
 package com.vault.vanishx.presentation.mailbox
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +28,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -53,9 +57,11 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomInviteSheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomLeft
 import com.vault.vanishx.presentation.mailbox.chat.RoomLoading
 import com.vault.vanishx.presentation.mailbox.chat.RoomSafetySheet
+import com.vault.vanishx.presentation.mailbox.chat.RoomScreenshotBanner
 import com.vault.vanishx.presentation.mailbox.chat.RoomUiDimens
 import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
 import com.vault.vanishx.presentation.theme.VanishXColors
+import timber.log.Timber
 
 @Composable
 fun RoomScreen(
@@ -78,6 +84,11 @@ fun RoomScreen(
             viewModel.onAction(RoomAction.ConsumePingPeerEvent)
         }
     }
+
+    ScreenCaptureEffect(
+        enabled = !uiState.isLoading && uiState.room != null,
+        onCaptured = { viewModel.onAction(RoomAction.ScreenshotDetected) },
+    )
 
     RoomContent(
         uiState = uiState,
@@ -133,6 +144,12 @@ private fun RoomContent(
             handshakeStatus = roomHandshakeStatus,
         )
 
+        if (uiState.showScreenshotBanner) {
+            RoomScreenshotBanner(
+                onDismiss = { onAction(RoomAction.DismissScreenshotBanner) },
+            )
+        }
+
         when {
             uiState.isLoading -> RoomLoading(modifier = Modifier.weight(1f))
             uiState.room?.status == MailboxRoom.STATUS_LEFT -> RoomLeft(modifier = Modifier.weight(1f))
@@ -172,6 +189,7 @@ private fun RoomContent(
                 draft = uiState.draft,
                 isSending = uiState.isSending,
                 locked = isHandshakeWaiting,
+                draftSensitive = uiState.draftSensitive,
                 onAction = onAction,
             )
         }
@@ -267,4 +285,38 @@ private fun RoomContent(
             onDismiss = { onAction(RoomAction.DismissSafetySheet) },
         )
     }
+}
+
+@Composable
+private fun ScreenCaptureEffect(
+    enabled: Boolean,
+    onCaptured: () -> Unit,
+) {
+    val context = LocalContext.current
+    DisposableEffect(enabled, context) {
+        if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return@DisposableEffect onDispose { }
+        }
+        val activity = context.findActivity() ?: return@DisposableEffect onDispose { }
+        val callback = Activity.ScreenCaptureCallback { onCaptured() }
+        val registered = runCatching {
+            activity.registerScreenCaptureCallback(activity.mainExecutor, callback)
+        }.onFailure { e ->
+            Timber.w(e, "Screen capture callback unavailable")
+        }.isSuccess
+        onDispose {
+            if (registered) {
+                runCatching { activity.unregisterScreenCaptureCallback(callback) }
+            }
+        }
+    }
+}
+
+private fun Context.findActivity(): ComponentActivity? {
+    var current: Context? = this
+    while (current is android.content.ContextWrapper) {
+        if (current is ComponentActivity) return current
+        current = current.baseContext
+    }
+    return null
 }
