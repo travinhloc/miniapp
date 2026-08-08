@@ -2,7 +2,9 @@ package com.vault.vanishx.presentation.mailbox
 
 import androidx.lifecycle.SavedStateHandle
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
+import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.repository.IdentityRepository
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.BlockPeerUseCase
@@ -44,7 +46,11 @@ class RoomViewModelTest {
     private val blockPeer: BlockPeerUseCase = mockk(relaxed = true)
     private val reportRoom: ReportRoomUseCase = mockk(relaxed = true)
     private val recallRoomMessage: RecallRoomMessageUseCase = mockk(relaxed = true)
+    private val renameRoom: com.vault.vanishx.domain.usecase.RenameRoomUseCase = mockk(relaxed = true)
+    private val deleteLocalMessage: com.vault.vanishx.domain.usecase.DeleteLocalMessageUseCase =
+        mockk(relaxed = true)
     private val mailboxRepository: MailboxRepository = mockk(relaxed = true)
+    private val identityRepository: IdentityRepository = mockk()
     private val proEntitlement: ProEntitlementRepository = mockk(relaxed = true)
     private val remote: MailboxRemoteDataSource = mockk(relaxed = true)
 
@@ -68,9 +74,14 @@ class RoomViewModelTest {
             removedRemote = 0,
             decryptFailures = 0,
         )
+        coEvery { identityRepository.ensureIdentity() } returns Identity("vx_me", "pubMe+/=")
         every { proEntitlement.isPro } returns MutableStateFlow(false)
         every { proEntitlement.isProNow() } returns false
         every { remote.observeMessages("room1") } returns emptyFlow()
+        every { remote.observePresence("room1") } returns emptyFlow()
+        every { remote.observeReadWatermarks("room1") } returns emptyFlow()
+        every { remote.observeTyping("room1") } returns emptyFlow()
+        every { remote.observeReactions("room1") } returns emptyFlow()
 
         val refreshRoomMeta: com.vault.vanishx.domain.usecase.RefreshRoomMetaUseCase = mockk(relaxed = true)
         return RoomViewModel(
@@ -85,7 +96,10 @@ class RoomViewModelTest {
             blockPeer = blockPeer,
             reportRoom = reportRoom,
             recallRoomMessage = recallRoomMessage,
+            renameRoom = renameRoom,
+            deleteLocalMessage = deleteLocalMessage,
             mailboxRepository = mailboxRepository,
+            identityRepository = identityRepository,
             proEntitlement = proEntitlement,
             remote = remote,
             dispatchersProvider = coroutinesRule.testDispatcherProvider,

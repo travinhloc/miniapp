@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.vault.vanishx.domain.repository
 
 import com.vault.vanishx.domain.model.ChatMessage
@@ -14,4 +16,5 @@ interface MailboxRepository {
     suspend fun upsertMessage(message: ChatMessage)
     suspend fun deleteExpiredMessages(nowMs: Long = System.currentTimeMillis()): Int
     suspend fun deleteMessagesForRoom(roomId: String): Int
+    suspend fun deleteMessage(messageId: String): Int
 }

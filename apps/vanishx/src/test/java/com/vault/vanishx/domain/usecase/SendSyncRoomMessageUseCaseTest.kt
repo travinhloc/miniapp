@@ -193,6 +193,104 @@ class SendSyncRoomMessageUseCaseTest {
         }
     }
 
+    @Test
+    fun `sender sync keeps own outbound on remote for offline peer`() = runTest {
+        val mailboxRepository: MailboxRepository = mockk(relaxed = true)
+        val identityRepository: IdentityRepository = mockk()
+        val remote = InMemoryMailboxRemoteDataSource()
+        val cipher = RoomMessageCipher()
+
+        coEvery { mailboxRepository.getRoom("room1") } returns room
+        coEvery { mailboxRepository.getMessage("m-out") } returns ChatMessage(
+            id = "m-out",
+            roomId = "room1",
+            body = "hello offline",
+            sentAt = 2L,
+            expiresAt = room.expiresAt,
+            direction = ChatMessage.DIRECTION_OUT,
+        )
+        coEvery { mailboxRepository.getMessages("room1") } returns emptyList()
+        coEvery { identityRepository.ensureIdentity() } returns Identity("vx_a", "pubA")
+        coEvery { mailboxRepository.deleteExpiredMessages(any()) } returns 0
+
+        val wire = cipher.encrypt("room1", roomKey, "hello offline")
+        remote.writeMessage(
+            "room1",
+            com.vault.vanishx.data.remote.RemoteMailboxMessage(
+                messageId = "m-out",
+                ciphertext = wire,
+                senderPub = "pubA",
+                createdAt = 2L,
+                expiresAt = room.expiresAt,
+            ),
+        )
+
+        val result = SyncRoomMailboxUseCase(
+            mailboxRepository = mailboxRepository,
+            identityRepository = identityRepository,
+            remote = remote,
+            cipher = cipher,
+            purgeExpiredRoom = PurgeExpiredRoomUseCase(
+                mailboxRepository,
+                remote,
+                com.vault.vanishx.data.push.FakeRoomPushTopics(),
+            ),
+            blockRepository = mockk(relaxed = true),
+            refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
+        ).invoke("room1")
+
+        result.removedRemote shouldBe 0
+        remote.listMessages("room1").single().messageId shouldBe "m-out"
+    }
+
+    @Test
+    fun `sender observe race keeps own outbound on remote`() = runTest {
+        val mailboxRepository: MailboxRepository = mockk(relaxed = true)
+        val identityRepository: IdentityRepository = mockk()
+        val remote = InMemoryMailboxRemoteDataSource()
+        val cipher = RoomMessageCipher()
+
+        coEvery { mailboxRepository.getRoom("room1") } returns room
+        coEvery { mailboxRepository.getMessage(any()) } returns null
+        coEvery { mailboxRepository.getMessages("room1") } returns emptyList()
+        coEvery { identityRepository.ensureIdentity() } returns Identity("vx_a", "pubA")
+        coEvery { mailboxRepository.deleteExpiredMessages(any()) } returns 0
+
+        val wire = cipher.encrypt("room1", roomKey, "race")
+        val remoteMsg = com.vault.vanishx.data.remote.RemoteMailboxMessage(
+            messageId = "m-race",
+            ciphertext = wire,
+            senderPub = "pubA",
+            createdAt = 2L,
+            expiresAt = room.expiresAt,
+        )
+        remote.writeMessage("room1", remoteMsg)
+
+        val sync = SyncRoomMailboxUseCase(
+            mailboxRepository = mailboxRepository,
+            identityRepository = identityRepository,
+            remote = remote,
+            cipher = cipher,
+            purgeExpiredRoom = PurgeExpiredRoomUseCase(
+                mailboxRepository,
+                remote,
+                com.vault.vanishx.data.push.FakeRoomPushTopics(),
+            ),
+            blockRepository = mockk(relaxed = true),
+            refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
+        )
+        val result = sync.ingestRemoteList("room1", listOf(remoteMsg))
+
+        result.ingested shouldBe 1
+        result.removedRemote shouldBe 0
+        remote.listMessages("room1").single().messageId shouldBe "m-race"
+        coVerify {
+            mailboxRepository.upsertMessage(
+                match { it.id == "m-race" && it.direction == ChatMessage.DIRECTION_OUT },
+            )
+        }
+    }
+
     private fun randomRoomKey(): String {
         val bytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
         return Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)

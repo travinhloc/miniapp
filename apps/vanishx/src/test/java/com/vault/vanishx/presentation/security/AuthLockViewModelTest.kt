@@ -117,6 +117,31 @@ class LockViewModelTest {
     }
 
     @Test
+    fun `prepare challenge then unlock works after prior unlock`() = runTest {
+        val session = AppLockSession()
+        viewModel = LockViewModel(
+            securityPinStore = pinStore,
+            appLockSession = session,
+            panicWipe = panicWipe,
+            dispatchersProvider = coroutinesRule.testDispatcherProvider,
+        )
+        enterPinWithoutSubmit("1234")
+        viewModel.onAction(LockAction.Submit)
+        session.isUnlocked shouldBe true
+        viewModel.uiState.value.unlocked shouldBe true
+
+        session.lock()
+        viewModel.onAction(LockAction.PrepareChallenge)
+        viewModel.uiState.value.unlocked shouldBe false
+        session.isUnlocked shouldBe false
+
+        enterPinWithoutSubmit("1234")
+        viewModel.onAction(LockAction.Submit)
+        session.isUnlocked shouldBe true
+        viewModel.uiState.value.unlocked shouldBe true
+    }
+
+    @Test
     fun `wrong pin shows attempts remaining`() = runTest {
         enterPinWithoutSubmit("0000")
         viewModel.onAction(LockAction.Submit)

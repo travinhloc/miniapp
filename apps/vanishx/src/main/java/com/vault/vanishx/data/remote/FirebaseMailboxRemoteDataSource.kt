@@ -1,3 +1,5 @@
+@file:Suppress("LargeClass", "TooManyFunctions")
+
 package com.vault.vanishx.data.remote
 
 import com.google.firebase.FirebaseApp
@@ -16,7 +18,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-@Suppress("TooManyFunctions")
 class FirebaseMailboxRemoteDataSource @Inject constructor(
     private val auth: FirebaseAuth,
     private val database: FirebaseDatabase,
@@ -164,6 +165,173 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         awaitClose { ref.removeEventListener(listener) }
     }
 
+    override suspend fun setPresence(roomId: String, deviceId: String, online: Boolean) {
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            val ref = roomRef(roomId).child(PATH_PRESENCE).child(deviceId)
+            val payload = mapOf(
+                KEY_ONLINE to online,
+                KEY_UPDATED_AT to System.currentTimeMillis(),
+            )
+            if (online) {
+                ref.onDisconnect().setValue(
+                    mapOf(KEY_ONLINE to false, KEY_UPDATED_AT to System.currentTimeMillis()),
+                ).await()
+            }
+            ref.setValue(payload).await()
+        }
+    }
+
+    override fun observePresence(roomId: String): Flow<List<RemotePresence>> = callbackFlow {
+        ensureAuthenticated()
+        val ref = roomRef(roomId).child(PATH_PRESENCE)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = snapshot.children.mapNotNull { child ->
+                    val id = child.key ?: return@mapNotNull null
+                    val online = child.child(KEY_ONLINE).getValue(Boolean::class.java)
+                        ?: return@mapNotNull null
+                    val updatedAt = child.child(KEY_UPDATED_AT).getValue(Long::class.java) ?: 0L
+                    RemotePresence(deviceId = id, online = online, updatedAt = updatedAt)
+                }
+                trySend(list)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
+    }
+
+    override suspend fun setReadWatermark(roomId: String, deviceId: String, messageId: String) {
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            roomRef(roomId).child(PATH_READ).child(deviceId).setValue(
+                mapOf(
+                    KEY_MESSAGE_ID to messageId,
+                    KEY_UPDATED_AT to System.currentTimeMillis(),
+                ),
+            ).await()
+        }
+    }
+
+    override fun observeReadWatermarks(roomId: String): Flow<List<RemoteReadWatermark>> = callbackFlow {
+        ensureAuthenticated()
+        val ref = roomRef(roomId).child(PATH_READ)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = snapshot.children.mapNotNull { child ->
+                    val id = child.key ?: return@mapNotNull null
+                    val messageId = child.child(KEY_MESSAGE_ID).getValue(String::class.java)
+                        ?: return@mapNotNull null
+                    val updatedAt = child.child(KEY_UPDATED_AT).getValue(Long::class.java) ?: 0L
+                    RemoteReadWatermark(deviceId = id, messageId = messageId, updatedAt = updatedAt)
+                }
+                trySend(list)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
+    }
+
+    override suspend fun setTyping(roomId: String, deviceId: String, atMs: Long) {
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            roomRef(roomId).child(PATH_TYPING).child(deviceId)
+                .setValue(mapOf(KEY_AT to atMs)).await()
+        }
+    }
+
+    override suspend fun clearTyping(roomId: String, deviceId: String) {
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            roomRef(roomId).child(PATH_TYPING).child(deviceId).removeValue().await()
+        }
+    }
+
+    override fun observeTyping(roomId: String): Flow<List<RemoteTyping>> = callbackFlow {
+        ensureAuthenticated()
+        val ref = roomRef(roomId).child(PATH_TYPING)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = snapshot.children.mapNotNull { child ->
+                    val id = child.key ?: return@mapNotNull null
+                    val at = child.child(KEY_AT).getValue(Long::class.java) ?: return@mapNotNull null
+                    RemoteTyping(deviceId = id, at = at)
+                }
+                trySend(list)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
+    }
+
+    override suspend fun setReaction(
+        roomId: String,
+        messageId: String,
+        deviceId: String,
+        emoji: String,
+    ) {
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            roomRef(roomId).child(PATH_REACTIONS).child(messageId).child(deviceId).setValue(
+                mapOf(
+                    KEY_EMOJI to emoji,
+                    KEY_AT to System.currentTimeMillis(),
+                ),
+            ).await()
+        }
+    }
+
+    override suspend fun clearReaction(roomId: String, messageId: String, deviceId: String) {
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            roomRef(roomId).child(PATH_REACTIONS).child(messageId).child(deviceId).removeValue().await()
+        }
+    }
+
+    override fun observeReactions(roomId: String): Flow<List<RemoteReaction>> = callbackFlow {
+        ensureAuthenticated()
+        val ref = roomRef(roomId).child(PATH_REACTIONS)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val list = mutableListOf<RemoteReaction>()
+                snapshot.children.forEach { msgChild ->
+                    val messageId = msgChild.key ?: return@forEach
+                    msgChild.children.forEach { deviceChild ->
+                        val deviceId = deviceChild.key ?: return@forEach
+                        val emoji = deviceChild.child(KEY_EMOJI).getValue(String::class.java)
+                            ?: return@forEach
+                        val at = deviceChild.child(KEY_AT).getValue(Long::class.java) ?: 0L
+                        list += RemoteReaction(
+                            messageId = messageId,
+                            deviceId = deviceId,
+                            emoji = emoji,
+                            at = at,
+                        )
+                    }
+                }
+                trySend(list)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
+    }
+
     private fun parseMessage(snapshot: DataSnapshot, messageId: String): RemoteMailboxMessage? {
         if (!snapshot.exists()) return null
         return toRemoteMessage(snapshot, messageId)
@@ -196,6 +364,10 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         const val PATH_META = "meta"
         const val PATH_MESSAGES = "messages"
         const val PATH_REPORTS = "reports"
+        const val PATH_PRESENCE = "presence"
+        const val PATH_READ = "read"
+        const val PATH_TYPING = "typing"
+        const val PATH_REACTIONS = "reactions"
         const val KEY_CREATED_AT = "createdAt"
         const val KEY_EXPIRES_AT = "expiresAt"
         const val KEY_HOST_PRO = "hostPro"
@@ -208,5 +380,10 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         const val KEY_REPORTER_PUB = "reporterPub"
         const val KEY_PEER_PUB = "peerPub"
         const val KEY_REASON = "reason"
+        const val KEY_ONLINE = "online"
+        const val KEY_UPDATED_AT = "updatedAt"
+        const val KEY_MESSAGE_ID = "messageId"
+        const val KEY_AT = "at"
+        const val KEY_EMOJI = "emoji"
     }
 }

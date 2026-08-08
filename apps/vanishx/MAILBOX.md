@@ -25,6 +25,17 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
     senderPub: string   // base64
     createdAt: number
     expiresAt: number   // message TTL (must be > now on write)
+  presence/{deviceId}/          // Epic 9 — no plaintext
+    online: boolean
+    updatedAt: number
+  read/{deviceId}/              // read watermark
+    messageId: string
+    updatedAt: number
+  typing/{deviceId}/            // ephemeral (~3s client TTL)
+    at: number
+  reactions/{messageId}/{deviceId}/
+    emoji: string               // ≤8 chars
+    at: number
 
 /reports/{reportId}     // UGC (story 3.3) — client write-only
   roomId: string
@@ -38,12 +49,16 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 
 `roomId` is a capability secret from the invite (MVP: knowing the path ⇒ can read while authenticated).
 
+`deviceId` = Firebase-safe form of the device Ed25519 pubkey (`firebaseSafeKey`).
+
 ## Client API
 
 - `MailboxRemoteDataSource` — write / read / delete message / **deleteAllMessages** / **writeReport** + write room meta
+- Engagement (Epic 9): **setPresence** / **observePresence** · **setReadWatermark** / **observeReadWatermarks** · **setTyping** / **clearTyping** / **observeTyping** · **setReaction** / **clearReaction** / **observeReactions**
 - `FirebaseMailboxRemoteDataSource` — RTDB implementation
 - Expired room (4.1): `PurgeExpiredRoomUseCase` clears local SQLCipher messages + remote `messages/` node (meta kept)
 - Home resume (4.1): `SyncActiveMailboxesUseCase` re-resolves TTL, purges expired, syncs active rooms
+- **Pickup queue:** outbound ciphertext stays on RTDB until the **peer** downloads it (or TTL / recall). Sender sync must not delete own messages just because they exist locally.
 - FCM (3.1): `firebase-messaging` · topic `vx_room_{roomId}` · notification → `vanishx://open/{roomId}`
 - Pending invite (3.1): `PendingInviteStore` + `ConsumePendingInviteUseCase` after identity bootstrap
 - Block / Report (3.3): local `blocked_peers` by peer pubkey · leave room · RTDB `/reports`
@@ -67,6 +82,8 @@ CI: không có file thật → Gradle copy từ `*.placeholder.json` (đủ cho 
    **or** `firebase deploy --only database` if the Firebase CLI is linked to this project.
 2. Enable **Anonymous** sign-in under Authentication.
 3. Run `./gradlew :apps:vanishx:installStagingDebug`, create/join a room, send a message.
+
+**Staging:** rules đã Publish (2026-08-09), gồm mailbox + engagement (`presence` / `read` / `typing` / `reactions`). Prod vẫn chờ Epic R / DoD.
 
 ## Out of scope
 

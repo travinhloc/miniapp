@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.vault.vanishx.data.repository
 
 import com.vault.vanishx.data.local.db.VanishxLocalDatabase
@@ -61,5 +63,10 @@ class MailboxRepositoryImpl @Inject constructor(
     override suspend fun deleteMessagesForRoom(roomId: String): Int =
         localDatabase.withDatabase { db ->
             db.messageDao().deleteByRoom(roomId)
+        }
+
+    override suspend fun deleteMessage(messageId: String): Int =
+        localDatabase.withDatabase { db ->
+            db.messageDao().deleteById(messageId)
         }
 }

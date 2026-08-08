@@ -1,3 +1,5 @@
+@file:Suppress("ComplexMethod", "MagicNumber")
+
 package com.vault.vanishx.presentation.mailbox.chat
 
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -88,10 +90,11 @@ internal fun RoomHeader(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = 4.dp)
+                    .clickable { onAction(RoomAction.OpenRenameDialog) },
             ) {
                 Text(
-                    text = title,
+                    text = title.ifBlank { stringResource(R.string.room_rename_placeholder) },
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
@@ -100,6 +103,26 @@ internal fun RoomHeader(
                     color = VanishXColors.OnSurface,
                     maxLines = 1,
                 )
+                if (isLive) {
+                    val presenceLabel = when {
+                        uiState.peerTyping -> stringResource(R.string.room_typing)
+                        uiState.peerOnline == true -> stringResource(R.string.room_peer_online)
+                        else -> stringResource(R.string.room_peer_away)
+                    }
+                    Text(
+                        text = presenceLabel,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp,
+                            letterSpacing = 0.25.sp,
+                        ),
+                        color = when {
+                            uiState.peerTyping -> VanishXColors.NeonAmber
+                            uiState.peerOnline == true -> VanishXColors.NeonGreen
+                            else -> VanishXColors.Muted
+                        },
+                        maxLines = 1,
+                    )
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),

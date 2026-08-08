@@ -21,6 +21,7 @@ class SendRoomMessageUseCase @Inject constructor(
         roomId: String,
         plaintext: String,
         sensitive: Boolean = false,
+        replyToId: String? = null,
     ): ChatMessage {
         val text = plaintext.trim()
         require(text.isNotEmpty()) { "Message is empty" }
@@ -36,10 +37,16 @@ class SendRoomMessageUseCase @Inject constructor(
             error("Room not activated yet")
         }
 
+        val replyId = replyToId?.takeIf { it.isNotBlank() }
+        if (replyId != null) {
+            val parent = mailboxRepository.getMessage(replyId)
+            require(parent != null && parent.roomId == roomId) { "Reply parent not found" }
+        }
+
         val identity = identityRepository.ensureIdentity()
         val now = System.currentTimeMillis()
         val messageId = "m_${UUID.randomUUID().toString().replace("-", "").take(MESSAGE_ID_CHARS)}"
-        val payload = MessagePlaintextCodec.encode(text, sensitive)
+        val payload = MessagePlaintextCodec.encode(text, sensitive, replyId)
         val ciphertext = cipher.encrypt(roomId, room.roomKey, payload)
         val wireExpiresAt = wireExpiresAt(resolved, now)
         val remoteMessage = RemoteMailboxMessage(
@@ -59,6 +66,7 @@ class SendRoomMessageUseCase @Inject constructor(
             expiresAt = wireExpiresAt,
             direction = ChatMessage.DIRECTION_OUT,
             sensitive = sensitive,
+            replyToId = replyId,
         )
         mailboxRepository.upsertMessage(local)
         return local

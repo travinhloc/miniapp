@@ -71,6 +71,7 @@ class SyncRoomMailboxUseCase @Inject constructor(
                     ingested++
                     removed++
                 }
+                ProcessResult.INGESTED_PENDING_PEER -> ingested++
                 ProcessResult.REMOVED_ONLY -> removed++
                 ProcessResult.DECRYPT_FAIL -> decryptFailures++
                 ProcessResult.SKIPPED -> Unit
@@ -125,6 +126,7 @@ class SyncRoomMailboxUseCase @Inject constructor(
                     ingested++
                     removed++
                 }
+                ProcessResult.INGESTED_PENDING_PEER -> ingested++
                 ProcessResult.REMOVED_ONLY -> removed++
                 ProcessResult.DECRYPT_FAIL -> decryptFailures++
                 ProcessResult.SKIPPED -> Unit
@@ -144,7 +146,7 @@ class SyncRoomMailboxUseCase @Inject constructor(
         myPub: String,
         now: Long,
     ): ProcessResult {
-        val early = processExpiredOrDuplicate(room.id, remoteMessage, now)
+        val early = processExpiredOrDuplicate(room.id, remoteMessage, myPub, now)
             ?: processBlockedPeer(room.id, remoteMessage, myPub)
         if (early != null) return early
 
@@ -152,8 +154,8 @@ class SyncRoomMailboxUseCase @Inject constructor(
         return if (plaintext == null) {
             ProcessResult.DECRYPT_FAIL
         } else {
-            ingestRemote(room, remoteMessage, myPub, plaintext)
-            ProcessResult.INGESTED
+            val removedRemote = ingestRemote(room, remoteMessage, myPub, plaintext)
+            if (removedRemote) ProcessResult.INGESTED else ProcessResult.INGESTED_PENDING_PEER
         }
     }
 
@@ -172,11 +174,18 @@ class SyncRoomMailboxUseCase @Inject constructor(
     private suspend fun processExpiredOrDuplicate(
         roomId: String,
         remoteMessage: RemoteMailboxMessage,
+        myPub: String,
         now: Long,
     ): ProcessResult? {
         val expired = remoteMessage.expiresAt > 0L && remoteMessage.expiresAt <= now
+        if (expired) {
+            runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
+            return ProcessResult.REMOVED_ONLY
+        }
         val existing = mailboxRepository.getMessage(remoteMessage.messageId) != null
-        if (!expired && !existing) return null
+        if (!existing) return null
+        // Own outbound must stay on RTDB until the peer downloads (or TTL / recall).
+        if (remoteMessage.senderPub == myPub) return ProcessResult.SKIPPED
         runCatching { remote.deleteMessage(roomId, remoteMessage.messageId) }
         return ProcessResult.REMOVED_ONLY
     }
@@ -194,12 +203,15 @@ class SyncRoomMailboxUseCase @Inject constructor(
         null
     }
 
+    /**
+     * @return true if remote ciphertext was deleted (inbound / delivered to us).
+     */
     private suspend fun ingestRemote(
         room: MailboxRoom,
         remoteMessage: RemoteMailboxMessage,
         myPub: String,
         plaintext: String,
-    ) {
+    ): Boolean {
         val direction = if (remoteMessage.senderPub == myPub) {
             ChatMessage.DIRECTION_OUT
         } else {
@@ -218,9 +230,15 @@ class SyncRoomMailboxUseCase @Inject constructor(
                 expiresAt = remoteMessage.expiresAt,
                 direction = direction,
                 sensitive = decoded.sensitive,
+                replyToId = decoded.replyToId,
             ),
         )
-        runCatching { remote.deleteMessage(room.id, remoteMessage.messageId) }
+        // RTDB is a peer pickup queue: only the recipient removes ciphertext.
+        if (direction == ChatMessage.DIRECTION_IN) {
+            runCatching { remote.deleteMessage(room.id, remoteMessage.messageId) }
+            return true
+        }
+        return false
     }
 
     private fun shouldRememberPeer(
@@ -234,6 +252,8 @@ class SyncRoomMailboxUseCase @Inject constructor(
 
     private enum class ProcessResult {
         INGESTED,
+        /** Ingested own outbound; left on RTDB for offline peer. */
+        INGESTED_PENDING_PEER,
         REMOVED_ONLY,
         DECRYPT_FAIL,
         SKIPPED,

@@ -47,6 +47,8 @@ sealed interface LockAction {
     data class BiometricFailed(val message: String) : LockAction
     data object ClearPinDraft : LockAction
     data object TickCooldown : LockAction
+    /** Reset challenge UI when lock overlay is shown again (same Activity-scoped VM). */
+    data object PrepareChallenge : LockAction
 }
 
 @HiltViewModel
@@ -85,6 +87,7 @@ class LockViewModel @Inject constructor(
                 it.copy(pin = "", showWrongPin = false, biometricError = null)
             }
             LockAction.TickCooldown -> refreshCooldownFromStore()
+            LockAction.PrepareChallenge -> _uiState.value = initialState()
         }
     }
 

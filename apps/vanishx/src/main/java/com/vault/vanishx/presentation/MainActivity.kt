@@ -1,3 +1,5 @@
+@file:Suppress("ComplexCondition")
+
 package com.vault.vanishx.presentation
 
 import android.content.Intent
@@ -9,7 +11,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -21,6 +22,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.vault.vanishx.data.security.AppLockSession
 import com.vault.vanishx.data.security.SecurityPinStore
@@ -75,7 +77,7 @@ class MainActivity : FragmentActivity() {
                         },
                     )
                 }
-                var lockTick by remember { mutableIntStateOf(0) }
+                val sessionUnlocked by appLockSession.isUnlockedFlow.collectAsStateWithLifecycle()
 
                 LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
                     if (!isChangingConfigurations &&
@@ -83,14 +85,11 @@ class MainActivity : FragmentActivity() {
                         appLockSession.shouldLockOnStop()
                     ) {
                         appLockSession.lock()
-                        lockTick++
                     }
                 }
                 LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
                     applyFlagSecure(securityPinStore.isFlagSecureEnabled())
                 }
-                @Suppress("UNUSED_EXPRESSION")
-                lockTick
 
                 when (phase) {
                     RootPhase.Splash -> SplashScreen(
@@ -107,8 +106,7 @@ class MainActivity : FragmentActivity() {
                         onFinished = { phase = RootPhase.Main },
                     )
                     RootPhase.Main -> {
-                        val showLock = securityPinStore.hasUnlockPin() &&
-                            !appLockSession.isUnlocked
+                        val showLock = securityPinStore.hasUnlockPin() && !sessionUnlocked
                         Box(modifier = Modifier.fillMaxSize()) {
                             AppNavGraph(navController = rememberNavController())
                             // Dialog sits above ModalBottomSheet windows (Join Message Request).
@@ -123,11 +121,8 @@ class MainActivity : FragmentActivity() {
                                     ),
                                 ) {
                                     LockScreen(
-                                        onUnlocked = { lockTick++ },
-                                        onWiped = {
-                                            lockTick++
-                                            phase = RootPhase.AuthSetup
-                                        },
+                                        onUnlocked = {},
+                                        onWiped = { phase = RootPhase.AuthSetup },
                                     )
                                 }
                             }

@@ -1,10 +1,12 @@
-@file:Suppress("MagicNumber")
+@file:Suppress("MagicNumber", "ComplexMethod")
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,10 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,46 +50,56 @@ internal fun RoomComposer(
     isSending: Boolean,
     onAction: (RoomAction) -> Unit,
     locked: Boolean = false,
-    draftSensitive: Boolean = false,
+    replySnippet: String? = null,
 ) {
     val inputEnabled = !isSending && !locked
+    val canSend = inputEnabled && draft.isNotBlank()
+    val view = LocalView.current
+    val sendCd = stringResource(R.string.room_send_cd)
+    val sendSensitiveCd = stringResource(R.string.room_send_sensitive_cd)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(VanishXColors.Glass)
             .border(BorderStroke(1.dp, VanishXColors.GlassBorder.copy(alpha = 0.1f))),
     ) {
-        if (!locked) {
-            FilterChip(
-                selected = draftSensitive,
-                onClick = { onAction(RoomAction.ToggleDraftSensitive) },
-                enabled = inputEnabled,
-                label = {
+        if (!locked && !replySnippet.isNullOrBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.room_composer_sensitive),
+                        text = stringResource(R.string.room_reply_banner),
                         style = MaterialTheme.typography.labelSmall,
+                        color = VanishXColors.Primary,
+                        fontWeight = FontWeight.SemiBold,
                     )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.Lock,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                    Text(
+                        text = replySnippet,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = VanishXColors.Muted,
+                        maxLines = 1,
                     )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = VanishXColors.NeonAmber.copy(alpha = 0.2f),
-                    selectedLabelColor = VanishXColors.NeonAmber,
-                    selectedLeadingIconColor = VanishXColors.NeonAmber,
-                ),
-                modifier = Modifier.padding(start = 10.dp, top = 6.dp),
-            )
+                }
+                IconButton(onClick = { onAction(RoomAction.ClearReply) }) {
+                    Text(
+                        text = "✕",
+                        color = VanishXColors.Muted,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
         }
         Box {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 12.dp)
+                    .padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 12.dp)
                     .alpha(if (locked) RoomUiDimens.composerLockedAlpha else 1f),
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(RoomUiDimens.composerGap),
@@ -135,23 +148,42 @@ internal fun RoomComposer(
                         )
                     }
                 }
-                IconButton(
-                    onClick = { onAction(RoomAction.Send) },
-                    enabled = inputEnabled && draft.isNotBlank(),
+                Box(
                     modifier = Modifier
                         .size(RoomUiDimens.sendButtonSize)
                         .clip(CircleShape)
                         .background(
-                            if (inputEnabled && draft.isNotBlank()) {
+                            if (canSend) {
                                 VanishXColors.Primary
                             } else {
                                 VanishXColors.Primary.copy(alpha = RoomUiDimens.sendDisabledAlpha)
                             },
+                        )
+                        .semantics {
+                            contentDescription = "$sendCd. $sendSensitiveCd"
+                        }
+                        .then(
+                            if (canSend) {
+                                Modifier.pointerInput(draft) {
+                                    detectTapGestures(
+                                        onTap = { onAction(RoomAction.Send) },
+                                        onLongPress = {
+                                            view.performHapticFeedback(
+                                                HapticFeedbackConstants.LONG_PRESS,
+                                            )
+                                            onAction(RoomAction.RequestSensitiveSend)
+                                        },
+                                    )
+                                }
+                            } else {
+                                Modifier
+                            },
                         ),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = stringResource(R.string.room_send_cd),
+                        contentDescription = null,
                         tint = VanishXColors.OnPrimary,
                         modifier = Modifier.size(22.dp),
                     )
@@ -161,7 +193,9 @@ internal fun RoomComposer(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .background(VanishXColors.Bg.copy(alpha = RoomUiDimens.composerLockedOverlayAlpha)),
+                        .background(
+                            VanishXColors.Bg.copy(alpha = RoomUiDimens.composerLockedOverlayAlpha),
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(

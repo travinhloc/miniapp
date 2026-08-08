@@ -12,8 +12,8 @@ Docs **không nằm trong repo này**. Nguồn sự thật:
 
 1. `vanishx-engine-vi.md` — PRD / core MVP  
 2. `vanishx-project-planning.md` — timeline  
-3. `stories/README.md` + story đang làm (**Epic 9:** `9.0.epic.md` / `9.1`…)  
-4. `stories/completed/` — epic/story Done (1–5, 7, 8)  
+3. `stories/README.md` + story đang làm (Epic 6 / R; media → Epic 11)  
+4. `stories/completed/` — epic/story Done (1–5, 7–9)  
 5. `vanishx-ui-ux-sprint-backlog.md` — Confirm PO / Chat backlog  
 6. `vanishx-production-dod.md` + `stories/R.0.epic.md` — Epic R Release Prod / soft-launch  
 7. `mockup/main.html` — UI M2 Night gallery  
@@ -34,7 +34,7 @@ Rồi trong chat `@vanishx-docs` hoặc `@vanishx-engine-vi.md`.
 Khi làm VanishX trong `miniapp`, attach:
 ```
 @../project-note-cursor/vanishx-docs/vanishx-engine-vi.md
-@../project-note-cursor/vanishx-docs/stories/9.0.epic.md
+@../project-note-cursor/vanishx-docs/stories/6.0.epic.md
 ```
 (hoặc kéo folder `vanishx-docs` vào chat)
 
@@ -55,5 +55,5 @@ Xem `.cursor/rules/vanishx-docs.mdc` trong repo này.
 ## Core MVP (nhắc nhanh)
 
 Crypto + SQLCipher + Firebase mailbox + create/join + gửi/nhận text + TTL/purge + sync-on-open.  
-**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5–8 (archive: `stories/completed/`).  
-**Đang mở:** Epic 9 Engagement · Epic 6 Optimize · Epic R Release Prod (`vanishx-production-dod.md`).
+**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5–9 (archive: `stories/completed/`).  
+**Đang mở:** Epic 6 Optimize · Epic R Release Prod (`vanishx-production-dod.md`). Tiếp theo: Epic 11 media.

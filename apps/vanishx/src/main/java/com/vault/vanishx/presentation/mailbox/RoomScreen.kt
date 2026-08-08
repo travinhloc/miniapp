@@ -56,10 +56,13 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomHeader
 import com.vault.vanishx.presentation.mailbox.chat.RoomInviteSheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomLeft
 import com.vault.vanishx.presentation.mailbox.chat.RoomLoading
+import com.vault.vanishx.presentation.mailbox.chat.RoomMessageActionSheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomSafetySheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomScreenshotBanner
 import com.vault.vanishx.presentation.mailbox.chat.RoomUiDimens
 import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
+import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
+import com.vault.vanishx.presentation.mailbox.chat.isMessageAtOrBeforeWatermark
 import com.vault.vanishx.presentation.theme.VanishXColors
 import timber.log.Timber
 
@@ -83,6 +86,24 @@ fun RoomScreen(
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             viewModel.onAction(RoomAction.ConsumePingPeerEvent)
         }
+    }
+
+    LaunchedEffect(uiState.pendingClipboard) {
+        val text = uiState.pendingClipboard ?: return@LaunchedEffect
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("VanishX message", text))
+        viewModel.onAction(RoomAction.ConsumeClipboard)
+    }
+
+    LaunchedEffect(uiState.toastMessage) {
+        val key = uiState.toastMessage ?: return@LaunchedEffect
+        val message = when (key) {
+            "copied" -> context.getString(R.string.room_action_copied)
+            "sensitive_copy_blocked" -> context.getString(R.string.room_copy_blocked_sensitive)
+            else -> key
+        }
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.onAction(RoomAction.ConsumeToast)
     }
 
     ScreenCaptureEffect(
@@ -178,6 +199,9 @@ private fun RoomContent(
                 isExpired = uiState.isExpired,
                 isSyncing = uiState.isSyncing,
                 onOpenSafety = { onAction(RoomAction.OpenSafetySheet) },
+                reactionsByMessage = uiState.reactionsByMessage,
+                peerReadWatermarkId = uiState.peerReadWatermarkId,
+                onLongPressMessage = { onAction(RoomAction.OpenMessageActions(it.id)) },
                 modifier = Modifier.weight(1f),
             )
         }
@@ -185,14 +209,35 @@ private fun RoomContent(
         FeedbackMessages(uiState = uiState)
 
         if (showComposer) {
+            val replySnippet = uiState.replyToMessageId?.let { id ->
+                uiState.messages.firstOrNull { it.id == id }?.let { msg ->
+                    when {
+                        msg.recalled -> "…"
+                        msg.sensitive -> "••••"
+                        else -> msg.body
+                    }
+                }
+            }
             RoomComposer(
                 draft = uiState.draft,
                 isSending = uiState.isSending,
                 locked = isHandshakeWaiting,
-                draftSensitive = uiState.draftSensitive,
+                replySnippet = replySnippet,
                 onAction = onAction,
             )
         }
+    }
+
+    if (uiState.showSensitiveSendConfirm) {
+        VanishXAlertDialog(
+            title = stringResource(R.string.room_sensitive_send_title),
+            body = stringResource(R.string.room_sensitive_send_body),
+            confirmLabel = stringResource(R.string.room_sensitive_send_confirm),
+            dismissLabel = stringResource(R.string.action_back),
+            tone = VanishXAlertTone.Warn,
+            onConfirm = { onAction(RoomAction.ConfirmSensitiveSend) },
+            onDismiss = { onAction(RoomAction.DismissSensitiveSend) },
+        )
     }
 
     if (uiState.showBlockConfirm) {
@@ -216,6 +261,32 @@ private fun RoomContent(
             tone = VanishXAlertTone.Danger,
             onConfirm = { onAction(RoomAction.ConfirmBurn) },
             onDismiss = { onAction(RoomAction.DismissBurnConfirm) },
+        )
+    }
+
+    if (uiState.showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { onAction(RoomAction.DismissRenameDialog) },
+            title = { Text(text = stringResource(R.string.room_rename_title)) },
+            text = {
+                OutlinedTextField(
+                    value = uiState.renameDraft,
+                    onValueChange = { onAction(RoomAction.RenameDraftChanged(it)) },
+                    singleLine = true,
+                    label = { Text(text = stringResource(R.string.room_rename_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { onAction(RoomAction.ConfirmRename) }) {
+                    Text(text = stringResource(R.string.room_rename_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onAction(RoomAction.DismissRenameDialog) }) {
+                    Text(text = stringResource(R.string.action_back))
+                }
+            },
         )
     }
 
@@ -283,6 +354,70 @@ private fun RoomContent(
         RoomSafetySheet(
             roomKey = uiState.room?.roomKey.orEmpty(),
             onDismiss = { onAction(RoomAction.DismissSafetySheet) },
+        )
+    }
+
+    val actionMessage = uiState.actionMessageId?.let { id ->
+        uiState.messages.firstOrNull { it.id == id }
+    }
+    if (actionMessage != null) {
+        RoomMessageActionSheet(
+            uiState = uiState,
+            message = actionMessage,
+            onAction = onAction,
+        )
+    }
+
+    if (uiState.deleteConfirmMessageId != null) {
+        VanishXAlertDialog(
+            title = stringResource(R.string.room_delete_title),
+            body = stringResource(R.string.room_delete_body),
+            confirmLabel = stringResource(R.string.room_delete_confirm),
+            dismissLabel = stringResource(R.string.action_back),
+            tone = VanishXAlertTone.Danger,
+            onConfirm = { onAction(RoomAction.ConfirmDeleteForMe) },
+            onDismiss = { onAction(RoomAction.DismissDeleteForMe) },
+        )
+    }
+
+    val detailsMessage = uiState.detailsMessageId?.let { id ->
+        uiState.messages.firstOrNull { it.id == id }
+    }
+    if (detailsMessage != null) {
+        AlertDialog(
+            onDismissRequest = { onAction(RoomAction.DismissMessageDetails) },
+            title = { Text(text = stringResource(R.string.room_action_details)) },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(
+                            R.string.room_details_sent_at,
+                            formatMessageTime(detailsMessage.sentAt),
+                        ),
+                    )
+                    Spacer(modifier = Modifier.height(RoomUiDimens.spacingSmall))
+                    Text(
+                        text = stringResource(
+                            when {
+                                detailsMessage.direction !=
+                                    com.vault.vanishx.domain.model.ChatMessage.DIRECTION_OUT ->
+                                    R.string.room_details_status_received
+                                isMessageAtOrBeforeWatermark(
+                                    detailsMessage.id,
+                                    uiState.peerReadWatermarkId,
+                                    uiState.messages,
+                                ) -> R.string.room_details_status_read
+                                else -> R.string.room_details_status_sent
+                            },
+                        ),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { onAction(RoomAction.DismissMessageDetails) }) {
+                    Text(text = stringResource(R.string.room_safety_close))
+                }
+            },
         )
     }
 }

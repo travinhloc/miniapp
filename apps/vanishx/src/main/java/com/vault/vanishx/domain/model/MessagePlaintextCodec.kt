@@ -1,32 +1,58 @@
+@file:Suppress("ComplexMethod", "NestedBlockDepth", "ReturnCount")
+
 package com.vault.vanishx.domain.model
 
 /**
  * Encrypted payload plaintext format.
- * - Legacy / normal: raw UTF-8 text (sensitive = false).
- * - Sensitive: `{"v":1,"s":true,"t":"<escaped text>"}` so peers learn the flag after decrypt.
+ * - Legacy / plain: raw UTF-8 (no sensitive, no reply).
+ * - Envelope: `{"v":1,"s":bool,"t":"...","r":"replyId?"}` when sensitive and/or reply.
  */
 object MessagePlaintextCodec {
 
     data class Decoded(
         val text: String,
         val sensitive: Boolean,
+        val replyToId: String? = null,
     )
 
-    fun encode(text: String, sensitive: Boolean): String {
-        if (!sensitive) return text
-        return """{"v":1,"s":true,"t":${quote(text)}}"""
+    fun encode(
+        text: String,
+        sensitive: Boolean,
+        replyToId: String? = null,
+    ): String {
+        val reply = replyToId?.takeIf { it.isNotBlank() }
+        if (!sensitive && reply == null) return text
+        return buildString {
+            append("{\"v\":1,\"s\":")
+            append(sensitive)
+            append(",\"t\":")
+            append(quote(text))
+            if (reply != null) {
+                append(",\"r\":")
+                append(quote(reply))
+            }
+            append('}')
+        }
     }
 
     fun decode(raw: String): Decoded {
-        if (!raw.startsWith(SENSITIVE_PREFIX)) {
-            return Decoded(text = raw, sensitive = false)
+        if (!raw.startsWith(ENVELOPE_PREFIX)) {
+            return Decoded(text = raw, sensitive = false, replyToId = null)
         }
-        val textKey = "\"t\":"
-        val textIndex = raw.indexOf(textKey)
-        if (textIndex < 0) return Decoded(text = raw, sensitive = false)
-        val textStart = textIndex + textKey.length
-        val text = unquote(raw, textStart) ?: return Decoded(text = raw, sensitive = false)
-        return Decoded(text = text, sensitive = true)
+        val sensitive = when {
+            raw.contains("\"s\":true") -> true
+            raw.contains("\"s\":false") -> false
+            else -> false
+        }
+        val text = readQuotedField(raw, "\"t\":") ?: return Decoded(text = raw, sensitive = false)
+        val replyToId = readQuotedField(raw, "\"r\":")
+        return Decoded(text = text, sensitive = sensitive, replyToId = replyToId)
+    }
+
+    private fun readQuotedField(raw: String, key: String): String? {
+        val index = raw.indexOf(key)
+        if (index < 0) return null
+        return unquote(raw, index + key.length)
     }
 
     private fun quote(value: String): String = buildString(value.length + 2) {
@@ -72,5 +98,5 @@ object MessagePlaintextCodec {
         return null
     }
 
-    private const val SENSITIVE_PREFIX = "{\"v\":1,"
+    private const val ENVELOPE_PREFIX = "{\"v\":1,"
 }
