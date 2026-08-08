@@ -83,6 +83,8 @@ CI: không có file thật → Gradle copy từ `*.placeholder.json` (đủ cho 
 2. Enable **Anonymous** sign-in under Authentication.
 3. Run `./gradlew :apps:vanishx:installStagingDebug`, create/join a room, send a message.
 
+**Staging:** rules đã Publish (2026-08-09), gồm mailbox + engagement (`presence` / `read` / `typing` / `reactions`). Prod vẫn chờ Epic R / DoD.
+
 ## Out of scope
 
 - WebRTC · Panic/IAP · polish UI · HTTPS App Links · Cloud Functions fan-out
