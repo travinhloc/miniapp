@@ -58,6 +58,7 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 - `FirebaseMailboxRemoteDataSource` — RTDB implementation
 - Expired room (4.1): `PurgeExpiredRoomUseCase` clears local SQLCipher messages + remote `messages/` node (meta kept)
 - Home resume (4.1): `SyncActiveMailboxesUseCase` re-resolves TTL, purges expired, syncs active rooms
+- **Pickup queue:** outbound ciphertext stays on RTDB until the **peer** downloads it (or TTL / recall). Sender sync must not delete own messages just because they exist locally.
 - FCM (3.1): `firebase-messaging` · topic `vx_room_{roomId}` · notification → `vanishx://open/{roomId}`
 - Pending invite (3.1): `PendingInviteStore` + `ConsumePendingInviteUseCase` after identity bootstrap
 - Block / Report (3.3): local `blocked_peers` by peer pubkey · leave room · RTDB `/reports`
