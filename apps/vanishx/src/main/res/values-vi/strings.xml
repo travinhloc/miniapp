@@ -241,6 +241,10 @@
     <string name="room_burn_confirm">Hủy ngay</string>
     <string name="room_e2e_tap_hint">Chạm để xem mã an toàn</string>
     <string name="room_composer_sensitive">Nhạy cảm</string>
+    <string name="room_send_sensitive_cd">Nhấn giữ để gửi tin Nhạy cảm</string>
+    <string name="room_sensitive_send_title">Gửi tin Nhạy cảm?</string>
+    <string name="room_sensitive_send_body">Đối phương phải giữ bubble mới đọc được. Tin sẽ bị làm mờ đến khi họ thả tay.</string>
+    <string name="room_sensitive_send_confirm">Gửi Nhạy cảm</string>
     <string name="room_sensitive_masked">••••••••••</string>
     <string name="room_sensitive_hold">Giữ để xem</string>
     <string name="room_sensitive_badge">Nhạy cảm</string>

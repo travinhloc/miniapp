@@ -222,11 +222,22 @@ private fun RoomContent(
                 draft = uiState.draft,
                 isSending = uiState.isSending,
                 locked = isHandshakeWaiting,
-                draftSensitive = uiState.draftSensitive,
                 replySnippet = replySnippet,
                 onAction = onAction,
             )
         }
+    }
+
+    if (uiState.showSensitiveSendConfirm) {
+        VanishXAlertDialog(
+            title = stringResource(R.string.room_sensitive_send_title),
+            body = stringResource(R.string.room_sensitive_send_body),
+            confirmLabel = stringResource(R.string.room_sensitive_send_confirm),
+            dismissLabel = stringResource(R.string.action_back),
+            tone = VanishXAlertTone.Warn,
+            onConfirm = { onAction(RoomAction.ConfirmSensitiveSend) },
+            onDismiss = { onAction(RoomAction.DismissSensitiveSend) },
+        )
     }
 
     if (uiState.showBlockConfirm) {

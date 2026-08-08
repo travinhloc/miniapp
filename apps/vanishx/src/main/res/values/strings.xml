@@ -241,6 +241,10 @@
     <string name="room_burn_confirm">Burn now</string>
     <string name="room_e2e_tap_hint">Tap for safety numbers</string>
     <string name="room_composer_sensitive">Sensitive</string>
+    <string name="room_send_sensitive_cd">Long-press to send as sensitive</string>
+    <string name="room_sensitive_send_title">Send as sensitive?</string>
+    <string name="room_sensitive_send_body">Peer must hold the bubble to read it. It stays blurred until they release.</string>
+    <string name="room_sensitive_send_confirm">Send sensitive</string>
     <string name="room_sensitive_masked">••••••••••</string>
     <string name="room_sensitive_hold">Hold to view</string>
     <string name="room_sensitive_badge">Sensitive</string>

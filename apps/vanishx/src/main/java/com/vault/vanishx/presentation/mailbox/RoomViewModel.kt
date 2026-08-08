@@ -65,7 +65,7 @@ data class RoomUiState(
     val isExpired: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
     val draft: String = "",
-    val draftSensitive: Boolean = false,
+    val showSensitiveSendConfirm: Boolean = false,
     val showScreenshotBanner: Boolean = false,
     val showBlockConfirm: Boolean = false,
     val showReportDialog: Boolean = false,
@@ -108,7 +108,9 @@ sealed interface RoomAction {
     data object Refresh : RoomAction
     data object Send : RoomAction
     data class DraftChanged(val value: String) : RoomAction
-    data object ToggleDraftSensitive : RoomAction
+    data object RequestSensitiveSend : RoomAction
+    data object ConfirmSensitiveSend : RoomAction
+    data object DismissSensitiveSend : RoomAction
     data object ScreenshotDetected : RoomAction
     data object DismissScreenshotBanner : RoomAction
     data object ClearFeedback : RoomAction
@@ -218,15 +220,24 @@ class RoomViewModel @Inject constructor(
         when (action) {
             RoomAction.Back -> launch { _navigator.emit(BaseDestination.Up()) }
             RoomAction.Refresh -> sync(showLoading = true)
-            RoomAction.Send -> send()
+            RoomAction.Send -> send(sensitive = false)
             is RoomAction.DraftChanged -> {
                 _uiState.update {
                     it.copy(draft = action.value, errorMessage = null)
                 }
                 publishTyping(action.value)
             }
-            RoomAction.ToggleDraftSensitive -> _uiState.update {
-                it.copy(draftSensitive = !it.draftSensitive)
+            RoomAction.RequestSensitiveSend -> {
+                if (_uiState.value.draft.isNotBlank() && !_uiState.value.isSending) {
+                    _uiState.update { it.copy(showSensitiveSendConfirm = true) }
+                }
+            }
+            RoomAction.ConfirmSensitiveSend -> {
+                _uiState.update { it.copy(showSensitiveSendConfirm = false) }
+                send(sensitive = true)
+            }
+            RoomAction.DismissSensitiveSend -> _uiState.update {
+                it.copy(showSensitiveSendConfirm = false)
             }
             RoomAction.ScreenshotDetected -> _uiState.update {
                 it.copy(showScreenshotBanner = true)
@@ -737,10 +748,9 @@ class RoomViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun send() {
+    private fun send(sensitive: Boolean) {
         if (_uiState.value.isExpired || _uiState.value.isSending) return
         val draft = _uiState.value.draft
-        val sensitive = _uiState.value.draftSensitive
         if (draft.isBlank()) return
         _uiState.update { it.copy(isSending = true, errorMessage = null) }
         flow { emit(sendRoomMessage(roomId, draft, sensitive, _uiState.value.replyToMessageId)) }
@@ -751,7 +761,7 @@ class RoomViewModel @Inject constructor(
                     state.copy(
                         isSending = false,
                         draft = "",
-                        draftSensitive = false,
+                        showSensitiveSendConfirm = false,
                         replyToMessageId = null,
                         messages = (state.messages + sent).distinctBy { it.id }.sortedBy { it.sentAt },
                     )
