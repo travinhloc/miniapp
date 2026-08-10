@@ -358,6 +358,10 @@
     <string name="room_attach_cd">Đính kèm media</string>
     <string name="room_attach_more_cd">Thêm tùy chọn</string>
     <string name="room_attach_gallery_cd">Ảnh và video</string>
+    <string name="room_voice_cd">Tin nhắn thoại</string>
+    <string name="room_voice_tray_title">Tin nhắn thoại</string>
+    <string name="room_voice_tray_body">Ghi âm sẽ sớm có. Tạm dùng chữ hoặc đính kèm video ngắn.</string>
+    <string name="room_voice_tray_hint">Chạm mic · giữ để ghi (sắp có)</string>
     <string name="room_attach_tray_title">Thêm</string>
     <string name="room_attach_gallery">Ảnh / Video</string>
     <string name="room_attach_document">Tài liệu</string>
@@ -367,6 +371,7 @@
     <string name="room_media_video_cd">Video đã chia sẻ</string>
     <string name="room_media_file">Tệp đính kèm</string>
     <string name="room_media_uploading">Đang gửi…</string>
+    <string name="room_media_on_device">Đã có trên máy</string>
     <string name="room_media_failed">Gửi thất bại. Chạm để ẩn.</string>
     <string name="room_media_viewer_title">Tệp đính kèm</string>
     <string name="room_media_save">Lưu vào thiết bị</string>

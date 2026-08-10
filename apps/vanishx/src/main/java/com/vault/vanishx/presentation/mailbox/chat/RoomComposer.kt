@@ -47,10 +47,11 @@ import com.vault.vanishx.presentation.theme.VanishXColors
 
 /**
  * Composer bar (Zalo-like):
- * - empty draft → `[input] […] [gallery]`
- * - has text → `[input] [send]` (send replaces trailing actions)
- * - `…` opens extensible more tray (documents first; stubs later)
- * - gallery opens media picker directly
+ * - empty draft → `[input] […] [mic] [gallery]`
+ * - has text → `[input] [send]`
+ * - `…` → more tray (documents + stubs)
+ * - gallery → system Photo Picker (images/videos)
+ * - mic → voice tray stub
  */
 @Composable
 internal fun RoomComposer(
@@ -59,6 +60,7 @@ internal fun RoomComposer(
     onAction: (RoomAction) -> Unit,
     onOpenMore: () -> Unit,
     onPickGallery: () -> Unit,
+    onOpenVoice: () -> Unit,
     locked: Boolean = false,
     replySnippet: String? = null,
     isSendingMedia: Boolean = false,
@@ -180,6 +182,16 @@ internal fun RoomComposer(
                             Icon(
                                 painter = painterResource(R.drawable.ic_composer_more),
                                 contentDescription = stringResource(R.string.room_attach_more_cd),
+                                tint = VanishXColors.Muted,
+                            )
+                        }
+                        IconButton(
+                            onClick = onOpenVoice,
+                            enabled = canAttach,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_composer_mic),
+                                contentDescription = stringResource(R.string.room_voice_cd),
                                 tint = VanishXColors.Muted,
                             )
                         }

@@ -18,6 +18,8 @@ object MediaLimits {
     val FILE_MIME = setOf(
         "application/pdf",
         "text/plain",
+        "text/markdown",
+        "text/x-markdown",
         "application/zip",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -48,7 +50,8 @@ object MediaLimits {
         return when (ext) {
             "jpg", "jpeg", "png", "webp" -> AttachmentMeta.KIND_IMAGE
             "mp4", "m4v", "webm", "3gp", "3gpp" -> AttachmentMeta.KIND_VIDEO
-            "pdf", "txt", "zip", "doc", "docx", "xls", "xlsx" -> AttachmentMeta.KIND_FILE
+            "pdf", "txt", "md", "markdown", "zip", "doc", "docx", "xls", "xlsx" ->
+                AttachmentMeta.KIND_FILE
             else -> null
         }
     }

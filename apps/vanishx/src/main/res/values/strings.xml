@@ -358,6 +358,10 @@
     <string name="room_attach_cd">Attach media</string>
     <string name="room_attach_more_cd">More attachments</string>
     <string name="room_attach_gallery_cd">Photo and video</string>
+    <string name="room_voice_cd">Voice message</string>
+    <string name="room_voice_tray_title">Voice message</string>
+    <string name="room_voice_tray_body">Voice notes are coming soon. Use text or attach a short video for now.</string>
+    <string name="room_voice_tray_hint">Tap mic · hold to record (soon)</string>
     <string name="room_attach_tray_title">More</string>
     <string name="room_attach_gallery">Photo / Video</string>
     <string name="room_attach_document">Document</string>
@@ -367,6 +371,7 @@
     <string name="room_media_video_cd">Shared video</string>
     <string name="room_media_file">Attachment</string>
     <string name="room_media_uploading">Sending…</string>
+    <string name="room_media_on_device">Already on device</string>
     <string name="room_media_failed">Could not send. Tap to dismiss.</string>
     <string name="room_media_viewer_title">Attachment</string>
     <string name="room_media_save">Save to device</string>

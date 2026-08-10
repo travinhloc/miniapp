@@ -8,6 +8,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Build
 import android.widget.Toast
@@ -33,7 +34,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -66,6 +69,7 @@ import com.vault.vanishx.presentation.mailbox.chat.MediaViewerDialog
 import com.vault.vanishx.presentation.mailbox.chat.RoomSafetySheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomScreenshotBanner
 import com.vault.vanishx.presentation.mailbox.chat.RoomUiDimens
+import com.vault.vanishx.presentation.mailbox.chat.VoiceRecordTray
 import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
 import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
 import com.vault.vanishx.presentation.mailbox.chat.isMessageAtOrBeforeWatermark
@@ -80,6 +84,7 @@ fun RoomScreen(
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showVoiceTray by remember { mutableStateOf(false) }
     val appLockSession = remember(context) {
         EntryPointAccessors.fromActivity(
             context as Activity,
@@ -87,16 +92,10 @@ fun RoomScreen(
         ).appLockSession()
     }
     val galleryPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
+        ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         appLockSession.endExternalUi()
         if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
-                )
-            }
             onAttachmentSelected(
                 context = context,
                 uri = uri,
@@ -180,9 +179,12 @@ fun RoomScreen(
         onOpenMore = {
             viewModel.onAction(RoomAction.AttachClicked)
         },
+        onOpenVoice = { showVoiceTray = true },
         onPickGallery = {
             appLockSession.beginExternalUi()
-            galleryPicker.launch(arrayOf("image/*", "video/*"))
+            galleryPicker.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
+            )
         },
         onPickDocument = {
             appLockSession.beginExternalUi()
@@ -190,6 +192,8 @@ fun RoomScreen(
                 arrayOf(
                     "application/pdf",
                     "text/plain",
+                    "text/markdown",
+                    "text/x-markdown",
                     "application/zip",
                     "application/msword",
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -200,6 +204,10 @@ fun RoomScreen(
             )
         },
     )
+
+    if (showVoiceTray) {
+        VoiceRecordTray(onDismiss = { showVoiceTray = false })
+    }
 }
 
 @Composable
@@ -209,6 +217,7 @@ private fun RoomContent(
     onCopyInvite: (String) -> Unit,
     onShareInvite: (String) -> Unit,
     onOpenMore: () -> Unit,
+    onOpenVoice: () -> Unit,
     onPickGallery: () -> Unit,
     onPickDocument: () -> Unit,
 ) {
@@ -306,6 +315,7 @@ private fun RoomContent(
                 isSending = uiState.isSending,
                 isSendingMedia = uiState.isSendingMedia,
                 onOpenMore = onOpenMore,
+                onOpenVoice = onOpenVoice,
                 onPickGallery = onPickGallery,
                 locked = isHandshakeWaiting,
                 replySnippet = replySnippet,
@@ -571,6 +581,7 @@ private fun resolveAttachmentMime(context: Context, uri: android.net.Uri): Strin
         "3gp", "3gpp" -> "video/3gpp"
         "pdf" -> "application/pdf"
         "txt" -> "text/plain"
+        "md", "markdown" -> "text/markdown"
         "zip" -> "application/zip"
         "doc" -> "application/msword"
         "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
