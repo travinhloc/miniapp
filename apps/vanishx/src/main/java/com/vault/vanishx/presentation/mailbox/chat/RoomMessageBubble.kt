@@ -1,4 +1,10 @@
-@file:Suppress("ComplexMethod", "MagicNumber", "UnstableCollections", "MatchingDeclarationName")
+@file:Suppress(
+    "ComplexMethod",
+    "MagicNumber",
+    "UnstableCollections",
+    "MatchingDeclarationName",
+    "ComposableParamOrder",
+)
 
 package com.vault.vanishx.presentation.mailbox.chat
 
@@ -17,8 +23,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,6 +75,7 @@ internal fun RoomMessageBubble(
     replyQuote: ReplyQuoteUi? = null,
     readReceipt: Boolean = false,
     onLongPress: (() -> Unit)? = null,
+    onMediaClick: (() -> Unit)? = null,
     onReplyQuoteClick: (() -> Unit)? = null,
 ) {
     val mine = message.direction == ChatMessage.DIRECTION_OUT
@@ -124,12 +136,26 @@ internal fun RoomMessageBubble(
             Column(
                 modifier = Modifier
                     .widthIn(max = RoomUiDimens.bubbleMaxWidth)
-                    .clip(bubbleShape)
+                    .then(if (message.isMedia) Modifier else Modifier.clip(bubbleShape))
                     .background(
-                        if (mine) VanishXColors.Primary else RoomUiDimens.bubbleInColor,
+                        when {
+                            message.isMedia -> Color.Transparent
+                            mine -> VanishXColors.Primary
+                            else -> RoomUiDimens.bubbleInColor
+                        },
                     )
-                    .pointerInput(message.id, message.sensitive, message.recalled, onLongPress) {
-                        if (message.sensitive && !message.recalled) {
+                    .pointerInput(message.id, message.sensitive, message.recalled, message.isMedia, onLongPress) {
+                        if (message.isMedia) {
+                            if (message.mediaTransferStatus != ChatMessage.MEDIA_PENDING) {
+                                detectTapGestures(
+                                    onTap = { onMediaClick?.invoke() },
+                                    onLongPress = {
+                                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                        onLongPress?.invoke()
+                                    },
+                                )
+                            }
+                        } else if (message.sensitive && !message.recalled) {
                             // Hold-to-read only. Do not set onLongPress here — Compose cancels
                             // onPress after longPressTimeout when onLongPress is registered,
                             // so users could only peek ~500ms before the action sheet stole focus.
@@ -160,7 +186,12 @@ internal fun RoomMessageBubble(
                             )
                         }
                     }
-                    .padding(start = 12.dp, end = 10.dp, top = 8.dp, bottom = 6.dp),
+                    .padding(
+                        start = if (message.isMedia) 0.dp else 12.dp,
+                        end = if (message.isMedia) 0.dp else 10.dp,
+                        top = if (message.isMedia) 0.dp else 8.dp,
+                        bottom = if (message.isMedia) 4.dp else 6.dp,
+                    ),
             ) {
             if (replyQuote != null && !message.recalled) {
                 Text(
@@ -217,6 +248,39 @@ internal fun RoomMessageBubble(
                         },
                     )
                 }
+                message.isMedia -> {
+                    // Anchor reactions to the media card (not MetaRow under it).
+                    Box {
+                        MediaMessageBody(message = message, mine = mine)
+                        if (reactionCounts.isNotEmpty()) {
+                            ReactionCountsRow(
+                                counts = reactionCounts,
+                                modifier = Modifier
+                                    .align(if (mine) Alignment.BottomEnd else Alignment.BottomStart)
+                                    .offset(
+                                        x = if (mine) (-4).dp else 4.dp,
+                                        y = RoomUiDimens.reactionHangOffset,
+                                    ),
+                            )
+                        }
+                    }
+                    BubbleMetaRow(
+                        mine = mine,
+                        sentAt = message.sentAt,
+                        readReceipt = readReceipt,
+                        onLightBubble = false,
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            // Keep time clear of the hanging reaction pill.
+                            .padding(
+                                end = if (reactionCounts.isNotEmpty()) {
+                                    RoomUiDimens.reactionMetaEndClearance
+                                } else {
+                                    0.dp
+                                },
+                            ),
+                    )
+                }
                 message.sensitive -> {
                     // Stable layout: body slot + hold hint + meta — avoid branch swap height jump
                     SensitiveBody(
@@ -264,14 +328,67 @@ internal fun RoomMessageBubble(
                 }
             }
             }
-            if (reactionCounts.isNotEmpty()) {
+            if (reactionCounts.isNotEmpty() && !message.isMedia) {
                 ReactionCountsRow(
                     counts = reactionCounts,
                     modifier = Modifier
                         .align(if (mine) Alignment.BottomEnd else Alignment.BottomStart)
-                        .offset(x = if (mine) (-4).dp else 4.dp, y = 10.dp),
+                        .offset(
+                            x = if (mine) (-4).dp else 4.dp,
+                            y = RoomUiDimens.reactionHangOffset,
+                        ),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun MediaMessageBody(message: ChatMessage, mine: Boolean) {
+    val pending = message.mediaTransferStatus == ChatMessage.MEDIA_PENDING
+    val failed = message.mediaTransferStatus == ChatMessage.MEDIA_FAILED
+    val mediaCorner = RoundedCornerShape(RoomUiDimens.mediaCorner)
+    Box {
+        when (message.mediaKind) {
+            "image" -> ImageMediaPreview(message = message)
+            "video" -> VideoMediaPreview(message = message)
+            else -> DocumentMediaPreview(message = message, mine = mine)
+        }
+        if (pending) {
+            MediaTransferOverlay(failed = false, modifier = Modifier.matchParentSize().clip(mediaCorner))
+        } else if (failed) {
+            MediaTransferOverlay(failed = true, modifier = Modifier.matchParentSize().clip(mediaCorner))
+        }
+    }
+}
+
+@Composable
+private fun MediaTransferOverlay(failed: Boolean, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.background(Color.Black.copy(alpha = 0.35f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (failed) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.room_media_failed),
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp),
+                )
+                Text(
+                    text = stringResource(R.string.room_media_failed),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+        } else {
+            CircularProgressIndicator(
+                modifier = Modifier.size(36.dp),
+                color = Color.White,
+                strokeWidth = 3.dp,
+            )
         }
     }
 }
@@ -375,9 +492,21 @@ private fun BubbleMetaRow(
     sentAt: Long,
     readReceipt: Boolean = false,
     onLongPress: (() -> Unit)? = null,
+    /** Outgoing text bubble uses on-primary; media sits on chat bg. */
+    onLightBubble: Boolean = mine,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
+    val timeColor = if (onLightBubble) {
+        VanishXColors.OnPrimary.copy(alpha = RoomUiDimens.timeAlpha)
+    } else {
+        VanishXColors.Muted
+    }
+    val checkColor = if (onLightBubble) {
+        VanishXColors.OnPrimary.copy(alpha = RoomUiDimens.checkAlpha)
+    } else {
+        VanishXColors.Muted.copy(alpha = RoomUiDimens.checkAlpha)
+    }
     Row(
         modifier = modifier
             .padding(top = 2.dp)
@@ -401,11 +530,7 @@ private fun BubbleMetaRow(
         Text(
             text = formatMessageTime(sentAt),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-            color = if (mine) {
-                VanishXColors.OnPrimary.copy(alpha = RoomUiDimens.timeAlpha)
-            } else {
-                VanishXColors.Muted
-            },
+            color = timeColor,
         )
         if (mine) {
             Text(
@@ -413,7 +538,7 @@ private fun BubbleMetaRow(
                     if (readReceipt) R.string.room_sent_checks else R.string.room_sent_check,
                 ),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                color = VanishXColors.OnPrimary.copy(alpha = RoomUiDimens.checkAlpha),
+                color = checkColor,
             )
         }
     }

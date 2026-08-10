@@ -49,6 +49,13 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
 
 `roomId` is a capability secret from the invite (MVP: knowing the path ⇒ can read while authenticated).
 
+## Media (Epic 11)
+
+RTDB remains a small encrypted envelope only (`MessagePlaintextCodec` v2). Ciphertext blobs use
+Firebase Storage at `/rooms/{roomId}/att/{messageId}/{attId}` and are encrypted locally with
+`RoomBlobCipher` before upload. The recipient downloads and decrypts the blob before removing the
+mailbox envelope, preserving the existing pickup-queue behavior.
+
 `deviceId` = Firebase-safe form of the device Ed25519 pubkey (`firebaseSafeKey`).
 
 ## Client API
@@ -85,6 +92,16 @@ CI: không có file thật → Gradle copy từ `*.placeholder.json` (đủ cho 
 
 **Staging:** rules đã Publish (2026-08-09), gồm mailbox + engagement (`presence` / `read` / `typing` / `reactions`). Prod vẫn chờ Epic R / DoD.
 
+## Media attachments (Epic 11)
+
+RTDB `messages/*/ciphertext` may hold envelope **`v:2`** (metadata only). Blob bytes live on Firebase Storage:
+
+```
+/rooms/{roomId}/att/{messageId}/{attId}   // AES-GCM ciphertext (RoomBlobCipher)
+```
+
+See [`STORAGE.md`](STORAGE.md) · [`CRYPTO.md`](CRYPTO.md) · product spec `vanishx-media-spec-vi.md`.
+
 ## Out of scope
 
-- WebRTC · Panic/IAP · polish UI · HTTPS App Links · Cloud Functions fan-out
+- WebRTC · HTTPS App Links · Cloud Functions fan-out · Caption (E11-5)

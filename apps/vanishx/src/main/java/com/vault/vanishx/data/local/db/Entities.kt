@@ -36,6 +36,15 @@ data class MessageEntity(
     val recalled: Boolean = false,
     val sensitive: Boolean = false,
     val replyToId: String? = null,
+    val mediaKind: String? = null,
+    val mediaMime: String? = null,
+    val mediaBytes: Long? = null,
+    val mediaAttId: String? = null,
+    val mediaWidth: Int? = null,
+    val mediaHeight: Int? = null,
+    val mediaFileName: String? = null,
+    val mediaLocalPath: String? = null,
+    val mediaTransferStatus: String? = null,
 )
 
 @Entity(tableName = "blocked_peers")

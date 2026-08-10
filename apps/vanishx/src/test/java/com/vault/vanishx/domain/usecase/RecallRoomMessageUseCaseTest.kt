@@ -1,6 +1,7 @@
 package com.vault.vanishx.domain.usecase
 
 import com.vault.vanishx.data.remote.InMemoryMailboxRemoteDataSource
+import com.vault.vanishx.data.remote.InMemoryMediaStorageRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteMailboxMessage
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.RecallPolicy
@@ -45,8 +46,12 @@ class RecallRoomMessageUseCaseTest {
             ),
         )
 
-        val result = RecallRoomMessageUseCase(mailboxRepository, pro, remote)
-            .invoke("room1", "m1")
+        val result = RecallRoomMessageUseCase(
+            mailboxRepository,
+            pro,
+            remote,
+            mediaRemote = InMemoryMediaStorageRemoteDataSource(),
+        ).invoke("room1", "m1")
 
         result.message.recalled shouldBe true
         result.message.body shouldBe ""
@@ -77,6 +82,7 @@ class RecallRoomMessageUseCaseTest {
             mailboxRepository,
             pro,
             InMemoryMailboxRemoteDataSource(),
+            mediaRemote = InMemoryMediaStorageRemoteDataSource(),
         ).invoke("room1", "m1", nowMs = now)
 
         result.message.recalled shouldBe true
@@ -103,6 +109,7 @@ class RecallRoomMessageUseCaseTest {
                 mailboxRepository,
                 pro,
                 InMemoryMailboxRemoteDataSource(),
+                mediaRemote = InMemoryMediaStorageRemoteDataSource(),
             ).invoke("room1", "m1", nowMs = now)
         }
     }

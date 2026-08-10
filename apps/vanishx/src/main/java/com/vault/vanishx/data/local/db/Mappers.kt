@@ -43,6 +43,15 @@ fun MessageEntity.toDomain(): ChatMessage = ChatMessage(
     recalled = recalled,
     sensitive = sensitive,
     replyToId = replyToId,
+    mediaKind = mediaKind,
+    mediaMime = mediaMime,
+    mediaBytes = mediaBytes,
+    mediaAttId = mediaAttId,
+    mediaWidth = mediaWidth,
+    mediaHeight = mediaHeight,
+    mediaFileName = mediaFileName,
+    mediaLocalPath = mediaLocalPath,
+    mediaTransferStatus = mediaTransferStatus,
 )
 
 fun ChatMessage.toEntity(): MessageEntity = MessageEntity(
@@ -55,4 +64,13 @@ fun ChatMessage.toEntity(): MessageEntity = MessageEntity(
     recalled = recalled,
     sensitive = sensitive,
     replyToId = replyToId,
+    mediaKind = mediaKind,
+    mediaMime = mediaMime,
+    mediaBytes = mediaBytes,
+    mediaAttId = mediaAttId,
+    mediaWidth = mediaWidth,
+    mediaHeight = mediaHeight,
+    mediaFileName = mediaFileName,
+    mediaLocalPath = mediaLocalPath,
+    mediaTransferStatus = mediaTransferStatus,
 )

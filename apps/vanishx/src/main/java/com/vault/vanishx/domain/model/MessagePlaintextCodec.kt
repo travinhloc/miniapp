@@ -1,11 +1,13 @@
-@file:Suppress("ComplexMethod", "NestedBlockDepth", "ReturnCount")
+@file:Suppress("ComplexMethod", "NestedBlockDepth", "ReturnCount", "LongMethod", "TooManyFunctions")
 
 package com.vault.vanishx.domain.model
 
 /**
  * Encrypted payload plaintext format.
  * - Legacy / plain: raw UTF-8 (no sensitive, no reply).
- * - Envelope: `{"v":1,"s":bool,"t":"...","r":"replyId?"}` when sensitive and/or reply.
+ * - v1: `{"v":1,"s":bool,"t":"...","r":"replyId?"}`
+ * - v2 media: `{"v":2,"k":"image|file|video","m":"mime","b":bytes,"a":"attId",...}`
+ *   (no caption — E11-5; no sensitive/reply — E11-6)
  */
 object MessagePlaintextCodec {
 
@@ -13,6 +15,7 @@ object MessagePlaintextCodec {
         val text: String,
         val sensitive: Boolean,
         val replyToId: String? = null,
+        val attachment: AttachmentMeta? = null,
     )
 
     fun encode(
@@ -35,10 +38,44 @@ object MessagePlaintextCodec {
         }
     }
 
-    fun decode(raw: String): Decoded {
-        if (!raw.startsWith(ENVELOPE_PREFIX)) {
-            return Decoded(text = raw, sensitive = false, replyToId = null)
+    fun encodeAttachment(meta: AttachmentMeta): String {
+        require(meta.attId.isNotBlank()) { "attId required" }
+        require(meta.mime.isNotBlank()) { "mime required" }
+        require(meta.bytes > 0L) { "bytes must be > 0" }
+        return buildString {
+            append("{\"v\":2,\"k\":")
+            append(quote(meta.kind))
+            append(",\"m\":")
+            append(quote(meta.mime))
+            append(",\"b\":")
+            append(meta.bytes)
+            append(",\"a\":")
+            append(quote(meta.attId))
+            meta.width?.let {
+                append(",\"w\":")
+                append(it)
+            }
+            meta.height?.let {
+                append(",\"h\":")
+                append(it)
+            }
+            meta.fileName?.takeIf { it.isNotBlank() }?.let {
+                append(",\"fn\":")
+                append(quote(it))
+            }
+            append('}')
         }
+    }
+
+    fun decode(raw: String): Decoded {
+        when {
+            raw.startsWith(ENVELOPE_V2_PREFIX) -> return decodeV2(raw)
+            raw.startsWith(ENVELOPE_V1_PREFIX) -> return decodeV1(raw)
+            else -> return Decoded(text = raw, sensitive = false, replyToId = null)
+        }
+    }
+
+    private fun decodeV1(raw: String): Decoded {
         val sensitive = when {
             raw.contains("\"s\":true") -> true
             raw.contains("\"s\":false") -> false
@@ -49,11 +86,48 @@ object MessagePlaintextCodec {
         return Decoded(text = text, sensitive = sensitive, replyToId = replyToId)
     }
 
+    private fun decodeV2(raw: String): Decoded {
+        val kind = readQuotedField(raw, "\"k\":") ?: return Decoded(text = raw, sensitive = false)
+        val mime = readQuotedField(raw, "\"m\":") ?: return Decoded(text = raw, sensitive = false)
+        val attId = readQuotedField(raw, "\"a\":") ?: return Decoded(text = raw, sensitive = false)
+        val bytes = readLongField(raw, "\"b\":") ?: return Decoded(text = raw, sensitive = false)
+        val width = readIntField(raw, "\"w\":")
+        val height = readIntField(raw, "\"h\":")
+        val fileName = readQuotedField(raw, "\"fn\":")
+        return Decoded(
+            text = "",
+            sensitive = false,
+            replyToId = null,
+            attachment = AttachmentMeta(
+                kind = kind,
+                mime = mime,
+                bytes = bytes,
+                attId = attId,
+                width = width,
+                height = height,
+                fileName = fileName,
+            ),
+        )
+    }
+
     private fun readQuotedField(raw: String, key: String): String? {
         val index = raw.indexOf(key)
         if (index < 0) return null
         return unquote(raw, index + key.length)
     }
+
+    private fun readLongField(raw: String, key: String): Long? {
+        val index = raw.indexOf(key)
+        if (index < 0) return null
+        var i = index + key.length
+        while (i < raw.length && raw[i].isWhitespace()) i++
+        val start = i
+        while (i < raw.length && (raw[i].isDigit())) i++
+        if (start == i) return null
+        return raw.substring(start, i).toLongOrNull()
+    }
+
+    private fun readIntField(raw: String, key: String): Int? = readLongField(raw, key)?.toInt()
 
     private fun quote(value: String): String = buildString(value.length + 2) {
         append('"')
@@ -98,5 +172,6 @@ object MessagePlaintextCodec {
         return null
     }
 
-    private const val ENVELOPE_PREFIX = "{\"v\":1,"
+    private const val ENVELOPE_V1_PREFIX = "{\"v\":1,"
+    private const val ENVELOPE_V2_PREFIX = "{\"v\":2,"
 }

@@ -4,6 +4,7 @@ package com.vault.vanishx.presentation.mailbox
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import android.net.Uri
 import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseViewModel
@@ -14,6 +15,7 @@ import com.vault.vanishx.data.remote.RemoteReadWatermark
 import com.vault.vanishx.data.remote.RemoteTyping
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.MediaLimits
 import com.vault.vanishx.domain.model.RecallPolicy
 import com.vault.vanishx.domain.model.firebaseSafeKey
 import com.vault.vanishx.domain.repository.IdentityRepository
@@ -30,7 +32,9 @@ import com.vault.vanishx.domain.usecase.RefreshRoomMetaUseCase
 import com.vault.vanishx.domain.usecase.RenameRoomUseCase
 import com.vault.vanishx.domain.usecase.ReportRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
+import com.vault.vanishx.domain.usecase.SendRoomMediaUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
+import com.vault.vanishx.domain.usecase.WipeRoomMediaUseCase
 import com.vault.vanishx.presentation.paywall.PaywallDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +60,7 @@ data class RoomUiState(
     val isLoading: Boolean = true,
     val isSyncing: Boolean = false,
     val isSending: Boolean = false,
+    val isSendingMedia: Boolean = false,
     val isPurging: Boolean = false,
     val isBlocking: Boolean = false,
     val isReporting: Boolean = false,
@@ -94,6 +99,8 @@ data class RoomUiState(
     val myDeviceId: String = "",
     val toastMessage: String? = null,
     val pendingClipboard: String? = null,
+    val mediaViewerMessageId: String? = null,
+    val showAttachTray: Boolean = false,
     val pingPeerEvent: PingPeerEvent? = null,
 )
 
@@ -107,6 +114,13 @@ sealed interface RoomAction {
     data object Back : RoomAction
     data object Refresh : RoomAction
     data object Send : RoomAction
+    data object AttachClicked : RoomAction
+    data object DismissAttachTray : RoomAction
+    data object DismissFailedMedia : RoomAction
+    data class SendMedia(val uri: Uri, val mime: String, val displayName: String?) : RoomAction
+    data class OpenMediaViewer(val messageId: String) : RoomAction
+    data object DismissMediaViewer : RoomAction
+    data class SaveMedia(val messageId: String) : RoomAction
     data class DraftChanged(val value: String) : RoomAction
     data object RequestSensitiveSend : RoomAction
     data object ConfirmSensitiveSend : RoomAction
@@ -163,6 +177,9 @@ class RoomViewModel @Inject constructor(
     private val getRoom: GetRoomUseCase,
     private val refreshRoomMeta: RefreshRoomMetaUseCase,
     private val sendRoomMessage: SendRoomMessageUseCase,
+    private val sendRoomMedia: SendRoomMediaUseCase,
+    private val wipeRoomMedia: WipeRoomMediaUseCase,
+    private val mediaExportHelper: com.vault.vanishx.data.media.MediaExportHelper,
     private val syncRoomMailbox: SyncRoomMailboxUseCase,
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
     private val pingRoom: PingRoomUseCase,
@@ -221,6 +238,21 @@ class RoomViewModel @Inject constructor(
             RoomAction.Back -> launch { _navigator.emit(BaseDestination.Up()) }
             RoomAction.Refresh -> sync(showLoading = true)
             RoomAction.Send -> send(sensitive = false)
+            RoomAction.AttachClicked -> _uiState.update {
+                it.copy(showAttachTray = true, errorMessage = null)
+            }
+            RoomAction.DismissAttachTray -> _uiState.update { it.copy(showAttachTray = false) }
+            RoomAction.DismissFailedMedia -> _uiState.update { state ->
+                state.copy(
+                    messages = state.messages.filterNot {
+                        it.mediaTransferStatus == ChatMessage.MEDIA_FAILED
+                    },
+                )
+            }
+            is RoomAction.SendMedia -> sendMedia(action)
+            is RoomAction.OpenMediaViewer -> _uiState.update { it.copy(mediaViewerMessageId = action.messageId) }
+            RoomAction.DismissMediaViewer -> _uiState.update { it.copy(mediaViewerMessageId = null) }
+            is RoomAction.SaveMedia -> saveMedia(action.messageId)
             is RoomAction.DraftChanged -> {
                 _uiState.update {
                     it.copy(draft = action.value, errorMessage = null)
@@ -779,6 +811,97 @@ class RoomViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun sendMedia(action: RoomAction.SendMedia) {
+        if (_uiState.value.isExpired || _uiState.value.isSendingMedia) return
+        val kind = MediaLimits.kindForMimeOrName(action.mime, action.displayName)
+            ?: run {
+                _uiState.update {
+                    it.copy(errorMessage = "Unsupported file type. Use image, short video, PDF, or text.")
+                }
+                return
+            }
+        val pendingId = "pending_${System.currentTimeMillis()}"
+        val now = System.currentTimeMillis()
+        val pending = ChatMessage(
+            id = pendingId,
+            roomId = roomId,
+            body = "",
+            sentAt = now,
+            expiresAt = now,
+            direction = ChatMessage.DIRECTION_OUT,
+            mediaKind = kind,
+            mediaMime = action.mime,
+            mediaFileName = action.displayName,
+            mediaLocalPath = action.uri.toString(),
+            mediaTransferStatus = ChatMessage.MEDIA_PENDING,
+        )
+        _uiState.update {
+            it.copy(
+                isSendingMedia = true,
+                showAttachTray = false,
+                errorMessage = null,
+                messages = (it.messages + pending).sortedBy { msg -> msg.sentAt },
+            )
+        }
+        flow { emit(sendRoomMedia(roomId, action.uri, action.mime, action.displayName)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { sent ->
+                _uiState.update { state ->
+                    state.copy(
+                        isSendingMedia = false,
+                        messages = (state.messages.filterNot { it.id == pendingId } + sent)
+                            .distinctBy { it.id }
+                            .sortedBy { it.sentAt },
+                    )
+                }
+            }
+            .catch { error ->
+                Timber.e(error, "Media send failed")
+                _uiState.update { state ->
+                    state.copy(
+                        isSendingMedia = false,
+                        errorMessage = friendlyError(error),
+                        messages = state.messages.map { msg ->
+                            if (msg.id == pendingId) {
+                                msg.copy(mediaTransferStatus = ChatMessage.MEDIA_FAILED)
+                            } else {
+                                msg
+                            }
+                        },
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun saveMedia(messageId: String) {
+        if (!_uiState.value.isPro) {
+            onAction(RoomAction.OpenPaywall)
+            return
+        }
+        val message = _uiState.value.messages.firstOrNull { it.id == messageId } ?: return
+        flow { emit(mediaExportHelper.saveToDevice(message)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { ok ->
+                _uiState.update {
+                    it.copy(
+                        mediaViewerMessageId = null,
+                        toastMessage = if (ok) "media_saved" else "media_save_failed",
+                    )
+                }
+            }
+            .catch { e ->
+                Timber.e(e, "Save media failed")
+                _uiState.update {
+                    it.copy(
+                        mediaViewerMessageId = null,
+                        toastMessage = "media_save_failed",
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
     private fun confirmBlock() {
         if (_uiState.value.isBlocking) return
         _uiState.update {
@@ -824,6 +947,7 @@ class RoomViewModel @Inject constructor(
             it.copy(isBlocking = true, showBurnConfirm = false, errorMessage = null)
         }
         flow {
+            wipeRoomMedia.wipeRoom(roomId, deleteRemote = true)
             mailboxRepository.deleteMessagesForRoom(roomId)
             mailboxRepository.upsertRoom(room.copy(status = MailboxRoom.STATUS_LEFT))
             emit(Unit)
@@ -1050,6 +1174,23 @@ class RoomViewModel @Inject constructor(
     }
 
     private fun mapMailboxError(message: String): String? = when {
+        message.contains("Object does not exist at location", ignoreCase = true) ||
+            message.contains("Object does not exist", ignoreCase = true) ->
+            "Firebase Storage not ready. Enable Storage on vanihx-staging and Publish storage.rules."
+        message.contains("Permission denied", ignoreCase = true) &&
+            message.contains("Storage", ignoreCase = true) ->
+            "Storage permission denied. Publish apps/vanishx/firebase/storage.rules."
+        message.contains("Unsupported media type", ignoreCase = true) ->
+            "Unsupported file type. Use image, short video, PDF, or text."
+        message.contains("Video duration", ignoreCase = true) ->
+            "Video must be ${MediaLimits.VIDEO_MAX_DURATION_MS / MS_PER_SEC}s or shorter."
+        message.contains("exceeds", ignoreCase = true) &&
+            message.contains("bytes", ignoreCase = true) ->
+            "File is too large for this chat."
+        message.contains("Unable to decode image", ignoreCase = true) ->
+            "Could not read that image."
+        message.contains("Unable to open content", ignoreCase = true) ->
+            "Could not open the selected file."
         message.contains("expired", ignoreCase = true) -> "Room expired"
         message.contains("Permission denied", ignoreCase = true) ->
             "Could not reach mailbox (permission). Check connection and try again."

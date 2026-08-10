@@ -22,6 +22,7 @@ class PurgeExpiredRoomUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
     private val remote: MailboxRemoteDataSource,
     private val roomPushTopics: RoomPushTopics,
+    private val wipeRoomMedia: WipeRoomMediaUseCase,
 ) {
     suspend operator fun invoke(roomId: String): PurgeExpiredRoomResult {
         val room = mailboxRepository.getRoom(roomId)
@@ -35,6 +36,8 @@ class PurgeExpiredRoomUseCase @Inject constructor(
         }.isSuccess
 
         roomPushTopics.unsubscribe(roomId)
+        runCatching { wipeRoomMedia.room(roomId, deleteRemote = true) }
+            .onFailure { Timber.w(it, "Media purge failed for room %s", roomId) }
 
         return PurgeExpiredRoomResult(
             roomId = roomId,

@@ -69,6 +69,7 @@ internal fun RoomMessageList(
     reactionsByMessage: Map<String, Map<String, Int>> = emptyMap(),
     peerReadWatermarkId: String? = null,
     onLongPressMessage: (ChatMessage) -> Unit = {},
+    onMediaClick: (ChatMessage) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -213,6 +214,7 @@ internal fun RoomMessageList(
                                 replyQuote = replyQuote,
                                 readReceipt = readReceipt,
                                 onLongPress = { onLongPressMessage(msg) },
+                                onMediaClick = { onMediaClick(msg) },
                                 onReplyQuoteClick = msg.replyToId?.let { id ->
                                     {
                                         val index = messageIndexById[id]
@@ -391,6 +393,7 @@ internal fun RoomActiveBody(
     reactionsByMessage: Map<String, Map<String, Int>> = emptyMap(),
     peerReadWatermarkId: String? = null,
     onLongPressMessage: (ChatMessage) -> Unit = {},
+    onMediaClick: (ChatMessage) -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         RoomMessageList(
@@ -402,6 +405,7 @@ internal fun RoomActiveBody(
             reactionsByMessage = reactionsByMessage,
             peerReadWatermarkId = peerReadWatermarkId,
             onLongPressMessage = onLongPressMessage,
+            onMediaClick = onMediaClick,
             modifier = Modifier.weight(1f),
         )
 

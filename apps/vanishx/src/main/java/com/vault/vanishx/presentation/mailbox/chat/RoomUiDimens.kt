@@ -9,6 +9,11 @@ internal object RoomUiDimens {
     val composerGap = 8.dp
     val bubbleMaxWidth = 280.dp
     val bubbleCorner = 16.dp
+    val mediaCorner = 16.dp
+    /** Reaction pill hangs this far past the bubble/media bottom edge. */
+    val reactionHangOffset = 10.dp
+    /** End inset for media timestamp so it does not sit under the reaction pill. */
+    val reactionMetaEndClearance = 40.dp
     val bubbleTailCorner = 4.dp
     val cardCorner = 16.dp
     val topBarHeight = 56.dp

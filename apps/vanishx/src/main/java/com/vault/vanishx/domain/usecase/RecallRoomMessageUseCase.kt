@@ -1,6 +1,7 @@
 package com.vault.vanishx.domain.usecase
 
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
+import com.vault.vanishx.data.remote.MediaStorageRemoteDataSource
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.RecallPolicy
 import com.vault.vanishx.domain.repository.MailboxRepository
@@ -17,6 +18,7 @@ class RecallRoomMessageUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
     private val proEntitlement: ProEntitlementRepository,
     private val remote: MailboxRemoteDataSource,
+    private val mediaRemote: MediaStorageRemoteDataSource,
 ) {
     suspend operator fun invoke(
         roomId: String,
@@ -43,6 +45,10 @@ class RecallRoomMessageUseCase @Inject constructor(
         }.onFailure { e ->
             Timber.w(e, "Remote recall delete failed for %s", messageId)
         }.isSuccess
+        existing.mediaAttId?.let { attId ->
+            runCatching { mediaRemote.delete(roomId, messageId, attId) }
+                .onFailure { Timber.w(it, "Media recall delete failed for %s", messageId) }
+        }
 
         val recalled = existing.copy(
             body = "",
