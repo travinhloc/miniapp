@@ -4,5 +4,6 @@
         <exclude domain="sharedpref" path="vanishx_identity_prefs.xml" />
         <exclude domain="sharedpref" path="vanishx_db_passphrase_prefs.xml" />
         <exclude domain="database" path="vanishx.db" />
+        <exclude domain="device_file" path="media" />
     </cloud-backup>
 </data-extraction-rules>

@@ -172,7 +172,7 @@
     <string name="room_ping_confirm">Ping</string>
     <string name="room_empty_e2e_title">End-to-end encrypted</string>
     <string name="room_empty_e2e_body">Messages stay protected on your device.</string>
-    <string name="room_composer_hint">Type a message…</string>
+    <string name="room_composer_hint">Message</string>
     <string name="room_send">Send</string>
     <string name="room_sent_tag">Sent · cannot recall</string>
     <string name="room_syncing">Syncing mailbox…</string>
@@ -354,4 +354,24 @@
     <string name="fcm_channel_description">Alerts when a temporary room may have new messages</string>
     <string name="fcm_notification_title">New mailbox activity</string>
     <string name="fcm_notification_body">Open the room to sync encrypted messages.</string>
+    <!-- Media -->
+    <string name="room_attach_cd">Attach media</string>
+    <string name="room_attach_more_cd">More attachments</string>
+    <string name="room_attach_gallery_cd">Photo and video</string>
+    <string name="room_attach_tray_title">More</string>
+    <string name="room_attach_gallery">Photo / Video</string>
+    <string name="room_attach_document">Document</string>
+    <string name="room_attach_tray_soon">More actions coming later (transfer, card, GIF…)</string>
+    <string name="room_media_image_cd">Shared image</string>
+    <string name="room_media_video">Video</string>
+    <string name="room_media_video_cd">Shared video</string>
+    <string name="room_media_file">Attachment</string>
+    <string name="room_media_uploading">Sending…</string>
+    <string name="room_media_failed">Could not send. Tap to dismiss.</string>
+    <string name="room_media_viewer_title">Attachment</string>
+    <string name="room_media_save">Save to device</string>
+    <string name="room_media_save_pro">Save with Pro</string>
+    <string name="room_media_saved">Saved to device</string>
+    <string name="room_media_save_failed">Could not save attachment</string>
+    <string name="room_media_missing">Attachment unavailable</string>
 </resources>

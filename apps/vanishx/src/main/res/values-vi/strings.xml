@@ -172,7 +172,7 @@
     <string name="room_ping_confirm">Gọi lại</string>
     <string name="room_empty_e2e_title">Mã hóa đầu cuối</string>
     <string name="room_empty_e2e_body">Tin nhắn được bảo vệ trên máy bạn.</string>
-    <string name="room_composer_hint">Nhập tin nhắn…</string>
+    <string name="room_composer_hint">Tin nhắn</string>
     <string name="room_send">Gửi</string>
     <string name="room_sent_tag">Đã phóng · không thu hồi</string>
     <string name="room_syncing">Đang đồng bộ hộp thư…</string>
@@ -354,4 +354,24 @@
     <string name="fcm_channel_description">Thông báo khi phòng tạm có thể có tin mới</string>
     <string name="fcm_notification_title">Hoạt động hộp thư mới</string>
     <string name="fcm_notification_body">Mở phòng để đồng bộ tin đã mã hóa.</string>
+    <!-- Media -->
+    <string name="room_attach_cd">Đính kèm media</string>
+    <string name="room_attach_more_cd">Thêm tùy chọn</string>
+    <string name="room_attach_gallery_cd">Ảnh và video</string>
+    <string name="room_attach_tray_title">Thêm</string>
+    <string name="room_attach_gallery">Ảnh / Video</string>
+    <string name="room_attach_document">Tài liệu</string>
+    <string name="room_attach_tray_soon">Sắp có thêm: chuyển khoản, danh thiếp, GIF…</string>
+    <string name="room_media_image_cd">Ảnh đã chia sẻ</string>
+    <string name="room_media_video">Video</string>
+    <string name="room_media_video_cd">Video đã chia sẻ</string>
+    <string name="room_media_file">Tệp đính kèm</string>
+    <string name="room_media_uploading">Đang gửi…</string>
+    <string name="room_media_failed">Gửi thất bại. Chạm để ẩn.</string>
+    <string name="room_media_viewer_title">Tệp đính kèm</string>
+    <string name="room_media_save">Lưu vào thiết bị</string>
+    <string name="room_media_save_pro">Lưu với Pro</string>
+    <string name="room_media_saved">Đã lưu vào máy</string>
+    <string name="room_media_save_failed">Không lưu được tệp đính kèm</string>
+    <string name="room_media_missing">Không có tệp đính kèm</string>
 </resources>

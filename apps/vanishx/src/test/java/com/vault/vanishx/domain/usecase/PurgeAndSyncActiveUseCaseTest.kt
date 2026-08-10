@@ -3,6 +3,10 @@ package com.vault.vanishx.domain.usecase
 import com.vault.vanishx.data.crypto.RoomMessageCipher
 import com.vault.vanishx.data.push.FakeRoomPushTopics
 import com.vault.vanishx.data.remote.InMemoryMailboxRemoteDataSource
+import com.vault.vanishx.data.remote.InMemoryMediaStorageRemoteDataSource
+import com.vault.vanishx.data.crypto.RoomBlobCipher
+import com.vault.vanishx.data.media.LocalMediaStore
+import org.robolectric.RuntimeEnvironment
 import com.vault.vanishx.data.remote.RemoteMailboxMessage
 import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.model.MailboxRoom
@@ -51,7 +55,7 @@ class PurgeAndSyncActiveUseCaseTest {
             ),
         )
 
-        val result = PurgeExpiredRoomUseCase(mailboxRepository, remote, FakeRoomPushTopics()).invoke("room1")
+        val result = PurgeExpiredRoomUseCase(mailboxRepository, remote, FakeRoomPushTopics(), wipeRoomMedia = mockk(relaxed = true)).invoke("room1")
 
         result.localDeleted shouldBe 0
         result.remotePurged shouldBe true
@@ -93,7 +97,12 @@ class PurgeAndSyncActiveUseCaseTest {
             ),
         )
 
-        val purge = PurgeExpiredRoomUseCase(mailboxRepository, remote, FakeRoomPushTopics())
+        val purge = PurgeExpiredRoomUseCase(
+            mailboxRepository,
+            remote,
+            FakeRoomPushTopics(),
+            wipeRoomMedia = mockk(relaxed = true),
+        )
         val result = SyncRoomMailboxUseCase(
             mailboxRepository = mailboxRepository,
             identityRepository = identityRepository,
@@ -102,6 +111,9 @@ class PurgeAndSyncActiveUseCaseTest {
             purgeExpiredRoom = purge,
             blockRepository = mockk(relaxed = true),
             refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
+            mediaRemote = InMemoryMediaStorageRemoteDataSource(),
+            blobCipher = RoomBlobCipher(),
+            localMediaStore = LocalMediaStore(RuntimeEnvironment.getApplication()),
         ).invoke("room1")
 
         result.ingested shouldBe 0

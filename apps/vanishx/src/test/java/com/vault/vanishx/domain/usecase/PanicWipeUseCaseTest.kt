@@ -35,6 +35,7 @@ class PanicWipeUseCaseTest {
             securityPinStore = pins,
             appLockSession = session,
             ensureIdentity = ensureIdentity,
+            wipeRoomMedia = mockk(relaxed = true),
         ).invoke()
 
         coVerify { wiper.wipe() }

@@ -1,4 +1,10 @@
-@file:Suppress("ComplexMethod", "MagicNumber", "UnstableCollections", "MatchingDeclarationName")
+@file:Suppress(
+    "ComplexMethod",
+    "MagicNumber",
+    "UnstableCollections",
+    "MatchingDeclarationName",
+    "ComposableParamOrder",
+)
 
 package com.vault.vanishx.presentation.mailbox.chat
 
@@ -7,6 +13,7 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,10 +22,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,6 +53,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -45,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.presentation.theme.VanishXColors
@@ -64,6 +82,7 @@ internal fun RoomMessageBubble(
     replyQuote: ReplyQuoteUi? = null,
     readReceipt: Boolean = false,
     onLongPress: (() -> Unit)? = null,
+    onMediaClick: (() -> Unit)? = null,
     onReplyQuoteClick: (() -> Unit)? = null,
 ) {
     val mine = message.direction == ChatMessage.DIRECTION_OUT
@@ -128,8 +147,12 @@ internal fun RoomMessageBubble(
                     .background(
                         if (mine) VanishXColors.Primary else RoomUiDimens.bubbleInColor,
                     )
-                    .pointerInput(message.id, message.sensitive, message.recalled, onLongPress) {
-                        if (message.sensitive && !message.recalled) {
+                    .pointerInput(message.id, message.sensitive, message.recalled, message.isMedia, onLongPress) {
+                        if (message.isMedia) {
+                            if (message.mediaTransferStatus != ChatMessage.MEDIA_PENDING) {
+                                detectTapGestures(onTap = { onMediaClick?.invoke() })
+                            }
+                        } else if (message.sensitive && !message.recalled) {
                             // Hold-to-read only. Do not set onLongPress here — Compose cancels
                             // onPress after longPressTimeout when onLongPress is registered,
                             // so users could only peek ~500ms before the action sheet stole focus.
@@ -217,6 +240,15 @@ internal fun RoomMessageBubble(
                         },
                     )
                 }
+                message.isMedia -> {
+                    MediaMessageBody(message = message, mine = mine)
+                    BubbleMetaRow(
+                        mine = mine,
+                        sentAt = message.sentAt,
+                        readReceipt = readReceipt,
+                        modifier = Modifier.align(Alignment.End),
+                    )
+                }
                 message.sensitive -> {
                     // Stable layout: body slot + hold hint + meta — avoid branch swap height jump
                     SensitiveBody(
@@ -273,6 +305,137 @@ internal fun RoomMessageBubble(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun MediaMessageBody(message: ChatMessage, mine: Boolean) {
+    val tint = if (mine) VanishXColors.OnPrimary else VanishXColors.OnSurface
+    val pending = message.mediaTransferStatus == ChatMessage.MEDIA_PENDING
+    val failed = message.mediaTransferStatus == ChatMessage.MEDIA_FAILED
+    Box {
+        when (message.mediaKind) {
+            "image" -> Image(
+                painter = rememberAsyncImagePainter(message.mediaLocalPath),
+                contentDescription = stringResource(R.string.room_media_image_cd),
+                modifier = Modifier
+                    .widthIn(max = RoomUiDimens.bubbleMaxWidth)
+                    .heightIn(max = 220.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+            )
+            "video" -> MediaFileCard(
+                title = message.mediaFileName ?: stringResource(R.string.room_media_video),
+                subtitle = formatMediaBytes(message.mediaBytes),
+                icon = Icons.Filled.PlayArrow,
+                tint = tint,
+                mine = mine,
+            )
+            else -> MediaFileCard(
+                title = message.mediaFileName ?: stringResource(R.string.room_media_file),
+                subtitle = formatMediaBytes(message.mediaBytes),
+                icon = Icons.Filled.Info,
+                tint = tint,
+                mine = mine,
+            )
+        }
+        if (pending) {
+            MediaTransferOverlay(failed = false, modifier = Modifier.matchParentSize())
+        } else if (failed) {
+            MediaTransferOverlay(failed = true, modifier = Modifier.matchParentSize())
+        }
+    }
+}
+
+@Composable
+private fun MediaFileCard(
+    title: String,
+    subtitle: String?,
+    icon: ImageVector,
+    tint: Color,
+    mine: Boolean,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.widthIn(min = 160.dp, max = RoomUiDimens.bubbleMaxWidth),
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = if (mine) {
+                VanishXColors.OnPrimary.copy(alpha = 0.18f)
+            } else {
+                VanishXColors.Primary.copy(alpha = 0.12f)
+            },
+            modifier = Modifier.size(40.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (mine) VanishXColors.OnPrimary else VanishXColors.Primary,
+                modifier = Modifier.padding(8.dp),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = tint,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tint.copy(alpha = 0.75f),
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MediaTransferOverlay(failed: Boolean, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.Black.copy(alpha = 0.35f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (failed) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.room_media_failed),
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp),
+                )
+                Text(
+                    text = stringResource(R.string.room_media_failed),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+        } else {
+            CircularProgressIndicator(
+                modifier = Modifier.size(36.dp),
+                color = Color.White,
+                strokeWidth = 3.dp,
+            )
+        }
+    }
+}
+
+private fun formatMediaBytes(bytes: Long?): String? {
+    if (bytes == null || bytes <= 0L) return null
+    val kb = bytes / 1024.0
+    return if (kb < 1024) {
+        "${kb.toInt()} KB"
+    } else {
+        val mb = kb / 1024.0
+        "${(mb * 10).toInt() / 10.0} MB"
     }
 }
 

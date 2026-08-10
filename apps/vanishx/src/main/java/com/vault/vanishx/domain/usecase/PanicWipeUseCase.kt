@@ -11,6 +11,7 @@ import javax.inject.Inject
 /**
  * Panic wipe: SQLCipher DB + passphrase, identity keyset, pending invite, PIN store → fresh identity.
  */
+@Suppress("LongParameterList")
 class PanicWipeUseCase @Inject constructor(
     private val localDatabaseWiper: LocalDatabaseWiper,
     private val identityKeyStore: IdentityKeyStore,
@@ -18,10 +19,12 @@ class PanicWipeUseCase @Inject constructor(
     private val securityPinStore: SecurityPinStore,
     private val appLockSession: AppLockSession,
     private val ensureIdentity: EnsureIdentityUseCase,
+    private val wipeRoomMedia: WipeRoomMediaUseCase,
 ) {
     suspend operator fun invoke() {
         Timber.w("Panic wipe starting")
         localDatabaseWiper.wipe()
+        wipeRoomMedia.localAll()
         identityKeyStore.clear()
         pendingInviteStore.clear()
         securityPinStore.clearAll()

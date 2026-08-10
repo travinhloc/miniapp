@@ -7,6 +7,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -31,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -39,11 +42,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
+import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.presentation.components.VanishXAlertDialog
 import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
+import com.vault.vanishx.presentation.mailbox.chat.AttachTraySheet
 import com.vault.vanishx.presentation.mailbox.chat.FeedbackMessages
 import com.vault.vanishx.presentation.mailbox.chat.REPORT_REASON_MAX_LINES
 import com.vault.vanishx.presentation.mailbox.chat.RoomActiveBody
@@ -57,6 +62,7 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomInviteSheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomLeft
 import com.vault.vanishx.presentation.mailbox.chat.RoomLoading
 import com.vault.vanishx.presentation.mailbox.chat.RoomMessageActionSheet
+import com.vault.vanishx.presentation.mailbox.chat.MediaViewerDialog
 import com.vault.vanishx.presentation.mailbox.chat.RoomSafetySheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomScreenshotBanner
 import com.vault.vanishx.presentation.mailbox.chat.RoomUiDimens
@@ -64,6 +70,7 @@ import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
 import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
 import com.vault.vanishx.presentation.mailbox.chat.isMessageAtOrBeforeWatermark
 import com.vault.vanishx.presentation.theme.VanishXColors
+import dagger.hilt.android.EntryPointAccessors
 import timber.log.Timber
 
 @Composable
@@ -73,6 +80,48 @@ fun RoomScreen(
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val appLockSession = remember(context) {
+        EntryPointAccessors.fromActivity(
+            context as Activity,
+            AppLockEntryPoint::class.java,
+        ).appLockSession()
+    }
+    val galleryPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        appLockSession.endExternalUi()
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            onAttachmentSelected(
+                context = context,
+                uri = uri,
+                onAction = viewModel::onAction,
+            )
+        }
+    }
+    val documentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        appLockSession.endExternalUi()
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            onAttachmentSelected(
+                context = context,
+                uri = uri,
+                onAction = viewModel::onAction,
+            )
+        }
+    }
     viewModel.navigator.collectAsEffect { destination -> navigator(destination) }
 
     LaunchedEffect(uiState.pingPeerEvent) {
@@ -100,6 +149,8 @@ fun RoomScreen(
         val message = when (key) {
             "copied" -> context.getString(R.string.room_action_copied)
             "sensitive_copy_blocked" -> context.getString(R.string.room_copy_blocked_sensitive)
+            "media_saved" -> context.getString(R.string.room_media_saved)
+            "media_save_failed" -> context.getString(R.string.room_media_save_failed)
             else -> key
         }
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -126,6 +177,28 @@ fun RoomScreen(
             }
             context.startActivity(Intent.createChooser(intent, context.getString(R.string.create_share)))
         },
+        onOpenMore = {
+            viewModel.onAction(RoomAction.AttachClicked)
+        },
+        onPickGallery = {
+            appLockSession.beginExternalUi()
+            galleryPicker.launch(arrayOf("image/*", "video/*"))
+        },
+        onPickDocument = {
+            appLockSession.beginExternalUi()
+            documentPicker.launch(
+                arrayOf(
+                    "application/pdf",
+                    "text/plain",
+                    "application/zip",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "*/*",
+                ),
+            )
+        },
     )
 }
 
@@ -135,6 +208,9 @@ private fun RoomContent(
     onAction: (RoomAction) -> Unit,
     onCopyInvite: (String) -> Unit,
     onShareInvite: (String) -> Unit,
+    onOpenMore: () -> Unit,
+    onPickGallery: () -> Unit,
+    onPickDocument: () -> Unit,
 ) {
     val showComposer = !uiState.isLoading &&
         uiState.room?.status == MailboxRoom.STATUS_ACTIVE &&
@@ -202,6 +278,13 @@ private fun RoomContent(
                 reactionsByMessage = uiState.reactionsByMessage,
                 peerReadWatermarkId = uiState.peerReadWatermarkId,
                 onLongPressMessage = { onAction(RoomAction.OpenMessageActions(it.id)) },
+                onMediaClick = { msg ->
+                    when (msg.mediaTransferStatus) {
+                        ChatMessage.MEDIA_FAILED -> onAction(RoomAction.DismissFailedMedia)
+                        ChatMessage.MEDIA_PENDING -> Unit
+                        else -> onAction(RoomAction.OpenMediaViewer(msg.id))
+                    }
+                },
                 modifier = Modifier.weight(1f),
             )
         }
@@ -221,11 +304,22 @@ private fun RoomContent(
             RoomComposer(
                 draft = uiState.draft,
                 isSending = uiState.isSending,
+                isSendingMedia = uiState.isSendingMedia,
+                onOpenMore = onOpenMore,
+                onPickGallery = onPickGallery,
                 locked = isHandshakeWaiting,
                 replySnippet = replySnippet,
                 onAction = onAction,
             )
         }
+    }
+
+    if (uiState.showAttachTray) {
+        AttachTraySheet(
+            enabled = !uiState.isSendingMedia,
+            onPickDocument = onPickDocument,
+            onAction = onAction,
+        )
     }
 
     if (uiState.showSensitiveSendConfirm) {
@@ -360,6 +454,19 @@ private fun RoomContent(
     val actionMessage = uiState.actionMessageId?.let { id ->
         uiState.messages.firstOrNull { it.id == id }
     }
+    val mediaViewerMessage = uiState.mediaViewerMessageId?.let { id ->
+        uiState.messages.firstOrNull { it.id == id && it.isMedia }
+    }
+    if (mediaViewerMessage != null) {
+        MediaViewerDialog(
+            message = mediaViewerMessage,
+            isPro = uiState.isPro,
+            onDismiss = { onAction(RoomAction.DismissMediaViewer) },
+            onSave = {
+                onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+            },
+        )
+    }
     if (actionMessage != null) {
         RoomMessageActionSheet(
             uiState = uiState,
@@ -419,6 +526,57 @@ private fun RoomContent(
                 }
             },
         )
+    }
+}
+
+private fun onAttachmentSelected(
+    context: Context,
+    uri: android.net.Uri,
+    onAction: (RoomAction) -> Unit,
+) {
+    val mime = resolveAttachmentMime(context, uri)
+    val displayName = resolveAttachmentDisplayName(context, uri)
+    onAction(RoomAction.SendMedia(uri, mime, displayName))
+}
+
+private fun resolveAttachmentDisplayName(context: Context, uri: android.net.Uri): String? {
+    val fromQuery = runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (index < 0) null else cursor.getString(index)
+        }
+    }.getOrNull()
+    return fromQuery ?: uri.lastPathSegment
+}
+
+private fun resolveAttachmentMime(context: Context, uri: android.net.Uri): String {
+    context.contentResolver.getType(uri)?.takeIf { it.isNotBlank() }?.let { return it }
+    val name = runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (index < 0) null else cursor.getString(index)
+        }
+    }.getOrNull()
+    val fromName = name?.substringAfterLast('.', "")?.lowercase()?.takeIf { it.isNotBlank() }
+    val fromPath = uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase()
+    val ext = fromName ?: fromPath
+    return when (ext) {
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "webp" -> "image/webp"
+        "mp4", "m4v" -> "video/mp4"
+        "webm" -> "video/webm"
+        "3gp", "3gpp" -> "video/3gpp"
+        "pdf" -> "application/pdf"
+        "txt" -> "text/plain"
+        "zip" -> "application/zip"
+        "doc" -> "application/msword"
+        "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "xls" -> "application/vnd.ms-excel"
+        "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else -> "application/octet-stream"
     }
 }
 

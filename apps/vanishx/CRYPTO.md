@@ -71,9 +71,16 @@ Local `rooms` row stores `roomKey` + `role` (`creator` \| `member`) in SQLCipher
 
 Plaintext never leaves the device. Free has **no recall**. Pro recall (4.2) = stub entitlement + delete mailbox node (IAP deferred).
 
-## 6. Out of scope (later)
+## 6. Media blobs (Epic 11)
 
-- Biometric unlock · RevenueCat / real IAP paywall
+| Purpose | Choice |
+|---------|--------|
+| AEAD | **AES-256-GCM** via Tink `AesGcmJce` (`RoomBlobCipher`) |
+| Key | Same invite `roomKey` |
+| AAD | UTF-8 `roomId\|attId` |
+| Wire | Raw IV‖ciphertext‖tag bytes on Firebase Storage |
+| Envelope | RTDB message plaintext `v:2` JSON (meta only) via `MessagePlaintextCodec` |
+| Local cache | `noBackupFilesDir/media` |
 
 ## 7. Block & Report (story 3.3)
 
@@ -95,17 +102,24 @@ Plaintext never leaves the device. Free has **no recall**. Pro recall (4.2) = st
 | Recall | Delete RTDB message if present · mark local `recalled` + clear body |
 | Peer already synced | Best-effort only (no `recalls/` fan-out in MVP) |
 
+## Out of scope (later)
+
+- Biometric unlock · RevenueCat SKU map · ECDH per-file · Caption (E11-5)
+
 ## Code map
 
 - `data/crypto/TinkIdentityKeyStore.kt` — identity  
 - `data/crypto/RoomSecretsGenerator.kt` — room id/key  
 - `data/crypto/RoomMessageCipher.kt` — AES-GCM room messages  
+- `data/crypto/RoomBlobCipher.kt` — AES-GCM media blobs  
 - `domain/model/InviteUriCodec.kt` — invite URI  
 - `data/local/db/VanishxLocalDatabase.kt` — SQLCipher Room + wipe  
 - `data/local/db/DatabasePassphraseStore.kt` — DB passphrase  
 - `data/remote/FirebaseMailboxRemoteDataSource.kt` — RTDB mailbox  
+- `data/remote/FirebaseMediaStorageRemoteDataSource.kt` — Storage blobs  
 - `data/billing/StubProEntitlementRepository.kt` — Pro stub  
 - `domain/usecase/EnsureIdentityUseCase.kt` — identity bootstrap  
 - `domain/usecase/CreateRoomUseCase.kt` / `JoinRoomUseCase.kt` — invite flow  
-- `domain/usecase/SendRoomMessageUseCase.kt` / `SyncRoomMailboxUseCase.kt` — mũi tên  
+- `domain/usecase/SendRoomMessageUseCase.kt` / `SyncRoomMailboxUseCase.kt` — text  
+- `domain/usecase/SendRoomMediaUseCase.kt` / `WipeRoomMediaUseCase.kt` — media  
 - `domain/usecase/RecallRoomMessageUseCase.kt` — Pro recall  

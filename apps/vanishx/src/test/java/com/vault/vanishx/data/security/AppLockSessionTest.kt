@@ -19,4 +19,14 @@ class AppLockSessionTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `external ui suppresses lock-on-stop`() {
+        val session = AppLockSession()
+        session.shouldLockOnStop() shouldBe true
+        session.beginExternalUi()
+        session.shouldLockOnStop() shouldBe false
+        session.endExternalUi()
+        session.shouldLockOnStop() shouldBe true
+    }
 }

@@ -1,10 +1,14 @@
 package com.vault.vanishx.domain.usecase
 
 import com.vault.vanishx.data.crypto.RoomCryptoException
+import com.vault.vanishx.data.crypto.RoomBlobCipher
 import com.vault.vanishx.data.crypto.RoomMessageCipher
+import com.vault.vanishx.data.media.LocalMediaStore
+import com.vault.vanishx.data.remote.MediaStorageRemoteDataSource
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteMailboxMessage
 import com.vault.vanishx.domain.model.ChatMessage
+import com.vault.vanishx.domain.model.MediaLimits
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.model.MessagePlaintextCodec
 import com.vault.vanishx.domain.repository.BlockRepository
@@ -20,7 +24,7 @@ data class SyncMailboxResult(
     val decryptFailures: Int,
 )
 
-@Suppress("LargeClass", "LongParameterList")
+@Suppress("LargeClass", "LongParameterList", "ComplexMethod", "ReturnCount", "MagicNumber")
 class SyncRoomMailboxUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
     private val identityRepository: IdentityRepository,
@@ -29,6 +33,9 @@ class SyncRoomMailboxUseCase @Inject constructor(
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
     private val blockRepository: BlockRepository,
     private val refreshRoomMeta: RefreshRoomMetaUseCase,
+    private val mediaRemote: MediaStorageRemoteDataSource,
+    private val blobCipher: RoomBlobCipher,
+    private val localMediaStore: LocalMediaStore,
 ) {
     suspend operator fun invoke(roomId: String): SyncMailboxResult {
         refreshRoomMeta(roomId)
@@ -221,6 +228,23 @@ class SyncRoomMailboxUseCase @Inject constructor(
             mailboxRepository.upsertRoom(room.copy(peerPub = remoteMessage.senderPub))
         }
         val decoded = MessagePlaintextCodec.decode(plaintext)
+        val attachment = decoded.attachment
+        val localPath = attachment?.let { meta ->
+            runCatching {
+                val encrypted = mediaRemote.download(
+                    room.id,
+                    remoteMessage.messageId,
+                    meta.attId,
+                    MediaLimits.maxBytesForKind(meta.kind) + DOWNLOAD_OVERHEAD_BYTES,
+                )
+                localMediaStore.write(
+                    room.id,
+                    remoteMessage.messageId,
+                    meta.attId,
+                    blobCipher.decrypt(room.id, meta.attId, room.roomKey, encrypted),
+                )
+            }.onFailure { Timber.w(it, "Media download failed for %s", remoteMessage.messageId) }.getOrNull()
+        }
         mailboxRepository.upsertMessage(
             ChatMessage(
                 id = remoteMessage.messageId,
@@ -231,6 +255,19 @@ class SyncRoomMailboxUseCase @Inject constructor(
                 direction = direction,
                 sensitive = decoded.sensitive,
                 replyToId = decoded.replyToId,
+                mediaKind = attachment?.kind,
+                mediaMime = attachment?.mime,
+                mediaBytes = attachment?.bytes,
+                mediaAttId = attachment?.attId,
+                mediaWidth = attachment?.width,
+                mediaHeight = attachment?.height,
+                mediaFileName = attachment?.fileName,
+                mediaLocalPath = localPath,
+                mediaTransferStatus = if (attachment == null || localPath != null) {
+                    ChatMessage.MEDIA_READY
+                } else {
+                    ChatMessage.MEDIA_FAILED
+                },
             ),
         )
         // RTDB is a peer pickup queue: only the recipient removes ciphertext.
@@ -257,5 +294,9 @@ class SyncRoomMailboxUseCase @Inject constructor(
         REMOVED_ONLY,
         DECRYPT_FAIL,
         SKIPPED,
+    }
+
+    private companion object {
+        const val DOWNLOAD_OVERHEAD_BYTES = 64 * 1024
     }
 }

@@ -2,6 +2,10 @@ package com.vault.vanishx.domain.usecase
 
 import com.vault.vanishx.data.crypto.RoomMessageCipher
 import com.vault.vanishx.data.remote.InMemoryMailboxRemoteDataSource
+import com.vault.vanishx.data.remote.InMemoryMediaStorageRemoteDataSource
+import com.vault.vanishx.data.crypto.RoomBlobCipher
+import com.vault.vanishx.data.media.LocalMediaStore
+import org.robolectric.RuntimeEnvironment
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.model.MailboxRoom
@@ -129,9 +133,13 @@ class SendSyncRoomMessageUseCaseTest {
                 mailboxRepository,
                 remote,
                 com.vault.vanishx.data.push.FakeRoomPushTopics(),
+                wipeRoomMedia = mockk(relaxed = true),
             ),
             blockRepository = mockk(relaxed = true),
             refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
+            mediaRemote = InMemoryMediaStorageRemoteDataSource(),
+            blobCipher = RoomBlobCipher(),
+            localMediaStore = LocalMediaStore(RuntimeEnvironment.getApplication()),
         ).invoke("room1")
 
         result.ingested shouldBe 1
@@ -181,9 +189,13 @@ class SendSyncRoomMessageUseCaseTest {
                 mailboxRepository,
                 remote,
                 com.vault.vanishx.data.push.FakeRoomPushTopics(),
+                wipeRoomMedia = mockk(relaxed = true),
             ),
             blockRepository = mockk(relaxed = true),
             refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
+            mediaRemote = InMemoryMediaStorageRemoteDataSource(),
+            blobCipher = RoomBlobCipher(),
+            localMediaStore = LocalMediaStore(RuntimeEnvironment.getApplication()),
         ).invoke("room1")
 
         coVerify {
@@ -234,9 +246,13 @@ class SendSyncRoomMessageUseCaseTest {
                 mailboxRepository,
                 remote,
                 com.vault.vanishx.data.push.FakeRoomPushTopics(),
+                wipeRoomMedia = mockk(relaxed = true),
             ),
             blockRepository = mockk(relaxed = true),
             refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
+            mediaRemote = InMemoryMediaStorageRemoteDataSource(),
+            blobCipher = RoomBlobCipher(),
+            localMediaStore = LocalMediaStore(RuntimeEnvironment.getApplication()),
         ).invoke("room1")
 
         result.removedRemote shouldBe 0
@@ -275,9 +291,13 @@ class SendSyncRoomMessageUseCaseTest {
                 mailboxRepository,
                 remote,
                 com.vault.vanishx.data.push.FakeRoomPushTopics(),
+                wipeRoomMedia = mockk(relaxed = true),
             ),
             blockRepository = mockk(relaxed = true),
             refreshRoomMeta = RefreshRoomMetaUseCase(mailboxRepository, remote),
+            mediaRemote = InMemoryMediaStorageRemoteDataSource(),
+            blobCipher = RoomBlobCipher(),
+            localMediaStore = LocalMediaStore(RuntimeEnvironment.getApplication()),
         )
         val result = sync.ingestRemoteList("room1", listOf(remoteMsg))
 

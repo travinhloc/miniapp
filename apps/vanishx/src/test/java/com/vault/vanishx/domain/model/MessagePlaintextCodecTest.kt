@@ -70,4 +70,24 @@ class MessagePlaintextCodecTest {
         decoded.replyToId shouldBe null
         decoded.sensitive shouldBe true
     }
+
+    @Test
+    fun `encode attachment v2 round-trips meta`() {
+        val meta = AttachmentMeta(
+            kind = AttachmentMeta.KIND_IMAGE,
+            mime = "image/jpeg",
+            bytes = 4200,
+            attId = "a_abc",
+            width = 1280,
+            height = 720,
+            fileName = "shot.jpg",
+        )
+        val wire = MessagePlaintextCodec.encodeAttachment(meta)
+        wire.startsWith("{\"v\":2,") shouldBe true
+        val decoded = MessagePlaintextCodec.decode(wire)
+        decoded.attachment shouldBe meta
+        decoded.text shouldBe ""
+        decoded.sensitive shouldBe false
+        decoded.replyToId shouldBe null
+    }
 }
