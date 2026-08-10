@@ -10,9 +10,9 @@ When implementing or discussing **VanishX** in this monorepo:
 1. Product docs are NOT in this repo. Read from sibling path:
    - `../project-note-cursor/vanishx-docs/`
    - Absolute: `/Users/loctra/Workspace/01_Projects/Active/project-note-cursor/vanishx-docs/`
-2. Start with `vanishx-engine-vi.md` (PRD) and the **active** story under `stories/` (**Epic 11:** `11.0.epic.md` / `11.1`… · media spec `vanishx-media-spec-vi.md`). Done archive: `stories/completed/` (Epic 1–5, 7–9).
-3. Core MVP + Epic 5–9 đã ship. Phase hiện tại: **Epic 11** Attachment/Media. Song song: Epic 6 Optimize · **Epic R** Release Prod (không dùng Epic 10).
-4. Defer unless asked: IAP/RevenueCat SKU map, App Links HTTPS, WebRTC, KMP/iOS · Caption media (E11-5) · History/Paywall deep (🅿️).
+2. Start with `vanishx-engine-vi.md` (PRD) and the **active** story under `stories/` (**Epic 6** / **Epic R**). **Epic 11** Media = **Done** (`11.0.epic.md` · debt **D11-***). Archive: `stories/completed/` (Epic 1–5, 7–9).
+3. Core MVP + Epic 5–9 + **Epic 11** đã ship. Phase hiện tại: Epic 6 Optimize · **Epic R** Release Prod (không dùng Epic 10). Feedback media / voice / camera → epic/story mới khi PO define.
+4. Defer unless asked: IAP/RevenueCat SKU map, App Links HTTPS, WebRTC, KMP/iOS · Caption media (E11-5) · ghi âm/ghi hình · History/Paywall deep (🅿️).
 5. New app module: `apps/vanishx` with `applicationId` `com.vault.vanishx`. Do not put VanishX features in `core/*`.
 6. See `docs/VANISHX.md` for how humans/agents should attach docs in Cursor.
 7. Update product docs in `project-note-cursor`; only update this repo’s pointer files if paths/process change.
