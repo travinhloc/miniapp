@@ -10,7 +10,7 @@ When implementing or discussing **VanishX** in this monorepo:
 1. Product docs are NOT in this repo. Read from sibling path:
    - `../project-note-cursor/vanishx-docs/`
    - Absolute: `/Users/loctra/Workspace/01_Projects/Active/project-note-cursor/vanishx-docs/`
-2. Start with `vanishx-engine-vi.md` (PRD) and the **active** story under `stories/` (**Epic 6** / **Epic R**). **Epic 11** Media = **Done** (debt **D11-***). **Epic 12** Chat Detail = **Done** (2026-08-13). Archive: `stories/completed/` (Epic 1–5, 7–9).
+2. Start with `vanishx-engine-vi.md` (PRD) and the **active** story under `stories/` (**Epic 6** / **Epic R**). **Epic 11** Media = **Done** (debt **D11-***). **Epic 12** Chat Detail = **Done** → `stories/completed/12.*`. Archive: `stories/completed/` (Epic 1–5, 7–9, **12**).
 3. Core MVP + Epic 5–9 + **Epic 11** + **Epic 12** đã ship. Phase hiện tại: Epic 6 Optimize · **Epic R** Release Prod.
 4. Defer unless asked: IAP/RevenueCat SKU map, App Links HTTPS, WebRTC, KMP/iOS · Caption media (E11-5) · ghi âm/ghi hình · History/Paywall deep (🅿️).
 5. New app module: `apps/vanishx` with `applicationId` `com.vault.vanishx`. Do not put VanishX features in `core/*`.

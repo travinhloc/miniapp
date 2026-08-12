@@ -12,8 +12,8 @@ Docs **không nằm trong repo này**. Nguồn sự thật:
 
 1. `vanishx-engine-vi.md` — PRD / core MVP  
 2. `vanishx-project-planning.md` — timeline  
-3. `stories/README.md` + story đang làm (**Epic 6** / **Epic R** · E11 Done · **E12 Done** 2026-08-13)  
-4. `stories/completed/` — epic/story Done (1–5, 7–9)  
+3. `stories/README.md` + story đang làm (**Epic 6** / **Epic R** · E11 Done · **E12 Done** → `completed/12.*`)  
+4. `stories/completed/` — epic/story Done (1–5, 7–9, **12**)  
 5. `vanishx-ui-ux-sprint-backlog.md` — Confirm PO / Chat backlog  
 6. `vanishx-production-dod.md` + `stories/R.0.epic.md` — Epic R Release Prod / soft-launch  
 7. `mockup/main.html` — UI M2 Night gallery  
