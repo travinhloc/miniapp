@@ -8,7 +8,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,19 +46,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.util.formatRemainingMs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
+import java.io.File
 @Composable
 @Suppress("UnstableCollections")
 internal fun RoomMessageList(
@@ -70,6 +74,10 @@ internal fun RoomMessageList(
     peerReadWatermarkId: String? = null,
     onLongPressMessage: (ChatMessage) -> Unit = {},
     onMediaClick: (ChatMessage) -> Unit = {},
+    scrollToMessageId: String? = null,
+    highlightMessageId: String? = null,
+    wallpaperPath: String? = null,
+    onScrollToMessageConsumed: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -103,6 +111,7 @@ internal fun RoomMessageList(
         }
     }
     var stickToBottom by remember { mutableStateOf(true) }
+    var didInitialBottomScroll by remember { mutableStateOf(false) }
 
     LaunchedEffect(showTtl, expiresAt) {
         if (!showTtl) return@LaunchedEffect
@@ -128,25 +137,42 @@ internal fun RoomMessageList(
     }
 
     LaunchedEffect(messages.size, messages.lastOrNull()?.id) {
-        if (messages.isNotEmpty() && stickToBottom) {
-            listState.animateScrollToItem(ttlOffset + timeline.lastIndex)
+        val shouldStickToLatest = messages.isNotEmpty() &&
+            stickToBottom &&
+            scrollToMessageId == null
+        if (shouldStickToLatest) {
+            val target = ttlOffset + timeline.lastIndex
+            if (!didInitialBottomScroll) {
+                listState.scrollToItem(target)
+                didInitialBottomScroll = true
+            } else {
+                listState.animateScrollToItem(target)
+            }
         }
+    }
+
+    LaunchedEffect(scrollToMessageId) {
+        val targetId = scrollToMessageId ?: return@LaunchedEffect
+        val index = messageIndexById[targetId] ?: return@LaunchedEffect
+        listState.animateScrollToItem(ttlOffset + index)
+        onScrollToMessageConsumed()
     }
 
     val expiryProgress = roomExpiryProgress(expiresAt, activatedAt, nowMs)
     val showAura = !isExpired && shouldShowBubbleAura(expiryProgress)
 
-    if (messages.isEmpty()) {
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = RoomUiDimens.spacingMedium),
-            contentAlignment = Alignment.Center,
-        ) {
-            E2eEmptyCard(onClick = onOpenSafety)
-        }
-    } else {
-        Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
+        RoomWallpaperLayer(wallpaperPath = wallpaperPath)
+        if (messages.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = RoomUiDimens.spacingMedium),
+                contentAlignment = Alignment.Center,
+            ) {
+                E2eEmptyCard(onClick = onOpenSafety)
+            }
+        } else {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -206,27 +232,41 @@ internal fun RoomMessageList(
                             }
                             val readReceipt = msg.direction == ChatMessage.DIRECTION_OUT &&
                                 isMessageAtOrBeforeWatermark(msg.id, peerReadWatermarkId, messages)
-                            RoomMessageBubble(
-                                message = msg,
-                                showAura = showAura,
-                                auraIntensity = expiryProgress,
-                                reactionCounts = reactionsByMessage[msg.id].orEmpty(),
-                                replyQuote = replyQuote,
-                                readReceipt = readReceipt,
-                                onLongPress = { onLongPressMessage(msg) },
-                                onMediaClick = { onMediaClick(msg) },
-                                onReplyQuoteClick = msg.replyToId?.let { id ->
-                                    {
-                                        val index = messageIndexById[id]
-                                        if (index != null) {
-                                            scope.launch {
-                                                stickToBottom = false
-                                                listState.animateScrollToItem(ttlOffset + index)
+                            Box(
+                                modifier = if (msg.id == highlightMessageId) {
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            VanishXColors.Primary.copy(alpha = 0.18f),
+                                            RoundedCornerShape(12.dp),
+                                        )
+                                        .padding(vertical = 2.dp)
+                                } else {
+                                    Modifier
+                                },
+                            ) {
+                                RoomMessageBubble(
+                                    message = msg,
+                                    showAura = showAura,
+                                    auraIntensity = expiryProgress,
+                                    reactionCounts = reactionsByMessage[msg.id].orEmpty(),
+                                    replyQuote = replyQuote,
+                                    readReceipt = readReceipt,
+                                    onLongPress = { onLongPressMessage(msg) },
+                                    onMediaClick = { onMediaClick(msg) },
+                                    onReplyQuoteClick = msg.replyToId?.let { id ->
+                                        {
+                                            val index = messageIndexById[id]
+                                            if (index != null) {
+                                                scope.launch {
+                                                    stickToBottom = false
+                                                    listState.animateScrollToItem(ttlOffset + index)
+                                                }
                                             }
                                         }
-                                    }
-                                },
-                            )
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -271,6 +311,36 @@ internal fun RoomMessageList(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RoomWallpaperLayer(wallpaperPath: String?) {
+    val wallpaper = wallpaperPath
+    val colorArgb = RoomWallpaper.parseColorArgb(wallpaper)
+    when {
+        colorArgb != null -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(androidx.compose.ui.graphics.Color(colorArgb)),
+            )
+        }
+        !wallpaper.isNullOrBlank() -> {
+            Image(
+                painter = rememberAsyncImagePainter(File(wallpaper)),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+    if (RoomWallpaper.isBright(wallpaper) && !wallpaper.isNullOrBlank()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(VanishXColors.Bg.copy(alpha = 0.45f)),
+        )
     }
 }
 
@@ -394,6 +464,10 @@ internal fun RoomActiveBody(
     peerReadWatermarkId: String? = null,
     onLongPressMessage: (ChatMessage) -> Unit = {},
     onMediaClick: (ChatMessage) -> Unit = {},
+    scrollToMessageId: String? = null,
+    highlightMessageId: String? = null,
+    wallpaperPath: String? = null,
+    onScrollToMessageConsumed: () -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         RoomMessageList(
@@ -406,6 +480,10 @@ internal fun RoomActiveBody(
             peerReadWatermarkId = peerReadWatermarkId,
             onLongPressMessage = onLongPressMessage,
             onMediaClick = onMediaClick,
+            scrollToMessageId = scrollToMessageId,
+            highlightMessageId = highlightMessageId,
+            wallpaperPath = wallpaperPath,
+            onScrollToMessageConsumed = onScrollToMessageConsumed,
             modifier = Modifier.weight(1f),
         )
 

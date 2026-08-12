@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber", "LongMethod")
+@file:Suppress("MagicNumber", "LongMethod", "ComplexMethod")
 
 package com.vault.vanishx.presentation.mailbox.chat
 

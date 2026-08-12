@@ -13,7 +13,10 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -82,7 +85,7 @@ class AuthSetupViewModelTest {
 class LockViewModelTest {
 
     @get:Rule
-    val coroutinesRule = CoroutineTestRule()
+    val coroutinesRule = CoroutineTestRule(StandardTestDispatcher())
 
     private lateinit var pinStore: SecurityPinStore
     private val appLockSession: AppLockSession = mockk(relaxed = true)
@@ -108,7 +111,7 @@ class LockViewModelTest {
     }
 
     @Test
-    fun `correct pin unlocks after OK`() = runTest {
+    fun `correct pin unlocks after OK`() = runTest(coroutinesRule.testDispatcher) {
         enterPinWithoutSubmit("1234")
         viewModel.uiState.value.unlocked shouldBe false
         viewModel.onAction(LockAction.Submit)
@@ -117,7 +120,44 @@ class LockViewModelTest {
     }
 
     @Test
-    fun `prepare challenge then unlock works after prior unlock`() = runTest {
+    fun `correct pin auto unlocks after delay`() = runTest(coroutinesRule.testDispatcher) {
+        enterPinWithoutSubmit("1234")
+        runCurrent()
+        viewModel.uiState.value.unlocked shouldBe false
+        advanceTimeBy(LockViewModel.AUTO_SUBMIT_DELAY_MS - 1L)
+        runCurrent()
+        viewModel.uiState.value.unlocked shouldBe false
+        advanceTimeBy(1L)
+        runCurrent()
+        viewModel.uiState.value.unlocked shouldBe true
+        verify { appLockSession.unlock() }
+    }
+
+    @Test
+    fun `backspace cancels auto submit`() = runTest(coroutinesRule.testDispatcher) {
+        enterPinWithoutSubmit("1234")
+        runCurrent()
+        viewModel.onAction(LockAction.Backspace)
+        advanceTimeBy(LockViewModel.AUTO_SUBMIT_DELAY_MS)
+        runCurrent()
+        viewModel.uiState.value.unlocked shouldBe false
+        viewModel.uiState.value.pin shouldBe "123"
+    }
+
+    @Test
+    fun `wrong pin auto shows attempts remaining`() = runTest(coroutinesRule.testDispatcher) {
+        enterPinWithoutSubmit("0000")
+        runCurrent()
+        advanceTimeBy(LockViewModel.AUTO_SUBMIT_DELAY_MS)
+        runCurrent()
+        val state = viewModel.uiState.value
+        state.showWrongPin shouldBe true
+        state.attemptsLeft shouldBe 4
+        state.unlocked shouldBe false
+    }
+
+    @Test
+    fun `prepare challenge then unlock works after prior unlock`() = runTest(coroutinesRule.testDispatcher) {
         val session = AppLockSession()
         viewModel = LockViewModel(
             securityPinStore = pinStore,
@@ -142,7 +182,7 @@ class LockViewModelTest {
     }
 
     @Test
-    fun `wrong pin shows attempts remaining`() = runTest {
+    fun `wrong pin shows attempts remaining`() = runTest(coroutinesRule.testDispatcher) {
         enterPinWithoutSubmit("0000")
         viewModel.onAction(LockAction.Submit)
         val state = viewModel.uiState.value
@@ -152,7 +192,7 @@ class LockViewModelTest {
     }
 
     @Test
-    fun `five wrong pins start cooldown without wipe by default`() = runTest {
+    fun `five wrong pins start cooldown without wipe by default`() = runTest(coroutinesRule.testDispatcher) {
         repeat(5) {
             enterPinWithoutSubmit("0000")
             viewModel.onAction(LockAction.Submit)
@@ -166,7 +206,7 @@ class LockViewModelTest {
     }
 
     @Test
-    fun `five wrong pins wipe when auto wipe enabled`() = runTest {
+    fun `five wrong pins wipe when auto wipe enabled`() = runTest(coroutinesRule.testDispatcher) {
         pinStore.setAutoWipeEnabled(true)
         viewModel = LockViewModel(
             securityPinStore = pinStore,
@@ -189,7 +229,7 @@ class LockViewModelTest {
     }
 
     @Test
-    fun `panic pin wipes silently`() = runTest {
+    fun `panic pin wipes silently`() = runTest(coroutinesRule.testDispatcher) {
         pinStore.setPanicPin("9999")
         enterPinWithoutSubmit("9999")
         viewModel.onAction(LockAction.Submit)
@@ -204,3 +244,4 @@ class LockViewModelTest {
         pin.forEach { viewModel.onAction(LockAction.Digit(it)) }
     }
 }
+

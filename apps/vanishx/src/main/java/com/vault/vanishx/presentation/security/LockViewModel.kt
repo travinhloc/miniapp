@@ -9,6 +9,8 @@ import com.vault.vanishx.data.security.SecurityPinStore
 import com.vault.vanishx.data.security.UnlockFailResult
 import com.vault.vanishx.domain.usecase.PanicWipeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class LockUiState(
@@ -63,12 +66,15 @@ class LockViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(initialState())
     val uiState: StateFlow<LockUiState> = _uiState.asStateFlow()
 
+    private var autoSubmitJob: Job? = null
+
     @Suppress("ComplexMethod")
     fun onAction(action: LockAction) {
         when (action) {
             is LockAction.Digit -> appendDigit(action.value)
             LockAction.Backspace -> {
                 if (isCoolingDown()) return
+                cancelAutoSubmit()
                 _uiState.update {
                     it.copy(pin = it.pin.dropLast(1), showWrongPin = false, biometricError = null)
                 }
@@ -79,15 +85,24 @@ class LockViewModel @Inject constructor(
                 _uiState.update { it.copy(promptBiometric = true, biometricError = null) }
             }
             LockAction.BiometricPromptShown -> _uiState.update { it.copy(promptBiometric = false) }
-            LockAction.BiometricSuccess -> unlock()
+            LockAction.BiometricSuccess -> {
+                cancelAutoSubmit()
+                unlock()
+            }
             is LockAction.BiometricFailed -> _uiState.update {
                 it.copy(biometricError = action.message, promptBiometric = false)
             }
-            LockAction.ClearPinDraft -> _uiState.update {
-                it.copy(pin = "", showWrongPin = false, biometricError = null)
+            LockAction.ClearPinDraft -> {
+                cancelAutoSubmit()
+                _uiState.update {
+                    it.copy(pin = "", showWrongPin = false, biometricError = null)
+                }
             }
             LockAction.TickCooldown -> refreshCooldownFromStore()
-            LockAction.PrepareChallenge -> _uiState.value = initialState()
+            LockAction.PrepareChallenge -> {
+                cancelAutoSubmit()
+                _uiState.value = initialState()
+            }
         }
     }
 
@@ -111,9 +126,29 @@ class LockViewModel @Inject constructor(
         _uiState.update {
             it.copy(pin = next, showWrongPin = false, biometricError = null)
         }
+        scheduleAutoSubmitIfComplete(next)
+    }
+
+    /**
+     * Samsung/Apple-style: after 4 digits, wait briefly then verify.
+     * OK still submits immediately for users who want to go faster.
+     */
+    private fun scheduleAutoSubmitIfComplete(pin: String) {
+        cancelAutoSubmit()
+        if (pin.length != SecurityPinStore.PIN_LENGTH) return
+        autoSubmitJob = viewModelScope.launch {
+            delay(AUTO_SUBMIT_DELAY_MS)
+            submit()
+        }
+    }
+
+    private fun cancelAutoSubmit() {
+        autoSubmitJob?.cancel()
+        autoSubmitJob = null
     }
 
     private fun submit() {
+        cancelAutoSubmit()
         if (_uiState.value.isBusy || _uiState.value.showBurnOverlay || isCoolingDown()) return
         val pin = _uiState.value.pin
         if (pin.length != SecurityPinStore.PIN_LENGTH) return
@@ -177,6 +212,7 @@ class LockViewModel @Inject constructor(
     }
 
     private fun wipe(silent: Boolean) {
+        cancelAutoSubmit()
         _uiState.update {
             it.copy(
                 isBusy = true,
@@ -219,4 +255,9 @@ class LockViewModel @Inject constructor(
     private fun remainingAttempts(): Int =
         (SecurityPinStore.MAX_UNLOCK_ATTEMPTS - securityPinStore.failedUnlockAttempts())
             .coerceIn(0, SecurityPinStore.MAX_UNLOCK_ATTEMPTS)
+
+    companion object {
+        /** Pause after 4th digit before auto-verify (OEM lock-screen style). */
+        const val AUTO_SUBMIT_DELAY_MS = 1_500L
+    }
 }

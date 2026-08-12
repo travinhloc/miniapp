@@ -253,8 +253,8 @@
     <string name="room_scroll_to_bottom">Jump down</string>
     <string name="room_day_today">Today</string>
     <string name="room_day_yesterday">Yesterday</string>
-    <string name="room_rename_title">Room name</string>
-    <string name="room_rename_hint">Display name</string>
+    <string name="room_rename_title">Nickname</string>
+    <string name="room_rename_hint">Local nickname</string>
     <string name="room_rename_save">Save</string>
     <string name="room_rename_placeholder">Tap to name room</string>
     <string name="room_rename_required">Enter a room name</string>
@@ -289,7 +289,7 @@
     <string name="lock_wrong_pin">Wrong PIN. %1$d attempts left before temporary lock.</string>
     <string name="lock_use_bio">Fingerprint / face</string>
     <string name="lock_ok">OK</string>
-    <string name="lock_ok_hint">Enter 4 digits, then tap OK</string>
+    <string name="lock_ok_hint">Enter 4 digits — unlocks automatically, or tap OK</string>
     <string name="lock_cooldown_title">Temporarily locked</string>
     <string name="lock_cooldown_subtitle">Too many wrong attempts. Try again when the timer ends.</string>
     <string name="lock_cooldown_tier_hint">Cooldownout level %1$d · next is longer (60s → 5m → 24h)</string>
@@ -379,4 +379,34 @@
     <string name="room_media_saved">Saved to device</string>
     <string name="room_media_save_failed">Could not save attachment</string>
     <string name="room_media_missing">Attachment unavailable</string>
+
+    <!-- Epic 12 Room Options -->
+    <string name="room_options_title">Options</string>
+    <string name="room_options_change_avatar">Change photo</string>
+    <string name="room_options_reset_avatar">Use default</string>
+    <string name="room_options_search">Search</string>
+    <string name="room_options_wallpaper">Wallpaper</string>
+    <string name="room_options_mute">Mute</string>
+    <string name="room_options_unmute">Unmute</string>
+    <string name="room_options_favorite">Favorite</string>
+    <string name="room_options_nickname">Nickname</string>
+    <string name="room_options_media_section">Photos, files</string>
+    <string name="room_options_media_empty">No media on this device yet</string>
+    <string name="room_options_safety_section">Privacy &amp; room</string>
+    <string name="room_options_reset_wallpaper">Reset wallpaper</string>
+    <string name="room_options_media_see_all">See all</string>
+    <string name="room_wallpaper_presets">Color presets</string>
+    <string name="room_wallpaper_from_gallery">Choose from gallery</string>
+    <string name="room_media_library_title">Media &amp; files</string>
+    <string name="room_media_library_tab_media">Photos (%1$d)</string>
+    <string name="room_media_library_tab_docs">Files (%1$d)</string>
+    <string name="room_media_library_tab_audio">Voice (%1$d)</string>
+    <string name="room_media_library_empty_media">No photos or videos yet</string>
+    <string name="room_media_library_empty_docs">No files yet</string>
+    <string name="room_media_library_empty_audio">No voice messages yet</string>
+    <string name="room_media_library_voice_item">Voice message</string>
+    <string name="room_avatar_too_large">Photo must be under 10 MB</string>
+    <string name="room_search_hint">Search messages</string>
+    <string name="room_search_prev">Previous match</string>
+    <string name="room_search_next">Next match</string>
 </resources>

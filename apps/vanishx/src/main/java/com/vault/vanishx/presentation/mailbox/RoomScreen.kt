@@ -14,6 +14,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -66,9 +67,13 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomLeft
 import com.vault.vanishx.presentation.mailbox.chat.RoomLoading
 import com.vault.vanishx.presentation.mailbox.chat.RoomMessageActionSheet
 import com.vault.vanishx.presentation.mailbox.chat.MediaViewerDialog
+import com.vault.vanishx.presentation.mailbox.chat.RoomMediaLibraryScreen
+import com.vault.vanishx.presentation.mailbox.chat.RoomOptionsScreen
+import com.vault.vanishx.presentation.mailbox.chat.RoomSearchBar
 import com.vault.vanishx.presentation.mailbox.chat.RoomSafetySheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomScreenshotBanner
 import com.vault.vanishx.presentation.mailbox.chat.RoomUiDimens
+import com.vault.vanishx.presentation.mailbox.chat.RoomWallpaperSheet
 import com.vault.vanishx.presentation.mailbox.chat.VoiceRecordTray
 import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
 import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
@@ -101,6 +106,22 @@ fun RoomScreen(
                 uri = uri,
                 onAction = viewModel::onAction,
             )
+        }
+    }
+    val avatarPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        appLockSession.endExternalUi()
+        if (uri != null) {
+            viewModel.onAction(RoomAction.SetRoomAvatar(uri))
+        }
+    }
+    val wallpaperPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        appLockSession.endExternalUi()
+        if (uri != null) {
+            viewModel.onAction(RoomAction.SetRoomWallpaper(uri))
         }
     }
     val documentPicker = rememberLauncherForActivityResult(
@@ -161,49 +182,89 @@ fun RoomScreen(
         onCaptured = { viewModel.onAction(RoomAction.ScreenshotDetected) },
     )
 
-    RoomContent(
-        uiState = uiState,
-        onAction = viewModel::onAction,
-        onCopyInvite = { uri ->
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("VanishX invite", uri))
-            Toast.makeText(context, context.getString(R.string.create_copied), Toast.LENGTH_SHORT).show()
-        },
-        onShareInvite = { uri ->
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, uri)
-            }
-            context.startActivity(Intent.createChooser(intent, context.getString(R.string.create_share)))
-        },
-        onOpenMore = {
-            viewModel.onAction(RoomAction.AttachClicked)
-        },
-        onOpenVoice = { showVoiceTray = true },
-        onPickGallery = {
-            appLockSession.beginExternalUi()
-            galleryPicker.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
+    Box(modifier = Modifier.fillMaxSize()) {
+        RoomContent(
+            uiState = uiState,
+            onAction = viewModel::onAction,
+            onCopyInvite = { uri ->
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("VanishX invite", uri))
+                Toast.makeText(context, context.getString(R.string.create_copied), Toast.LENGTH_SHORT).show()
+            },
+            onShareInvite = { uri ->
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, uri)
+                }
+                context.startActivity(Intent.createChooser(intent, context.getString(R.string.create_share)))
+            },
+            onOpenMore = {
+                viewModel.onAction(RoomAction.AttachClicked)
+            },
+            onOpenVoice = { showVoiceTray = true },
+            onPickGallery = {
+                appLockSession.beginExternalUi()
+                galleryPicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
+                )
+            },
+            onPickDocument = {
+                appLockSession.beginExternalUi()
+                documentPicker.launch(
+                    arrayOf(
+                        "application/pdf",
+                        "text/plain",
+                        "text/markdown",
+                        "text/x-markdown",
+                        "application/zip",
+                        "application/msword",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        "application/vnd.ms-excel",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "*/*",
+                    ),
+                )
+            },
+        )
+        if (uiState.showRoomOptions) {
+            RoomOptionsScreen(
+                uiState = uiState,
+                onAction = viewModel::onAction,
+                onPickAvatar = {
+                    appLockSession.beginExternalUi()
+                    avatarPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                    )
+                },
             )
-        },
-        onPickDocument = {
-            appLockSession.beginExternalUi()
-            documentPicker.launch(
-                arrayOf(
-                    "application/pdf",
-                    "text/plain",
-                    "text/markdown",
-                    "text/x-markdown",
-                    "application/zip",
-                    "application/msword",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    "application/vnd.ms-excel",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "*/*",
-                ),
+        }
+        if (uiState.showMediaLibrary) {
+            RoomMediaLibraryScreen(
+                messages = uiState.messages,
+                onBack = { viewModel.onAction(RoomAction.DismissMediaLibrary) },
+                onOpenMessage = { id ->
+                    viewModel.onAction(RoomAction.DismissMediaLibrary)
+                    viewModel.onAction(RoomAction.OpenMediaViewer(id))
+                },
             )
-        },
-    )
+        }
+    }
+
+    if (uiState.showWallpaperSheet) {
+        RoomWallpaperSheet(
+            currentToken = uiState.room?.wallpaperLocalPath,
+            onPickPreset = { token -> viewModel.onAction(RoomAction.SetWallpaperPreset(token)) },
+            onPickGallery = {
+                viewModel.onAction(RoomAction.DismissWallpaperSheet)
+                appLockSession.beginExternalUi()
+                wallpaperPicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                )
+            },
+            onReset = { viewModel.onAction(RoomAction.ResetRoomWallpaper) },
+            onDismiss = { viewModel.onAction(RoomAction.DismissWallpaperSheet) },
+        )
+    }
 
     if (showVoiceTray) {
         VoiceRecordTray(onDismiss = { showVoiceTray = false })
@@ -226,7 +287,6 @@ private fun RoomContent(
         !uiState.isExpired
     val roomHandshakeStatus = handshakeStatus(uiState.room, uiState.isExpired)
     val isHandshakeWaiting = roomHandshakeStatus == RoomHandshakeStatus.WAITING
-    val isWaitingForPeer = isHandshakeWaiting && uiState.room?.role == MailboxRoom.ROLE_CREATOR
     val inviteUri = uiState.room?.let { room ->
         RoomInvite(
             roomId = room.id,
@@ -246,9 +306,12 @@ private fun RoomContent(
         RoomHeader(
             uiState = uiState,
             onAction = onAction,
-            isWaitingForPeer = isWaitingForPeer,
             handshakeStatus = roomHandshakeStatus,
         )
+
+        if (uiState.showRoomSearch) {
+            RoomSearchBar(uiState = uiState, onAction = onAction)
+        }
 
         if (uiState.showScreenshotBanner) {
             RoomScreenshotBanner(
@@ -294,6 +357,10 @@ private fun RoomContent(
                         else -> onAction(RoomAction.OpenMediaViewer(msg.id))
                     }
                 },
+                scrollToMessageId = uiState.scrollToMessageId,
+                highlightMessageId = uiState.highlightMessageId,
+                wallpaperPath = uiState.room?.wallpaperLocalPath,
+                onScrollToMessageConsumed = { onAction(RoomAction.ConsumeScrollToMessage) },
                 modifier = Modifier.weight(1f),
             )
         }

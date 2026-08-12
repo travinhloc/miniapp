@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -822,6 +823,14 @@ private fun SessionCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
+                if (room.isFavorite) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = stringResource(R.string.room_options_favorite),
+                        tint = VanishXColors.NeonAmber,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
                 if (room.isWaiting) {
                     Text(
                         text = stringResource(R.string.home_waiting_badge),

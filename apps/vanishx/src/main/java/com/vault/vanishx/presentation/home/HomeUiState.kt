@@ -14,6 +14,8 @@ data class HomeRoomItem(
     val initials: String = "?",
     /** False for Pro Host rooms or Free rooms not yet activated. */
     val hasRoomClock: Boolean = false,
+    val isFavorite: Boolean = false,
+    val isMuted: Boolean = false,
 )
 
 data class HomeUiState(
@@ -83,6 +85,8 @@ fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomIt
         ttlFraction = fraction,
         initials = initialsFrom(label),
         hasRoomClock = clock,
+        isFavorite = favorite,
+        isMuted = muted,
     )
 }
 

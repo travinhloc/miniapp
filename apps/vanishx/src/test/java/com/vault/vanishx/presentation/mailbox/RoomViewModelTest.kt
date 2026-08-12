@@ -100,6 +100,8 @@ class RoomViewModelTest {
             reportRoom = reportRoom,
             recallRoomMessage = recallRoomMessage,
             renameRoom = renameRoom,
+            updateRoomLocalPrefs = mockk(relaxed = true),
+            roomLocalAssetStore = mockk(relaxed = true),
             deleteLocalMessage = deleteLocalMessage,
             mailboxRepository = mailboxRepository,
             identityRepository = identityRepository,

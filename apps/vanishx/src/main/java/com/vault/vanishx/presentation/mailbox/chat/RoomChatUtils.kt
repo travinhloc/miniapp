@@ -39,8 +39,8 @@ internal fun findRecallableMessage(
 
 internal fun resolveRoomTitle(room: MailboxRoom?): String {
     if (room == null) return ""
-    return room.title?.takeIf { it.isNotBlank() }
-        ?: room.nickname?.takeIf { it.isNotBlank() }
+    return room.nickname?.takeIf { it.isNotBlank() }
+        ?: room.title?.takeIf { it.isNotBlank() }
         ?: "···${room.id.takeLast(ROOM_ID_DISPLAY_SUFFIX)}"
 }
 

@@ -23,6 +23,10 @@ data class MailboxRoomEntity(
     val icebreaker: String? = null,
     val hostPro: Boolean = false,
     val activatedAt: Long = 0L,
+    val muted: Boolean = false,
+    val favorite: Boolean = false,
+    val avatarLocalPath: String? = null,
+    val wallpaperLocalPath: String? = null,
 )
 
 @Entity(tableName = "messages")

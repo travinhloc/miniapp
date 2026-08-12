@@ -102,7 +102,8 @@ class HomeViewModel @Inject constructor(
                     .filter { it.status != com.vault.vanishx.domain.model.MailboxRoom.STATUS_LEFT }
                     .map { it.toHomeItem(now) }
                     .sortedWith(
-                        compareBy<HomeRoomItem> { it.isExpired }
+                        compareBy<HomeRoomItem> { !it.isFavorite }
+                            .thenBy { it.isExpired }
                             .thenByDescending { it.remainingMs },
                     )
                 _uiState.update {

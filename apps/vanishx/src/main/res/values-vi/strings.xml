@@ -251,8 +251,8 @@
     <string name="room_scroll_to_bottom">Xuống dưới</string>
     <string name="room_day_today">Hôm nay</string>
     <string name="room_day_yesterday">Hôm qua</string>
-    <string name="room_rename_title">Tên phòng</string>
-    <string name="room_rename_hint">Tên hiển thị</string>
+    <string name="room_rename_title">Tên gợi nhớ</string>
+    <string name="room_rename_hint">Tên gợi nhớ trên máy</string>
     <string name="room_rename_save">Lưu</string>
     <string name="room_rename_placeholder">Chạm để đặt tên</string>
     <string name="room_rename_required">Nhập tên phòng</string>
@@ -289,7 +289,7 @@
     <string name="lock_wrong_pin">PIN sai. Còn %1$d lần trước khi tạm khoá.</string>
     <string name="lock_use_bio">Vân tay / khuôn mặt</string>
     <string name="lock_ok">OK</string>
-    <string name="lock_ok_hint">Nhập 4 số, rồi bấm OK</string>
+    <string name="lock_ok_hint">Nhập 4 số — tự mở khóa, hoặc bấm OK</string>
     <string name="lock_cooldown_title">Tạm khoá nhập PIN</string>
     <string name="lock_cooldown_subtitle">Sai quá nhiều lần. Thử lại khi hết thời gian chờ.</string>
     <string name="lock_cooldown_tier_hint">Bậc %1$d · lần sau lâu hơn (60s → 5p → 24h)</string>
@@ -379,4 +379,34 @@
     <string name="room_media_saved">Đã lưu vào máy</string>
     <string name="room_media_save_failed">Không lưu được tệp đính kèm</string>
     <string name="room_media_missing">Không có tệp đính kèm</string>
+
+    <!-- Epic 12 Room Options -->
+    <string name="room_options_title">Tùy chọn</string>
+    <string name="room_options_change_avatar">Đổi ảnh</string>
+    <string name="room_options_reset_avatar">Dùng mặc định</string>
+    <string name="room_options_search">Tìm tin</string>
+    <string name="room_options_wallpaper">Hình nền</string>
+    <string name="room_options_mute">Tắt thông báo</string>
+    <string name="room_options_unmute">Bật thông báo</string>
+    <string name="room_options_favorite">Yêu thích</string>
+    <string name="room_options_nickname">Tên gợi nhớ</string>
+    <string name="room_options_media_section">Ảnh, file</string>
+    <string name="room_options_media_empty">Chưa có media trên máy</string>
+    <string name="room_options_safety_section">Riêng tư &amp; phòng</string>
+    <string name="room_options_reset_wallpaper">Đặt lại hình nền</string>
+    <string name="room_options_media_see_all">Xem tất cả</string>
+    <string name="room_wallpaper_presets">Màu có sẵn</string>
+    <string name="room_wallpaper_from_gallery">Chọn từ thư viện</string>
+    <string name="room_media_library_title">Ảnh, file</string>
+    <string name="room_media_library_tab_media">Ảnh (%1$d)</string>
+    <string name="room_media_library_tab_docs">File (%1$d)</string>
+    <string name="room_media_library_tab_audio">Tin nhắn thoại (%1$d)</string>
+    <string name="room_media_library_empty_media">Chưa có ảnh hoặc video</string>
+    <string name="room_media_library_empty_docs">Chưa có file nào</string>
+    <string name="room_media_library_empty_audio">Chưa có tin nhắn thoại</string>
+    <string name="room_media_library_voice_item">Tin nhắn thoại</string>
+    <string name="room_avatar_too_large">Ảnh phải dưới 10 MB</string>
+    <string name="room_search_hint">Tìm tin nhắn</string>
+    <string name="room_search_prev">Kết quả trước</string>
+    <string name="room_search_next">Kết quả sau</string>
 </resources>
