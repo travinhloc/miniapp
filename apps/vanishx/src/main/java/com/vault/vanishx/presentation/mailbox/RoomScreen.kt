@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions", "ComplexMethod", "ComplexCondition")
+@file:Suppress("TooManyFunctions", "ComplexMethod", "ComplexCondition", "ModifierMissing")
 
 package com.vault.vanishx.presentation.mailbox
 

@@ -48,12 +48,12 @@ See [`MAILBOX.md`](MAILBOX.md) — RTDB schema, rules, Anonymous Auth, remote da
 |---------|--------|
 | Room id | 16 random bytes → URL-safe Base64, take 22 chars |
 | Room key | 32 random bytes → URL-safe Base64 (E2EE in 2.3) |
-| Invite URI | `vanishx://r/{roomId}?k={roomKey}&e={expiresAtMs}` |
+| Invite URI | Canonical `https://{host}/join?token=` (opaque v1) · fallback `vanishx://r/{roomId}?k={roomKey}&e=` |
 | QR | ZXing encode + JourneyApps scan |
 | TTL Free Host | Clock starts when guest **enters** · default 24h |
 | TTL Pro Host | No room clock (chat forever) |
 
-**Tradeoff:** room key is in the query string (capability URL). Convenient for QR/share; anyone with the link has the key. HTTPS App Links / key fragmentation can harden later (3.1).
+**Tradeoff:** room key stays inside the opaque token (and still in local SQLCipher). Capability URL: anyone with the link can join.
 
 Local `rooms` row stores `roomKey` + `role` (`creator` \| `member`) in SQLCipher.
 
@@ -112,7 +112,7 @@ Plaintext never leaves the device. Free has **no recall**. Pro recall (4.2) = st
 - `data/crypto/RoomSecretsGenerator.kt` — room id/key  
 - `data/crypto/RoomMessageCipher.kt` — AES-GCM room messages  
 - `data/crypto/RoomBlobCipher.kt` — AES-GCM media blobs  
-- `domain/model/InviteUriCodec.kt` — invite URI  
+- `domain/model/InviteUriCodec.kt` / `InviteTokenCodec.kt` — HTTPS invite + opaque token (14.1)  
 - `data/local/db/VanishxLocalDatabase.kt` — SQLCipher Room + wipe  
 - `data/local/db/DatabasePassphraseStore.kt` — DB passphrase  
 - `data/remote/FirebaseMailboxRemoteDataSource.kt` — RTDB mailbox  

@@ -30,9 +30,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vault.vanishx.R
+import com.vault.vanishx.domain.model.InviteUriCodec
 import com.vault.vanishx.presentation.qr.QrBitmapEncoder
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.vanishxSheetInsets
@@ -47,6 +49,7 @@ internal fun RoomInviteSheet(
 ) {
     val qrEncoder = remember { QrBitmapEncoder() }
     val qrBitmap = remember(inviteUri) { qrEncoder.encode(inviteUri) }
+    val shortLink = remember(inviteUri) { InviteUriCodec.displayShort(inviteUri) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -99,6 +102,16 @@ internal fun RoomInviteSheet(
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color.White)
                         .padding(12.dp),
+                )
+            }
+            if (shortLink != null) {
+                Spacer(modifier = Modifier.height(RoomUiDimens.spacingSmall))
+                Text(
+                    text = shortLink,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = VanishXColors.Muted,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             Spacer(modifier = Modifier.height(RoomUiDimens.spacingMedium))

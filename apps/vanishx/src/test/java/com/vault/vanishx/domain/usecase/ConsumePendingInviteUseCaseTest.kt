@@ -5,6 +5,7 @@ import com.vault.vanishx.data.push.FakeRoomPushTopics
 import com.vault.vanishx.data.remote.InMemoryMailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteRoomMeta
 import com.vault.vanishx.data.push.RoomPushTopics
+import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.domain.repository.MailboxRepository
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -24,6 +25,16 @@ class ConsumePendingInviteUseCaseTest {
 
         useCase.captureIfInvite("vanishx://r/room1?k=key1&e=1") shouldBe true
         verify { store.save("vanishx://r/room1?k=key1&e=1") }
+    }
+
+    @Test
+    fun `captureIfInvite stores https canonical`() {
+        val store: PendingInviteStore = mockk(relaxed = true)
+        val useCase = ConsumePendingInviteUseCase(store, mockk())
+        val https = RoomInvite("room1", "key1", 1L).toUriString()
+
+        useCase.captureIfInvite(https) shouldBe true
+        verify { store.save(https) }
     }
 
     @Test

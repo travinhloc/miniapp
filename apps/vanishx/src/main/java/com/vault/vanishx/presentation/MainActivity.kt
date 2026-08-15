@@ -26,7 +26,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.vault.vanishx.data.security.AppLockSession
 import com.vault.vanishx.data.security.SecurityPinStore
+import com.vault.vanishx.domain.usecase.CaptureClipboardInviteUseCase
 import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
+import com.vault.vanishx.presentation.invite.InviteBootstrapSession
 import com.vault.vanishx.presentation.security.AuthSetupScreen
 import com.vault.vanishx.presentation.security.LockScreen
 import com.vault.vanishx.presentation.splash.SplashScreen
@@ -46,6 +48,9 @@ class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var consumePendingInvite: ConsumePendingInviteUseCase
+
+    @Inject
+    lateinit var captureClipboardInvite: CaptureClipboardInviteUseCase
 
     @Inject
     lateinit var securityPinStore: SecurityPinStore
@@ -139,6 +144,11 @@ class MainActivity : FragmentActivity() {
         captureInviteIntent(intent)
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) maybeCaptureClipboardInvite()
+    }
+
     fun applyFlagSecure(enabled: Boolean) {
         if (enabled) {
             window.setFlags(
@@ -151,6 +161,12 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun captureInviteIntent(intent: Intent?) {
-        consumePendingInvite.captureIfInvite(intent?.dataString)
+        val saved = consumePendingInvite.captureIfInvite(intent?.dataString)
+        InviteBootstrapSession.onUriCaptureResult(saved)
+    }
+
+    private fun maybeCaptureClipboardInvite() {
+        if (!InviteBootstrapSession.takeClipboardAttempt()) return
+        captureClipboardInvite()
     }
 }

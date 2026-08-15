@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VanishX — Lời mời</title>
+  <style>
+    :root {
+      --md-bg: #0b0e14;
+      --md-surface: #161b22;
+      --md-primary: #00e5ff;
+      --md-on-surface: #e6edf3;
+      --md-muted: #8b949e;
+      --md-outline: #30363d;
+      --md-error: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, Roboto, sans-serif;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,229,255,.10), transparent 55%),
+        var(--md-bg);
+      color: var(--md-on-surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 32px;
+      text-align: center;
+    }
+    .mark {
+      width: 72px; height: 72px; border-radius: 20px;
+      background: var(--md-primary); color: #000;
+      display: grid; place-items: center;
+      font-size: 36px; font-weight: 700;
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; font-weight: 500; }
+    .lead { margin: 0 0 24px; font-size: 15px; color: var(--md-muted); line-height: 22px; max-width: 280px; }
+    .status {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 16px; border-radius: 12px;
+      background: var(--md-surface); border: 1px solid var(--md-outline);
+      font-size: 13px; margin-bottom: 16px; max-width: 280px;
+    }
+    .status.err { color: var(--md-error); }
+    .qr { width: 168px; height: 168px; border-radius: 16px; background: #fff; padding: 8px; margin: 8px auto 16px; }
+    .qr svg { width: 100%; height: 100%; display: block; }
+    .short { font-size: 13px; color: var(--md-muted); margin-bottom: 16px; letter-spacing: .02em; }
+    .btn {
+      width: 100%; max-width: 280px; min-height: 48px; border: none; border-radius: 12px;
+      font: 500 15px system-ui, sans-serif; cursor: pointer;
+    }
+    .btn-primary { background: var(--md-primary); color: #000; }
+    .btn-ghost {
+      background: transparent; color: var(--md-muted);
+      border: 1px solid var(--md-outline); margin-top: 8px;
+    }
+    .note { margin-top: auto; font-size: 12px; color: var(--md-muted); line-height: 18px; max-width: 280px; }
+    .panel { display: none; flex-direction: column; align-items: center; width: min(100%, 360px); }
+    .panel.on { display: flex; }
+  </style>
+</head>
+<body>
+  <div class="mark" aria-hidden="true">V</div>
+
+  <div id="panel-android" class="panel">
+    <h1>Lời mời VanishX</h1>
+    <p class="lead">Sắp mở cửa hàng. Nếu app đã cài, mở VanishX để vào lời mời.</p>
+    <div class="status">Đã chép lời mời · mở Play sau 1 giây</div>
+    <button type="button" class="btn btn-primary" id="btn-play">Mở Google Play</button>
+  </div>
+
+  <div id="panel-ios" class="panel">
+    <h1>VanishX hiện chỉ Android</h1>
+    <p class="lead">iOS chưa có app. Lời mời đã chép — mở trên điện thoại Android.</p>
+    <div class="status">Không chuyển App Store iOS</div>
+    <button type="button" class="btn btn-ghost" id="btn-copied" disabled>Đã chép lời mời</button>
+  </div>
+
+  <div id="panel-desktop" class="panel">
+    <h1>Mở trên Android</h1>
+    <p class="lead">Quét QR hoặc mở link trên điện thoại đã / sẽ cài VanishX.</p>
+    <div class="qr" id="qr" aria-hidden="true"></div>
+    <div class="short" id="short"></div>
+    <button type="button" class="btn btn-primary" id="btn-copy">Sao chép link</button>
+    <p class="note">Desktop không nhảy Play. QR là link lời mời — không hiện mã phòng.</p>
+  </div>
+
+  <div id="panel-bad" class="panel">
+    <h1>Link không hợp lệ</h1>
+    <p class="lead" id="bad-lead">Thiếu token hoặc lời mời đã hết hạn. Nhờ người gửi QR / link mới.</p>
+    <div class="status err">Không ghi clipboard · không mở Play</div>
+  </div>
+
+  <script src="qrcode.min.js"></script>
+  <script src="join-logic.js"></script>
+  <script src="join-boot.js"></script>
+</body>
+</html>
