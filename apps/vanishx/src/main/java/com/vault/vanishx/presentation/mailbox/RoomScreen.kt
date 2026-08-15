@@ -17,16 +17,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -79,6 +73,7 @@ import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
 import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
 import com.vault.vanishx.presentation.mailbox.chat.isMessageAtOrBeforeWatermark
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import dagger.hilt.android.EntryPointAccessors
 import timber.log.Timber
 
@@ -167,7 +162,7 @@ fun RoomScreen(
     LaunchedEffect(uiState.toastMessage) {
         val key = uiState.toastMessage ?: return@LaunchedEffect
         val message = when (key) {
-            "copied" -> context.getString(R.string.room_action_copied)
+            "peer_joined" -> context.getString(R.string.room_peer_joined)
             "sensitive_copy_blocked" -> context.getString(R.string.room_copy_blocked_sensitive)
             "media_saved" -> context.getString(R.string.room_media_saved)
             "media_save_failed" -> context.getString(R.string.room_media_save_failed)
@@ -299,9 +294,7 @@ private fun RoomContent(
         modifier = Modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
-            .statusBarsPadding()
-            // IME ∪ nav bars — avoid stacking imePadding + navigationBarsPadding (gap above keyboard).
-            .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars)),
+            .vanishxScreenInsets(),
     ) {
         RoomHeader(
             uiState = uiState,

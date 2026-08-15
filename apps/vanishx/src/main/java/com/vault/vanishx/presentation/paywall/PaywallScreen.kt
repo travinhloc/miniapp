@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -43,6 +42,7 @@ import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 
 private val CardCorner = 16.dp
 private val ButtonCorner = 8.dp
@@ -72,7 +72,7 @@ private fun PaywallScreenContent(
         modifier = modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
-            .statusBarsPadding(),
+            .vanishxScreenInsets(),
     ) {
         Row(
             modifier = Modifier

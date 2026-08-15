@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.vault.vanishx.R
 import com.vault.vanishx.presentation.mailbox.RoomAction
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxSheetInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,10 +46,12 @@ internal fun RoomBentoSheet(
         onDismissRequest = { onAction(RoomAction.DismissBentoSheet) },
         sheetState = rememberModalBottomSheetState(),
         containerColor = VanishXColors.Surface,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .vanishxSheetInsets()
                 .padding(horizontal = RoomUiDimens.spacingMedium)
                 .padding(bottom = RoomUiDimens.spacingMedium),
         ) {
@@ -170,10 +174,12 @@ internal fun RoomSafetySheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(),
         containerColor = VanishXColors.Surface,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .vanishxSheetInsets()
                 .padding(horizontal = RoomUiDimens.spacingMedium)
                 .padding(bottom = RoomUiDimens.spacingMedium),
         ) {

@@ -1,36 +1,34 @@
+@file:Suppress("ComplexMethod", "ComplexCondition")
+
 package com.vault.vanishx.presentation.home
 
+import com.vault.vanishx.domain.model.ChatMessage
+import com.vault.vanishx.domain.model.ConversationPreviewResolver
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.presentation.conversation.ConversationRowModel
 
-data class HomeRoomItem(
-    val id: String,
-    val displayName: String,
-    val remainingMs: Long,
-    val isExpired: Boolean,
-    val role: String,
-    val isWaiting: Boolean = false,
-    /** 0f..1f remaining fraction of room lifetime (1 = full). */
-    val ttlFraction: Float = 1f,
-    val initials: String = "?",
-    /** False for Pro Host rooms or Free rooms not yet activated. */
-    val hasRoomClock: Boolean = false,
-    val isFavorite: Boolean = false,
-    val isMuted: Boolean = false,
-)
+enum class HomeListFilter {
+    All,
+    Open,
+    Expired,
+    Favorite,
+}
 
 data class HomeUiState(
     val anonymousId: String? = null,
     val isBootstrappingIdentity: Boolean = true,
     val isMailboxSyncing: Boolean = false,
-    val recentRooms: List<HomeRoomItem> = emptyList(),
-    val totalRoomCount: Int = 0,
-    val hasMoreRooms: Boolean = false,
+    val rooms: List<ConversationRowModel> = emptyList(),
+    val visibleRooms: List<ConversationRowModel> = emptyList(),
+    val searchQuery: String = "",
+    val listFilter: HomeListFilter = HomeListFilter.Open,
     val inviteDraft: String = "",
     val shareHintUri: String? = null,
+    val waitingInviteUri: String? = null,
+    val pendingInviteUri: String? = null,
     val showProStubToggle: Boolean = false,
     val isProStub: Boolean = false,
     val inviteDraftEmpty: Boolean = false,
-    val vaporizedToday: Int = 0,
     val errorMessage: String? = null,
 )
 
@@ -48,9 +46,53 @@ sealed interface HomeAction {
     data class OpenRoom(val roomId: String) : HomeAction
     data class DeleteRoom(val roomId: String) : HomeAction
     data object DismissShareHint : HomeAction
+    data class SearchQueryChanged(val value: String) : HomeAction
+    data class SetFilter(val filter: HomeListFilter) : HomeAction
+    data class ShareWaiting(val roomId: String) : HomeAction
+    data object DismissWaitingInvite : HomeAction
+    data object OpenPendingInvite : HomeAction
+    data object DismissPendingInvite : HomeAction
 }
 
-@Suppress("ComplexMethod")
+internal fun MailboxRoom.toConversationRow(
+    lastMessage: ChatMessage?,
+    messages: List<ChatMessage>,
+    isPro: Boolean,
+    nowMs: Long = System.currentTimeMillis(),
+): ConversationRowModel {
+    val home = toHomeItem(nowMs)
+    val left = status == MailboxRoom.STATUS_LEFT
+    val preview = ConversationPreviewResolver.resolve(
+        waiting = home.isWaiting,
+        expired = home.isExpired,
+        isPro = isPro,
+        left = left,
+        lastMessage = lastMessage,
+        nowMs = nowMs,
+    )
+    val unread = if (home.isWaiting || home.isExpired || left) {
+        0
+    } else {
+        ConversationPreviewResolver.unreadInboundCount(messages, lastReadMessageId, nowMs)
+    }
+    return ConversationRowModel(
+        id = id,
+        displayName = home.displayName,
+        initials = home.initials,
+        avatarLocalPath = avatarLocalPath,
+        preview = preview,
+        unreadCount = unread,
+        isFavorite = favorite,
+        isMuted = muted,
+        isWaiting = home.isWaiting,
+        isExpired = home.isExpired,
+        isLeft = left,
+        hasRoomClock = home.hasRoomClock,
+        ttlFraction = home.ttlFraction,
+        remainingMs = home.remainingMs,
+    )
+}
+
 fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomItem {
     val resolved = resolvedStatus(nowMs)
     val expired = resolved == MailboxRoom.STATUS_EXPIRED
@@ -72,8 +114,7 @@ fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomIt
         ?: title?.takeIf { it.isNotBlank() }
         ?: "···${id.takeLast(ROOM_ID_SUFFIX_LEN)}"
     val waiting = role == MailboxRoom.ROLE_CREATOR &&
-        activatedAt <= 0L &&
-        peerPub.isNullOrBlank() &&
+        isAwaitingGuest() &&
         !expired
     return HomeRoomItem(
         id = id,
@@ -89,6 +130,21 @@ fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomIt
         isMuted = muted,
     )
 }
+
+/** TTL/title helper used by History mapping. */
+data class HomeRoomItem(
+    val id: String,
+    val displayName: String,
+    val remainingMs: Long,
+    val isExpired: Boolean,
+    val role: String,
+    val isWaiting: Boolean = false,
+    val ttlFraction: Float = 1f,
+    val initials: String = "?",
+    val hasRoomClock: Boolean = false,
+    val isFavorite: Boolean = false,
+    val isMuted: Boolean = false,
+)
 
 private fun initialsFrom(label: String): String {
     val cleaned = label.trim().removePrefix("#")

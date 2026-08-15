@@ -74,23 +74,26 @@ internal fun RoomMessageBubble(
     reactionCounts: Map<String, Int> = emptyMap(),
     replyQuote: ReplyQuoteUi? = null,
     readReceipt: Boolean = false,
+    isGroupTail: Boolean = true,
+    showTimestamp: Boolean = true,
     onLongPress: (() -> Unit)? = null,
     onMediaClick: (() -> Unit)? = null,
     onReplyQuoteClick: (() -> Unit)? = null,
 ) {
     val mine = message.direction == ChatMessage.DIRECTION_OUT
+    val tail = if (isGroupTail) RoomUiDimens.bubbleTailCorner else RoomUiDimens.bubbleCorner
     val bubbleShape = if (mine) {
         RoundedCornerShape(
             topStart = RoomUiDimens.bubbleCorner,
             topEnd = RoomUiDimens.bubbleCorner,
             bottomStart = RoomUiDimens.bubbleCorner,
-            bottomEnd = RoomUiDimens.bubbleTailCorner,
+            bottomEnd = tail,
         )
     } else {
         RoundedCornerShape(
             topStart = RoomUiDimens.bubbleCorner,
             topEnd = RoomUiDimens.bubbleCorner,
-            bottomStart = RoomUiDimens.bubbleTailCorner,
+            bottomStart = tail,
             bottomEnd = RoomUiDimens.bubbleCorner,
         )
     }
@@ -130,11 +133,12 @@ internal fun RoomMessageBubble(
     ) {
         Box(
             modifier = Modifier
-                .widthIn(max = RoomUiDimens.bubbleMaxWidth)
+                .fillMaxWidth(RoomUiDimens.bubbleMaxFraction)
                 .padding(bottom = if (reactionCounts.isNotEmpty()) 12.dp else 0.dp),
         ) {
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .widthIn(max = RoomUiDimens.bubbleMaxWidth)
                     .then(if (message.isMedia) Modifier else Modifier.clip(bubbleShape))
                     .background(
@@ -264,22 +268,24 @@ internal fun RoomMessageBubble(
                             )
                         }
                     }
-                    BubbleMetaRow(
-                        mine = mine,
-                        sentAt = message.sentAt,
-                        readReceipt = readReceipt,
-                        onLightBubble = false,
-                        modifier = Modifier
-                            .align(Alignment.End)
-                            // Keep time clear of the hanging reaction pill.
-                            .padding(
-                                end = if (reactionCounts.isNotEmpty()) {
-                                    RoomUiDimens.reactionMetaEndClearance
-                                } else {
-                                    0.dp
-                                },
-                            ),
-                    )
+                    if (showTimestamp) {
+                        BubbleMetaRow(
+                            mine = mine,
+                            sentAt = message.sentAt,
+                            readReceipt = readReceipt,
+                            onLightBubble = false,
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                // Keep time clear of the hanging reaction pill.
+                                .padding(
+                                    end = if (reactionCounts.isNotEmpty()) {
+                                        RoomUiDimens.reactionMetaEndClearance
+                                    } else {
+                                        0.dp
+                                    },
+                                ),
+                        )
+                    }
                 }
                 message.sensitive -> {
                     // Stable layout: body slot + hold hint + meta — avoid branch swap height jump
@@ -301,14 +307,16 @@ internal fun RoomMessageBubble(
                             .padding(top = 4.dp)
                             .graphicsLayer { alpha = if (showPlain) 0f else 1f },
                     )
-                    BubbleMetaRow(
-                        mine = mine,
-                        sentAt = message.sentAt,
-                        readReceipt = readReceipt,
-                        // Actions: long-press time (not the body — body is hold-to-read)
-                        onLongPress = onLongPress,
-                        modifier = Modifier.align(Alignment.End),
-                    )
+                    if (showTimestamp) {
+                        BubbleMetaRow(
+                            mine = mine,
+                            sentAt = message.sentAt,
+                            readReceipt = readReceipt,
+                            // Actions: long-press time (not the body — body is hold-to-read)
+                            onLongPress = onLongPress,
+                            modifier = Modifier.align(Alignment.End),
+                        )
+                    }
                 }
                 else -> {
                     Text(
@@ -319,12 +327,14 @@ internal fun RoomMessageBubble(
                         ),
                         color = if (mine) VanishXColors.OnPrimary else VanishXColors.OnSurface,
                     )
-                    BubbleMetaRow(
-                        mine = mine,
-                        sentAt = message.sentAt,
-                        readReceipt = readReceipt,
-                        modifier = Modifier.align(Alignment.End),
-                    )
+                    if (showTimestamp) {
+                        BubbleMetaRow(
+                            mine = mine,
+                            sentAt = message.sentAt,
+                            readReceipt = readReceipt,
+                            modifier = Modifier.align(Alignment.End),
+                        )
+                    }
                 }
             }
             }

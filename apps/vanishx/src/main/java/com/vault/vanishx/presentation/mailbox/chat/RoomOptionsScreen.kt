@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,6 +51,7 @@ import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.presentation.mailbox.RoomAction
 import com.vault.vanishx.presentation.mailbox.RoomUiState
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import java.io.File
 
 @Composable
@@ -72,7 +72,7 @@ internal fun RoomOptionsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
-            .statusBarsPadding(),
+            .vanishxScreenInsets(),
     ) {
         Row(
             modifier = Modifier

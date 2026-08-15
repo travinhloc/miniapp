@@ -20,6 +20,7 @@ fun MailboxRoomEntity.toDomain(): MailboxRoom = MailboxRoom(
     favorite = favorite,
     avatarLocalPath = avatarLocalPath,
     wallpaperLocalPath = wallpaperLocalPath,
+    lastReadMessageId = lastReadMessageId,
 )
 
 fun MailboxRoom.toEntity(): MailboxRoomEntity = MailboxRoomEntity(
@@ -39,6 +40,7 @@ fun MailboxRoom.toEntity(): MailboxRoomEntity = MailboxRoomEntity(
     favorite = favorite,
     avatarLocalPath = avatarLocalPath,
     wallpaperLocalPath = wallpaperLocalPath,
+    lastReadMessageId = lastReadMessageId,
 )
 
 fun MessageEntity.toDomain(): ChatMessage = ChatMessage(

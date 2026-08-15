@@ -30,6 +30,8 @@ data class MailboxRoom(
     val avatarLocalPath: String? = null,
     /** Sandbox path to local chat wallpaper (no upload). */
     val wallpaperLocalPath: String? = null,
+    /** Local last-read message id (E9-4 persist for Home unread). */
+    val lastReadMessageId: String? = null,
 ) {
     companion object {
         const val STATUS_ACTIVE = "active"
@@ -41,6 +43,9 @@ data class MailboxRoom(
 
     /** Free Host after guest enter — countdown applies. */
     fun hasRoomClock(): Boolean = !hostPro && expiresAt > 0L
+
+    /** Guest has not entered yet (invite still shareable for the host). */
+    fun isAwaitingGuest(): Boolean = status == STATUS_ACTIVE && activatedAt <= 0L
 
     fun isPendingActivation(): Boolean = !hostPro && activatedAt <= 0L
 

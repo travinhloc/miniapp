@@ -19,6 +19,7 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
     private val typing = ConcurrentHashMap<String, RemoteTyping>()
     private val reactions = ConcurrentHashMap<String, RemoteReaction>()
     private val revisions = MutableStateFlow(0)
+    private val metaRevisions = MutableStateFlow(0)
     private val engagementRevisions = MutableStateFlow(0)
 
     override suspend fun ensureAuthenticated() {
@@ -28,12 +29,16 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
     override suspend fun writeRoomMeta(roomId: String, meta: RemoteRoomMeta) {
         ensureAuthenticated()
         roomMeta[roomId] = meta
+        metaRevisions.value = metaRevisions.value + 1
     }
 
     override suspend fun readRoomMeta(roomId: String): RemoteRoomMeta? {
         ensureAuthenticated()
         return roomMeta[roomId]
     }
+
+    override fun observeRoomMeta(roomId: String): Flow<RemoteRoomMeta?> =
+        metaRevisions.map { roomMeta[roomId] }
 
     override suspend fun writeMessage(roomId: String, message: RemoteMailboxMessage) {
         require(message.ciphertext.length in 1..RemoteMailboxMessage.MAX_CIPHERTEXT_LENGTH)

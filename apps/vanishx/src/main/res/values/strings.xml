@@ -70,6 +70,7 @@
     <string name="history_filter_expired">Expired</string>
     <string name="history_filter_all">All</string>
     <string name="history_empty">No rooms in this filter.</string>
+    <string name="history_empty_none">No rooms yet.</string>
     <string name="history_note">Free can only open active rooms. Expired rooms need VanishX Pro to view again.</string>
     <string name="history_open_pro">Open with Pro</string>
     <string name="history_action_none">—</string>
@@ -103,9 +104,9 @@
     <string name="create_mode_instant_desc">Enter the room · show Copy / Share / QR invite · wait for them to accept</string>
     <string name="create_mode_later_title">Later</string>
     <string name="create_mode_later_desc">Save the link on Home · send it when you\'re ready</string>
-    <string name="create_icebreaker_label">Icebreaker (optional)</string>
+    <string name="create_icebreaker_label">Invite note (optional)</string>
     <string name="create_icebreaker_hint">e.g. I\'m the one from yesterday\'s listing…</string>
-    <string name="create_icebreaker_help">Shown on the invite — they see it before accepting</string>
+    <string name="create_icebreaker_help">Shown on the join request before they accept. Not sent as a chat message.</string>
     <string name="create_defaults_note">Defaults: auto nickname · expires in 24 hours (adjustable later in the room)</string>
     <string name="create_action">Continue</string>
     <string name="create_creating">Creating…</string>
@@ -134,7 +135,7 @@
     <!-- Join · Message Request (story 7.6) -->
     <string name="join_request_title">Chat request</string>
     <string name="join_request_subtitle">Room #%1$s · from host</string>
-    <string name="join_request_icebreaker_label">Icebreaker</string>
+    <string name="join_request_icebreaker_label">Note from host</string>
     <string name="join_request_privacy">Auto-deletes in 24h · no history kept on the server</string>
     <string name="join_nickname_change">Change</string>
     <string name="join_nickname_save">Save</string>
@@ -145,6 +146,9 @@
     <string name="join_block_body">They will be blocked by public key. You won\'t receive requests from them again on this device, and this request won\'t be accepted.</string>
     <string name="join_block_confirm">Block</string>
     <string name="join_later_toast">Saved · not accepted — the host is still waiting</string>
+    <string name="home_pending_invite">Saved invite · not accepted yet</string>
+    <string name="home_pending_invite_open">Open</string>
+    <string name="room_peer_joined">The other person joined the room</string>
     <string name="join_blocked_toast">Blocked. This request was not accepted.</string>
     <string name="join_error_peer_blocked">You blocked this host on this device. Unblock to join their rooms again.</string>
     <string name="join_unblock_and_chat">Unblock &amp; Chat</string>
@@ -409,4 +413,30 @@
     <string name="room_search_hint">Search messages</string>
     <string name="room_search_prev">Previous match</string>
     <string name="room_search_next">Next match</string>
+
+    <string name="conv_preview_waiting">Waiting to accept · No one joined yet</string>
+    <string name="conv_preview_expired">Expired</string>
+    <string name="conv_preview_recalled">Recalled</string>
+    <string name="conv_preview_sensitive">Sensitive message</string>
+    <string name="conv_preview_image">Photo</string>
+    <string name="conv_preview_file">File</string>
+    <string name="conv_preview_video">Video</string>
+    <string name="conv_preview_empty">No messages yet</string>
+    <string name="conv_preview_left">Left / blocked</string>
+    <string name="conv_preview_you">You: %1$s</string>
+    <string name="home_search_hint">Search</string>
+    <string name="home_filter_all">All</string>
+    <string name="home_filter_open">Active</string>
+    <string name="home_filter_expired">Expired</string>
+    <string name="home_filter_favorite">Favorites</string>
+    <string name="home_empty_title">No chats yet</string>
+    <string name="home_empty_create">Create room</string>
+    <string name="home_empty_paste">Paste invite</string>
+    <string name="home_menu_create">Create room</string>
+    <string name="home_menu_paste">Paste invite</string>
+    <string name="home_invite_qr">QR</string>
+    <string name="home_invite_sheet_title">Invite to room</string>
+    <string name="home_history_link">Expired &amp; archive → History</string>
+    <string name="history_filter_favorite">Favorites</string>
+    <string name="history_search_hint">Search rooms</string>
 </resources>

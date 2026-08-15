@@ -186,7 +186,7 @@ internal fun RoomMessageList(
                     horizontal = RoomUiDimens.spacingMedium,
                     vertical = RoomUiDimens.spacingSmall,
                 ),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 if (showTtl) {
                     val ttlAt = expiresAt!!
@@ -233,17 +233,23 @@ internal fun RoomMessageList(
                             val readReceipt = msg.direction == ChatMessage.DIRECTION_OUT &&
                                 isMessageAtOrBeforeWatermark(msg.id, peerReadWatermarkId, messages)
                             Box(
-                                modifier = if (msg.id == highlightMessageId) {
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            VanishXColors.Primary.copy(alpha = 0.18f),
-                                            RoundedCornerShape(12.dp),
-                                        )
-                                        .padding(vertical = 2.dp)
+                                modifier = (if (item.isGroupTail) {
+                                    Modifier.padding(bottom = 6.dp)
                                 } else {
                                     Modifier
-                                },
+                                }).then(
+                                    if (msg.id == highlightMessageId) {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                VanishXColors.Primary.copy(alpha = 0.18f),
+                                                RoundedCornerShape(12.dp),
+                                            )
+                                            .padding(vertical = 2.dp)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                             ) {
                                 RoomMessageBubble(
                                     message = msg,
@@ -252,6 +258,8 @@ internal fun RoomMessageList(
                                     reactionCounts = reactionsByMessage[msg.id].orEmpty(),
                                     replyQuote = replyQuote,
                                     readReceipt = readReceipt,
+                                    isGroupTail = item.isGroupTail,
+                                    showTimestamp = item.showTimestamp,
                                     onLongPress = { onLongPressMessage(msg) },
                                     onMediaClick = { onMediaClick(msg) },
                                     onReplyQuoteClick = msg.replyToId?.let { id ->

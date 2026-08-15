@@ -5,8 +5,12 @@ import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.BuildConfig
 import com.vault.vanishx.data.invite.PendingInviteStore
+import com.vault.vanishx.domain.model.InviteUriCodec
+import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
+import com.vault.vanishx.presentation.conversation.ConversationRowModel
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
 import com.vault.vanishx.presentation.history.HistoryDestination
@@ -62,6 +66,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 refreshRooms()
+                refreshPendingInvite()
                 // Story 7.6: a pending invite (deep link / post-install) must go through the
                 // Message Request sheet — never auto-accept the handshake on cold start.
                 if (pendingInviteStore.peek() != null) {
@@ -94,24 +99,28 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun refreshRooms() {
-        flow { emit(mailboxRepository.getAllRooms()) }
+        flow {
+            val now = System.currentTimeMillis()
+            val isPro = _uiState.value.isProStub
+            val rooms = mailboxRepository.getAllRooms()
+            val items = rooms
+                .filter { it.status != MailboxRoom.STATUS_LEFT }
+                .map { room ->
+                    val last = mailboxRepository.getLatestVisibleMessage(room.id, now)
+                    val messages = mailboxRepository.getMessages(room.id)
+                    room.toConversationRow(last, messages, isPro, now)
+                }
+                .sortedWith(
+                    compareBy<ConversationRowModel> { !it.isFavorite }
+                        .thenBy { it.isExpired }
+                        .thenByDescending { it.remainingMs },
+                )
+            emit(items)
+        }
             .flowOn(dispatchersProvider.io)
-            .onEach { rooms ->
-                val now = System.currentTimeMillis()
-                val items = rooms
-                    .filter { it.status != com.vault.vanishx.domain.model.MailboxRoom.STATUS_LEFT }
-                    .map { it.toHomeItem(now) }
-                    .sortedWith(
-                        compareBy<HomeRoomItem> { !it.isFavorite }
-                            .thenBy { it.isExpired }
-                            .thenByDescending { it.remainingMs },
-                    )
-                _uiState.update {
-                    it.copy(
-                        recentRooms = items.take(RECENT_LIMIT),
-                        totalRoomCount = items.size,
-                        hasMoreRooms = items.size > RECENT_LIMIT,
-                    )
+            .onEach { items ->
+                _uiState.update { state ->
+                    state.copy(rooms = items).withVisibleRooms()
                 }
             }
             .catch { e -> Timber.w(e, "Refresh rooms failed") }
@@ -134,7 +143,10 @@ class HomeViewModel @Inject constructor(
                     navigateJoin()
                 }
             }
-            HomeAction.Resume -> syncOnOpen()
+            HomeAction.Resume -> {
+                refreshPendingInvite()
+                syncOnOpen()
+            }
             HomeAction.OpenSettings -> navigateSettings()
             HomeAction.OpenHistory -> navigateHistory()
             HomeAction.ToggleProStub -> toggleProStub()
@@ -149,6 +161,19 @@ class HomeViewModel @Inject constructor(
             is HomeAction.OpenRoom -> navigateRoom(action.roomId)
             is HomeAction.DeleteRoom -> deleteRoom(action.roomId)
             HomeAction.DismissShareHint -> _uiState.update { it.copy(shareHintUri = null) }
+            is HomeAction.SearchQueryChanged -> _uiState.update {
+                it.copy(searchQuery = action.value).withVisibleRooms()
+            }
+            is HomeAction.SetFilter -> _uiState.update {
+                it.copy(listFilter = action.filter).withVisibleRooms()
+            }
+            is HomeAction.ShareWaiting -> showWaitingInvite(action.roomId)
+            HomeAction.DismissWaitingInvite -> _uiState.update { it.copy(waitingInviteUri = null) }
+            HomeAction.OpenPendingInvite -> navigateJoin()
+            HomeAction.DismissPendingInvite -> {
+                pendingInviteStore.clear()
+                _uiState.update { it.copy(pendingInviteUri = null) }
+            }
         }
     }
 
@@ -195,8 +220,46 @@ class HomeViewModel @Inject constructor(
         refreshRooms()
     }
 
+    private fun refreshPendingInvite() {
+        _uiState.update { it.copy(pendingInviteUri = pendingInviteStore.peek()) }
+    }
+
+    private fun showWaitingInvite(roomId: String) {
+        flow {
+            val room = mailboxRepository.getRoom(roomId) ?: return@flow
+            emit(
+                InviteUriCodec.format(
+                    RoomInvite(
+                        roomId = room.id,
+                        roomKey = room.roomKey,
+                        expiresAt = room.expiresAt.takeIf { it > 0L },
+                    ),
+                ),
+            )
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach { uri -> _uiState.update { it.copy(waitingInviteUri = uri) } }
+            .catch { e -> Timber.w(e, "Waiting invite failed") }
+            .launchIn(viewModelScope)
+    }
+
+    private fun HomeUiState.withVisibleRooms(): HomeUiState {
+        val query = searchQuery.trim()
+        val filtered = rooms.filter { room ->
+            val matchesFilter = when (listFilter) {
+                HomeListFilter.All, HomeListFilter.Open -> !room.isExpired
+                HomeListFilter.Expired -> room.isExpired
+                HomeListFilter.Favorite -> room.isFavorite
+            }
+            val matchesQuery = query.isEmpty() ||
+                room.displayName.contains(query, ignoreCase = true) ||
+                room.id.contains(query, ignoreCase = true)
+            matchesFilter && matchesQuery
+        }
+        return copy(visibleRooms = filtered)
+    }
+
     private companion object {
-        const val RECENT_LIMIT = 3
         fun isProStubToggleEnabled(): Boolean =
             BuildConfig.DEBUG && BuildConfig.FLAVOR == "staging"
     }

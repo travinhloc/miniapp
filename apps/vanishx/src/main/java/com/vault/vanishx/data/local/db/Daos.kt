@@ -27,6 +27,9 @@ interface MailboxRoomDao {
 
     @Query("SELECT * FROM rooms WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): MailboxRoomEntity?
+
+    @Query("UPDATE rooms SET lastReadMessageId = :messageId WHERE id = :roomId")
+    suspend fun setLastReadMessageId(roomId: String, messageId: String)
 }
 
 @Dao
@@ -39,6 +42,12 @@ interface MessageDao {
 
     @Query("SELECT * FROM messages WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): MessageEntity?
+
+    @Query(
+        "SELECT * FROM messages WHERE roomId = :roomId AND (expiresAt = 0 OR expiresAt > :nowMs) " +
+            "ORDER BY sentAt DESC LIMIT 1",
+    )
+    suspend fun getLatestVisible(roomId: String, nowMs: Long): MessageEntity?
 
     @Query("DELETE FROM messages WHERE expiresAt > 0 AND expiresAt <= :nowMs")
     suspend fun deleteExpired(nowMs: Long): Int

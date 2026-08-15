@@ -239,6 +239,7 @@ class RoomViewModel @Inject constructor(
     val uiState: StateFlow<RoomUiState> = _uiState.asStateFlow()
 
     private var observeJob: Job? = null
+    private var metaObserveJob: Job? = null
     private var expiryJob: Job? = null
     private var engagementJob: Job? = null
     private var lastPeerPingAtMs = 0L
@@ -253,6 +254,7 @@ class RoomViewModel @Inject constructor(
 
     override fun onCleared() {
         observeJob?.cancel()
+        metaObserveJob?.cancel()
         expiryJob?.cancel()
         engagementJob?.cancel()
         val deviceId = presenceDeviceId.ifBlank { _uiState.value.myDeviceId }
@@ -810,20 +812,37 @@ class RoomViewModel @Inject constructor(
             .flowOn(dispatchersProvider.io)
             .onEach { updated ->
                 if (updated == null) return@onEach
-                val expired = updated.status == MailboxRoom.STATUS_EXPIRED ||
-                    updated.status == MailboxRoom.STATUS_LEFT
-                _uiState.update {
-                    it.copy(
-                        room = updated,
-                        isExpired = expired || it.isExpired,
-                    )
-                }
-                if (!expired) {
-                    scheduleExpiry(updated)
-                }
+                applyRoomMetaUpdate(updated)
             }
             .catch { e -> Timber.w(e, "refreshRoomMeta failed") }
             .launchIn(viewModelScope)
+    }
+
+    private fun applyRoomMetaUpdate(updated: MailboxRoom) {
+        val previous = _uiState.value.room
+        val wasWaiting = handshakeStatus(previous, _uiState.value.isExpired) ==
+            RoomHandshakeStatus.WAITING
+        val expired = updated.status == MailboxRoom.STATUS_EXPIRED ||
+            updated.status == MailboxRoom.STATUS_LEFT
+        val nowLive = handshakeStatus(updated, expired) == RoomHandshakeStatus.LIVE
+        val peerJustJoined = wasWaiting &&
+            nowLive &&
+            previous?.role == MailboxRoom.ROLE_CREATOR
+        _uiState.update {
+            it.copy(
+                room = updated,
+                isExpired = expired || it.isExpired,
+                toastMessage = if (peerJustJoined) "peer_joined" else it.toastMessage,
+                showInviteSheet = if (nowLive) false else it.showInviteSheet,
+            )
+        }
+        if (!expired) {
+            scheduleExpiry(updated)
+            if (peerJustJoined) {
+                maybeStartEngagement(updated)
+                sync(showLoading = false)
+            }
+        }
     }
 
     private data class BootstrapPayload(
@@ -849,6 +868,7 @@ class RoomViewModel @Inject constructor(
     private fun onLiveExpiry() {
         if (_uiState.value.isExpired) return
         observeJob?.cancel()
+        metaObserveJob?.cancel()
         engagementJob?.cancel()
         setPresenceOffline()
         _uiState.update {
@@ -922,6 +942,7 @@ class RoomViewModel @Inject constructor(
                     roomNow?.status == MailboxRoom.STATUS_LEFT
                 if (expired) {
                     observeJob?.cancel()
+                    metaObserveJob?.cancel()
                     expiryJob?.cancel()
                     engagementJob?.cancel()
                     setPresenceOffline()
@@ -965,6 +986,7 @@ class RoomViewModel @Inject constructor(
 
     private fun startObserving() {
         observeJob?.cancel()
+        metaObserveJob?.cancel()
         observeJob = remote.observeMessages(roomId)
             .onEach { remoteList ->
                 if (_uiState.value.isExpired) return@onEach
@@ -974,6 +996,7 @@ class RoomViewModel @Inject constructor(
                     roomNow?.status == MailboxRoom.STATUS_LEFT
                 ) {
                     observeJob?.cancel()
+                    metaObserveJob?.cancel()
                     expiryJob?.cancel()
                     engagementJob?.cancel()
                     setPresenceOffline()
@@ -1005,6 +1028,15 @@ class RoomViewModel @Inject constructor(
                 Timber.e(e, "Mailbox observe failed")
                 _uiState.update { it.copy(errorMessage = friendlyError(e)) }
             }
+            .flowOn(dispatchersProvider.io)
+            .launchIn(viewModelScope)
+        metaObserveJob = remote.observeRoomMeta(roomId)
+            .onEach {
+                if (_uiState.value.isExpired) return@onEach
+                val updated = refreshRoomMeta(roomId) ?: return@onEach
+                applyRoomMetaUpdate(updated)
+            }
+            .catch { e -> Timber.w(e, "Room meta observe failed") }
             .flowOn(dispatchersProvider.io)
             .launchIn(viewModelScope)
     }
@@ -1140,6 +1172,7 @@ class RoomViewModel @Inject constructor(
             .flowOn(dispatchersProvider.io)
             .onEach {
                 observeJob?.cancel()
+                metaObserveJob?.cancel()
                 expiryJob?.cancel()
                 engagementJob?.cancel()
                 setPresenceOffline()
@@ -1185,6 +1218,7 @@ class RoomViewModel @Inject constructor(
             .flowOn(dispatchersProvider.io)
             .onEach {
                 observeJob?.cancel()
+                metaObserveJob?.cancel()
                 expiryJob?.cancel()
                 engagementJob?.cancel()
                 setPresenceOffline()
@@ -1296,6 +1330,9 @@ class RoomViewModel @Inject constructor(
                             runCatching {
                                 remote.setReadWatermark(roomId, deviceId, lastId)
                             }.onFailure { Timber.w(it, "setReadWatermark failed") }
+                            runCatching {
+                                mailboxRepository.markRoomRead(roomId, lastId)
+                            }.onFailure { Timber.w(it, "markRoomRead failed") }
                         }
                     }
             }

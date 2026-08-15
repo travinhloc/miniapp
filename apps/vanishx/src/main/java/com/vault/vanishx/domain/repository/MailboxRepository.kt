@@ -17,4 +17,6 @@ interface MailboxRepository {
     suspend fun deleteExpiredMessages(nowMs: Long = System.currentTimeMillis()): Int
     suspend fun deleteMessagesForRoom(roomId: String): Int
     suspend fun deleteMessage(messageId: String): Int
+    suspend fun getLatestVisibleMessage(roomId: String, nowMs: Long = System.currentTimeMillis()): ChatMessage?
+    suspend fun markRoomRead(roomId: String, messageId: String)
 }

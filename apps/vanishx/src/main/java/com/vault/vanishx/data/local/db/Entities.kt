@@ -27,6 +27,7 @@ data class MailboxRoomEntity(
     val favorite: Boolean = false,
     val avatarLocalPath: String? = null,
     val wallpaperLocalPath: String? = null,
+    val lastReadMessageId: String? = null,
 )
 
 @Entity(tableName = "messages")

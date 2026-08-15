@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -54,6 +53,7 @@ import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.AttachmentMeta
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import java.io.File
 
 private enum class MediaLibraryTab {
@@ -81,7 +81,7 @@ internal fun RoomMediaLibraryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
-            .statusBarsPadding(),
+            .vanishxScreenInsets(),
     ) {
         MediaLibraryTopBar(onBack = onBack)
         MediaLibraryTabs(

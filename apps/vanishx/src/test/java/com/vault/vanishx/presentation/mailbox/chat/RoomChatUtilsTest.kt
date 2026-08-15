@@ -47,6 +47,22 @@ class RoomChatUtilsTest {
     }
 
     @Test
+    fun `groups consecutive same-direction messages`() {
+        val now = 10_000L
+        val messages = listOf(
+            ChatMessage("a", "r", "1", now, now + 1_000L, ChatMessage.DIRECTION_OUT),
+            ChatMessage("b", "r", "2", now + 1_000L, now + 2_000L, ChatMessage.DIRECTION_OUT),
+            ChatMessage("c", "r", "3", now + 2_000L, now + 3_000L, ChatMessage.DIRECTION_IN),
+        )
+        val grouped = buildRoomTimeline(messages, now).filterIsInstance<RoomTimelineItem.Message>()
+        grouped[0].isGroupTail shouldBe false
+        grouped[0].showTimestamp shouldBe false
+        grouped[1].isGroupTail shouldBe true
+        grouped[1].showTimestamp shouldBe true
+        grouped[2].isGroupTail shouldBe true
+    }
+
+    @Test
     fun `findRecallableMessage allows free within window`() {
         val now = 10_000L
         val messages = listOf(

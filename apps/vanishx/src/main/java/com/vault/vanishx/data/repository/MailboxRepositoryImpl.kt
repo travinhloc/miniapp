@@ -69,4 +69,15 @@ class MailboxRepositoryImpl @Inject constructor(
         localDatabase.withDatabase { db ->
             db.messageDao().deleteById(messageId)
         }
+
+    override suspend fun getLatestVisibleMessage(roomId: String, nowMs: Long): ChatMessage? =
+        localDatabase.withDatabase { db ->
+            db.messageDao().getLatestVisible(roomId, nowMs)?.toDomain()
+        }
+
+    override suspend fun markRoomRead(roomId: String, messageId: String) {
+        localDatabase.withDatabase { db ->
+            db.mailboxRoomDao().setLastReadMessageId(roomId, messageId)
+        }
+    }
 }

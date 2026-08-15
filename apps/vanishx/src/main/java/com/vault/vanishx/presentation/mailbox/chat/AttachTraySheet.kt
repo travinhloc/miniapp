@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.vault.vanishx.R
 import com.vault.vanishx.presentation.mailbox.RoomAction
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxSheetInsets
 
 private val DocumentCircleColor = Color(0xFF1B4F9C)
 
@@ -50,10 +52,12 @@ internal fun AttachTraySheet(
         onDismissRequest = { onAction(RoomAction.DismissAttachTray) },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = VanishXColors.Surface,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .vanishxSheetInsets()
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
             Text(

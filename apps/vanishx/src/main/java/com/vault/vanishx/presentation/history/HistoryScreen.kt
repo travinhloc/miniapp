@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.vault.vanishx.presentation.history
 
 import androidx.compose.foundation.background
@@ -11,12 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -25,8 +27,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.vault.vanishx.presentation.conversation.ConversationRow
+import com.vault.vanishx.presentation.conversation.ConversationRowModel
+import com.vault.vanishx.domain.model.ConversationPreview
+import com.vault.vanishx.domain.model.ConversationPreviewKind
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -45,7 +53,7 @@ import com.vault.vanishx.R
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.VanishXTheme
-import com.vault.vanishx.presentation.util.formatRemainingMs
+import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 
 private val CardCorner = 16.dp
 private const val CARD_BORDER_ALPHA = 0.06f
@@ -74,7 +82,7 @@ private fun HistoryScreenContent(
         modifier = modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
-            .statusBarsPadding(),
+            .vanishxScreenInsets(),
     ) {
         Row(
             modifier = Modifier
@@ -134,24 +142,45 @@ private fun HistoryScreenContent(
                     selected = uiState.filter == HistoryRoomFilter.All,
                     onClick = { onAction(HistoryAction.SetFilter(HistoryRoomFilter.All)) },
                 )
+                HistoryFilterChip(
+                    label = stringResource(R.string.history_filter_favorite),
+                    selected = uiState.filter == HistoryRoomFilter.Favorite,
+                    onClick = { onAction(HistoryAction.SetFilter(HistoryRoomFilter.Favorite)) },
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = uiState.searchQuery,
+                onValueChange = { onAction(HistoryAction.SearchQueryChanged(it)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.history_search_hint), color = VanishXColors.Muted) },
+                leadingIcon = {
+                    Icon(Icons.Filled.Search, contentDescription = null, tint = VanishXColors.Muted)
+                },
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = VanishXColors.Outline,
+                    unfocusedBorderColor = VanishXColors.Outline,
+                    focusedTextColor = VanishXColors.OnSurface,
+                    unfocusedTextColor = VanishXColors.OnSurface,
+                ),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (uiState.rooms.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.history_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = VanishXColors.Muted,
-                    modifier = Modifier.padding(vertical = 32.dp),
-                    textAlign = TextAlign.Center,
+                HistoryEmptyState(
+                    hasAnyRooms = uiState.hasAnyRooms,
+                    onCreate = { onAction(HistoryAction.CreateRoom) },
+                    onJoin = { onAction(HistoryAction.JoinRoom) },
                 )
             } else {
                 uiState.rooms.forEach { room ->
                     HistoryRoomRow(
                         room = room,
                         isPro = uiState.isPro,
-                        onOpen = { onAction(HistoryAction.OpenRoom(room.id)) },
+                        onOpen = { onAction(HistoryAction.OpenRoom(room.row.id)) },
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -164,6 +193,49 @@ private fun HistoryScreenContent(
             color = VanishXColors.Muted,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
+    }
+}
+
+@Composable
+private fun HistoryEmptyState(
+    hasAnyRooms: Boolean,
+    onCreate: () -> Unit,
+    onJoin: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(
+                if (hasAnyRooms) R.string.history_empty else R.string.history_empty_none,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = VanishXColors.Muted,
+            textAlign = TextAlign.Center,
+        )
+        if (!hasAnyRooms) {
+            Button(
+                onClick = onCreate,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VanishXColors.Primary,
+                    contentColor = VanishXColors.OnPrimary,
+                ),
+            ) {
+                Text(stringResource(R.string.home_empty_create))
+            }
+            OutlinedButton(
+                onClick = onJoin,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = VanishXColors.Accent),
+            ) {
+                Text(stringResource(R.string.home_empty_paste))
+            }
+        }
     }
 }
 
@@ -203,6 +275,7 @@ private fun HistoryRoomRow(
     isPro: Boolean,
     onOpen: () -> Unit,
 ) {
+    val row = room.row
     Surface(
         shape = RoundedCornerShape(CardCorner),
         color = VanishXColors.Surface,
@@ -213,70 +286,41 @@ private fun HistoryRoomRow(
             VanishXColors.Primary.copy(alpha = CARD_BORDER_ALPHA),
         ),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = room.displayName,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                        ),
-                        color = VanishXColors.OnSurface,
-                    )
-                    Text(
-                        text = historyMetaLabel(room.meta),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                        color = VanishXColors.Muted,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                }
-                Text(
-                    text = historyBadgeLabel(room),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                    color = when {
-                        room.isLeft -> VanishXColors.Muted
-                        room.isExpired -> VanishXColors.Accent
-                        else -> VanishXColors.Primary
-                    },
-                )
-            }
-
+        Column {
+            ConversationRow(
+                model = row,
+                onClick = onOpen,
+                showTtlRing = false,
+            )
+            Text(
+                text = historyMetaLabel(room.meta),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = VanishXColors.Muted,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
+            )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 when {
-                    room.isLeft -> {
+                    row.isLeft -> {
                         Text(
                             text = stringResource(R.string.history_action_none),
                             style = MaterialTheme.typography.labelLarge,
                             color = VanishXColors.Muted,
                         )
                     }
-                    room.isExpired && !isPro -> {
+                    row.isExpired && !isPro -> {
                         OutlinedButton(
                             onClick = onOpen,
                             shape = RoundedCornerShape(14.dp),
-                            contentPadding = ButtonDefaults.ContentPadding,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = VanishXColors.Accent,
                             ),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                VanishXColors.Accent.copy(alpha = 0.5f),
-                            ),
                         ) {
-                            Text(
-                                text = stringResource(R.string.history_open_pro),
-                                style = MaterialTheme.typography.labelMedium,
-                            )
+                            Text(text = stringResource(R.string.history_open_pro))
                         }
                     }
                     else -> {
@@ -287,12 +331,8 @@ private fun HistoryRoomRow(
                                 containerColor = VanishXColors.Primary,
                                 contentColor = VanishXColors.OnPrimary,
                             ),
-                            contentPadding = ButtonDefaults.ContentPadding,
                         ) {
-                            Text(
-                                text = stringResource(R.string.home_open),
-                                style = MaterialTheme.typography.labelMedium,
-                            )
+                            Text(text = stringResource(R.string.home_open))
                         }
                     }
                 }
@@ -309,13 +349,6 @@ private fun historyMetaLabel(meta: HistoryRoomMeta): String = when (meta) {
     HistoryRoomMeta.Left -> stringResource(R.string.history_meta_left)
 }
 
-@Composable
-private fun historyBadgeLabel(room: HistoryRoomItem): String = when {
-    room.isLeft -> stringResource(R.string.history_badge_left)
-    room.isExpired -> stringResource(R.string.badge_expired)
-    else -> stringResource(R.string.badge_remaining, formatRemainingMs(room.remainingMs))
-}
-
 @Preview(showSystemUi = true)
 @Composable
 private fun HistoryScreenPreview() {
@@ -324,20 +357,23 @@ private fun HistoryScreenPreview() {
             uiState = HistoryUiState(
                 rooms = listOf(
                     HistoryRoomItem(
-                        id = "1",
-                        displayName = "Kế hoạch cuối tuần",
+                        row = ConversationRowModel(
+                            id = "1",
+                            displayName = "Kế hoạch cuối tuần",
+                            initials = "K",
+                            avatarLocalPath = null,
+                            preview = ConversationPreview(ConversationPreviewKind.Text, "Hi"),
+                            unreadCount = 0,
+                            isFavorite = false,
+                            isMuted = false,
+                            isWaiting = false,
+                            isExpired = false,
+                            isLeft = false,
+                            hasRoomClock = true,
+                            ttlFraction = 0.5f,
+                            remainingMs = 300_000,
+                        ),
                         meta = HistoryRoomMeta.Creator,
-                        remainingMs = 300_000,
-                        isExpired = false,
-                        isLeft = false,
-                    ),
-                    HistoryRoomItem(
-                        id = "2",
-                        displayName = "Phòng ···k9f",
-                        meta = HistoryRoomMeta.Archived,
-                        remainingMs = 0,
-                        isExpired = true,
-                        isLeft = false,
                     ),
                 ),
             ),

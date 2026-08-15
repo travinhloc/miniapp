@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.vault.vanishx.R
 import com.vault.vanishx.presentation.qr.QrBitmapEncoder
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxSheetInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,12 +52,12 @@ internal fun RoomInviteSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(),
         containerColor = VanishXColors.Surface,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = RoomUiDimens.spacingMedium, vertical = 4.dp)
-                .padding(bottom = RoomUiDimens.spacingMedium),
+                .padding(horizontal = RoomUiDimens.spacingMedium, vertical = 4.dp),
         ) {
             Text(
                 text = stringResource(R.string.room_invite_waiting_pill),
@@ -121,6 +123,7 @@ internal fun RoomInviteSheet(
                     Text(text = stringResource(R.string.create_share))
                 }
             }
+            Spacer(modifier = Modifier.vanishxSheetInsets())
         }
     }
 }

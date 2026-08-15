@@ -11,6 +11,8 @@ interface MailboxRemoteDataSource {
 
     suspend fun readRoomMeta(roomId: String): RemoteRoomMeta?
 
+    fun observeRoomMeta(roomId: String): kotlinx.coroutines.flow.Flow<RemoteRoomMeta?>
+
     suspend fun writeMessage(roomId: String, message: RemoteMailboxMessage)
 
     suspend fun readMessage(roomId: String, messageId: String): RemoteMailboxMessage?
