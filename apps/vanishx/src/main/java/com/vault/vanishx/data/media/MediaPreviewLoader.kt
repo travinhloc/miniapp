@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber", "ReturnCount")
+@file:Suppress("MagicNumber", "ReturnCount", "ComplexMethod")
 
 package com.vault.vanishx.data.media
 

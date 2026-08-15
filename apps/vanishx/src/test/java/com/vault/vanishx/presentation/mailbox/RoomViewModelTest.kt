@@ -64,7 +64,10 @@ class RoomViewModelTest {
         peerPub = null,
     )
 
-    private fun liveRoom() = waitingRoom().copy(peerPub = "peerPubKey")
+    private fun liveRoom() = waitingRoom().copy(
+        peerPub = "peerPubKey",
+        activatedAt = 1L,
+    )
 
     private fun viewModel(room: MailboxRoom?): RoomViewModel {
         coEvery { getRoom("room1") } returns room
@@ -100,6 +103,8 @@ class RoomViewModelTest {
             reportRoom = reportRoom,
             recallRoomMessage = recallRoomMessage,
             renameRoom = renameRoom,
+            updateRoomLocalPrefs = mockk(relaxed = true),
+            roomLocalAssetStore = mockk(relaxed = true),
             deleteLocalMessage = deleteLocalMessage,
             mailboxRepository = mailboxRepository,
             identityRepository = identityRepository,

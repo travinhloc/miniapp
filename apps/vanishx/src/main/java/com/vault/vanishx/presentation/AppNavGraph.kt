@@ -49,10 +49,10 @@ fun NavHostController.navigate(destination: BaseDestination) {
             navigateUp()
         }
         is MailboxDestination.Room -> {
+            if (!popBackStack(MailboxDestination.Create.destination, inclusive = true)) {
+                popBackStack(MailboxDestination.Join.destination, inclusive = true)
+            }
             navigate(route = destination.destination) {
-                popUpTo(MailboxDestination.Join.destination) {
-                    inclusive = true
-                }
                 launchSingleTop = true
             }
         }

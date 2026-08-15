@@ -46,9 +46,19 @@ class RoomHandshakeStatusTest {
     }
 
     @Test
-    fun `active room with peerPub is LIVE`() {
+    fun `creator with own pub stored as peer is still WAITING until activate`() {
         val result = handshakeStatus(
-            room = room(peerPub = "peerPubKey"),
+            room = room(peerPub = "creatorPub"),
+            isExpired = false,
+        )
+
+        result shouldBe RoomHandshakeStatus.WAITING
+    }
+
+    @Test
+    fun `active room with peerPub is LIVE after guest enter`() {
+        val result = handshakeStatus(
+            room = room(peerPub = "peerPubKey", activatedAt = 1_700_000_000_000L),
             isExpired = false,
         )
 

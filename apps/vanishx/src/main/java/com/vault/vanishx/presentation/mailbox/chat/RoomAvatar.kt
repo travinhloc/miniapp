@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -23,10 +24,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
 import com.vault.vanishx.presentation.theme.VanishXColors
+import java.io.File
 
 @Composable
 internal fun RoomAvatar(
@@ -34,6 +38,7 @@ internal fun RoomAvatar(
     pulse: Boolean = false,
     size: Dp = RoomUiDimens.avatarSize,
     neonColor: Color = VanishXColors.NeonAmber,
+    imagePath: String? = null,
 ) {
     Box(
         contentAlignment = Alignment.Center,
@@ -53,14 +58,23 @@ internal fun RoomAvatar(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = letter,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-                color = Color.White,
-            )
+            if (!imagePath.isNullOrBlank() && File(imagePath).exists()) {
+                Image(
+                    painter = rememberAsyncImagePainter(File(imagePath)),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Text(
+                    text = letter,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    color = Color.White,
+                )
+            }
         }
     }
 }

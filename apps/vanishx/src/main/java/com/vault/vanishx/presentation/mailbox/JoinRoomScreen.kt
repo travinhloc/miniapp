@@ -9,13 +9,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,6 +61,8 @@ import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.scan.VanishXScanActivity
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxScreenInsets
+import com.vault.vanishx.presentation.theme.vanishxSheetInsets
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -164,11 +165,12 @@ private fun MessageRequestSheet(
             confirmValueChange = { !busy },
         ),
         containerColor = VanishXColors.Surface,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
+                .vanishxSheetInsets()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp),
         ) {
@@ -436,7 +438,7 @@ private fun JoinRoomContent(
         modifier = Modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
-            .statusBarsPadding(),
+            .vanishxScreenInsets(),
     ) {
         Row(
             modifier = Modifier

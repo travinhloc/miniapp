@@ -26,7 +26,7 @@ class RefreshRoomMetaUseCase @Inject constructor(
                     hostPro = meta.hostPro,
                     activatedAt = meta.activatedAt ?: local.activatedAt,
                     icebreaker = meta.icebreaker ?: local.icebreaker,
-                    peerPub = local.peerPub ?: meta.creatorPub,
+                    peerPub = resolvedPeerPub(local, meta.creatorPub),
                     status = local.copy(
                         expiresAt = meta.expiresAt,
                         hostPro = meta.hostPro,
@@ -39,5 +39,13 @@ class RefreshRoomMetaUseCase @Inject constructor(
             }
         }
         return result
+    }
+}
+
+private fun resolvedPeerPub(local: MailboxRoom, creatorPub: String?): String? {
+    val stored = local.peerPub?.takeIf { it.isNotBlank() }
+    return when (local.role) {
+        MailboxRoom.ROLE_CREATOR -> stored?.takeUnless { it == creatorPub }
+        else -> stored ?: creatorPub
     }
 }

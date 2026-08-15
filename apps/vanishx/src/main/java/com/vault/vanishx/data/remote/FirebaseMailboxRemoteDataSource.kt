@@ -61,21 +61,24 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         return withContext(dispatchersProvider.io) {
             val snapshot = roomRef(roomId).child(PATH_META).get().await()
             if (!snapshot.exists()) return@withContext null
-            val createdAt = snapshot.child(KEY_CREATED_AT).getValue(Long::class.java) ?: return@withContext null
-            val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java) ?: return@withContext null
-            val creatorPub = snapshot.child(KEY_CREATOR_PUB).getValue(String::class.java)
-            val icebreaker = snapshot.child(KEY_ICEBREAKER).getValue(String::class.java)
-            val hostPro = snapshot.child(KEY_HOST_PRO).getValue(Boolean::class.java) ?: false
-            val activatedAt = snapshot.child(KEY_ACTIVATED_AT).getValue(Long::class.java)
-            RemoteRoomMeta(
-                createdAt = createdAt,
-                expiresAt = expiresAt,
-                creatorPub = creatorPub,
-                icebreaker = icebreaker,
-                hostPro = hostPro,
-                activatedAt = activatedAt,
-            )
+            parseRoomMeta(snapshot)
         }
+    }
+
+    override fun observeRoomMeta(roomId: String): Flow<RemoteRoomMeta?> = callbackFlow {
+        ensureAuthenticated()
+        val ref = roomRef(roomId).child(PATH_META)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                trySend(parseRoomMeta(snapshot))
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
     }
 
     override suspend fun writeMessage(roomId: String, message: RemoteMailboxMessage) {
@@ -335,6 +338,24 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
     private fun parseMessage(snapshot: DataSnapshot, messageId: String): RemoteMailboxMessage? {
         if (!snapshot.exists()) return null
         return toRemoteMessage(snapshot, messageId)
+    }
+
+    private fun parseRoomMeta(snapshot: DataSnapshot): RemoteRoomMeta? {
+        if (!snapshot.exists()) return null
+        val createdAt = snapshot.child(KEY_CREATED_AT).getValue(Long::class.java) ?: return null
+        val expiresAt = snapshot.child(KEY_EXPIRES_AT).getValue(Long::class.java) ?: return null
+        val creatorPub = snapshot.child(KEY_CREATOR_PUB).getValue(String::class.java)
+        val icebreaker = snapshot.child(KEY_ICEBREAKER).getValue(String::class.java)
+        val hostPro = snapshot.child(KEY_HOST_PRO).getValue(Boolean::class.java) ?: false
+        val activatedAt = snapshot.child(KEY_ACTIVATED_AT).getValue(Long::class.java)
+        return RemoteRoomMeta(
+            createdAt = createdAt,
+            expiresAt = expiresAt,
+            creatorPub = creatorPub,
+            icebreaker = icebreaker,
+            hostPro = hostPro,
+            activatedAt = activatedAt,
+        )
     }
 
     private fun toRemoteMessage(snapshot: DataSnapshot, messageId: String): RemoteMailboxMessage? {

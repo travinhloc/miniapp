@@ -13,7 +13,11 @@ import java.util.concurrent.TimeUnit
 
 internal sealed interface RoomTimelineItem {
     data class DaySeparator(val dayStartMs: Long, val kind: DaySeparatorKind) : RoomTimelineItem
-    data class Message(val message: ChatMessage) : RoomTimelineItem
+    data class Message(
+        val message: ChatMessage,
+        val isGroupTail: Boolean = true,
+        val showTimestamp: Boolean = true,
+    ) : RoomTimelineItem
 }
 
 internal enum class DaySeparatorKind {
@@ -39,8 +43,8 @@ internal fun findRecallableMessage(
 
 internal fun resolveRoomTitle(room: MailboxRoom?): String {
     if (room == null) return ""
-    return room.title?.takeIf { it.isNotBlank() }
-        ?: room.nickname?.takeIf { it.isNotBlank() }
+    return room.nickname?.takeIf { it.isNotBlank() }
+        ?: room.title?.takeIf { it.isNotBlank() }
         ?: "···${room.id.takeLast(ROOM_ID_DISPLAY_SUFFIX)}"
 }
 
@@ -77,20 +81,34 @@ internal fun daySeparatorKind(dayStartMs: Long, nowMs: Long): DaySeparatorKind {
     }
 }
 
+internal const val BUBBLE_GROUP_WINDOW_MS = 120_000L
+
+internal fun sameBubbleGroup(current: ChatMessage, next: ChatMessage): Boolean =
+    current.direction == next.direction &&
+        next.sentAt - current.sentAt in 0L..BUBBLE_GROUP_WINDOW_MS
+
 internal fun buildRoomTimeline(
     messages: List<ChatMessage>,
     nowMs: Long = System.currentTimeMillis(),
 ): List<RoomTimelineItem> {
     if (messages.isEmpty()) return emptyList()
-    val items = ArrayList<RoomTimelineItem>(messages.size * 2)
+    val sorted = messages.sortedBy { it.sentAt }
+    val items = ArrayList<RoomTimelineItem>(sorted.size * 2)
     var lastDayStart = Long.MIN_VALUE
-    for (message in messages) {
+    for (index in sorted.indices) {
+        val message = sorted[index]
         val start = dayStartMs(message.sentAt)
         if (start != lastDayStart) {
             items += RoomTimelineItem.DaySeparator(start, daySeparatorKind(start, nowMs))
             lastDayStart = start
         }
-        items += RoomTimelineItem.Message(message)
+        val next = sorted.getOrNull(index + 1)
+        val isTail = next == null || !sameBubbleGroup(message, next)
+        items += RoomTimelineItem.Message(
+            message = message,
+            isGroupTail = isTail,
+            showTimestamp = isTail,
+        )
     }
     return items
 }

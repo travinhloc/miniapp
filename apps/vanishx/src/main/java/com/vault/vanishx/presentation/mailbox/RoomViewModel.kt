@@ -34,6 +34,7 @@ import com.vault.vanishx.domain.usecase.ReportRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMediaUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
+import com.vault.vanishx.domain.usecase.UpdateRoomLocalPrefsUseCase
 import com.vault.vanishx.domain.usecase.WipeRoomMediaUseCase
 import com.vault.vanishx.presentation.paywall.PaywallDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -81,11 +82,20 @@ data class RoomUiState(
     val pingBusy: Boolean = false,
     val remoteMetaPresent: Boolean? = null,
     val showInviteSheet: Boolean = false,
+    val showRoomOptions: Boolean = false,
+    val showMediaLibrary: Boolean = false,
+    val showWallpaperSheet: Boolean = false,
     val showBentoSheet: Boolean = false,
     val showSafetySheet: Boolean = false,
     val showBurnConfirm: Boolean = false,
     val showRenameDialog: Boolean = false,
     val renameDraft: String = "",
+    val showRoomSearch: Boolean = false,
+    val searchQuery: String = "",
+    val searchMatchIds: List<String> = emptyList(),
+    val searchMatchIndex: Int = 0,
+    val scrollToMessageId: String? = null,
+    val highlightMessageId: String? = null,
     val actionMessageId: String? = null,
     val deleteConfirmMessageId: String? = null,
     val detailsMessageId: String? = null,
@@ -143,6 +153,13 @@ sealed interface RoomAction {
     data object DismissInviteSheet : RoomAction
     data object PingPeer : RoomAction
     data object ConsumePingPeerEvent : RoomAction
+    data object OpenRoomOptions : RoomAction
+    data object DismissRoomOptions : RoomAction
+    data object OpenMediaLibrary : RoomAction
+    data object DismissMediaLibrary : RoomAction
+    data object OpenWallpaperSheet : RoomAction
+    data object DismissWallpaperSheet : RoomAction
+    data class SetWallpaperPreset(val token: String) : RoomAction
     data object OpenBentoSheet : RoomAction
     data object DismissBentoSheet : RoomAction
     data object OpenSafetySheet : RoomAction
@@ -155,6 +172,18 @@ sealed interface RoomAction {
     data object DismissRenameDialog : RoomAction
     data class RenameDraftChanged(val value: String) : RoomAction
     data object ConfirmRename : RoomAction
+    data object ToggleRoomMuted : RoomAction
+    data object ToggleRoomFavorite : RoomAction
+    data class SetRoomAvatar(val uri: Uri) : RoomAction
+    data object ResetRoomAvatar : RoomAction
+    data class SetRoomWallpaper(val uri: Uri) : RoomAction
+    data object ResetRoomWallpaper : RoomAction
+    data object OpenRoomSearch : RoomAction
+    data object DismissRoomSearch : RoomAction
+    data class SearchQueryChanged(val value: String) : RoomAction
+    data object SearchNextMatch : RoomAction
+    data object SearchPrevMatch : RoomAction
+    data object ConsumeScrollToMessage : RoomAction
     data class OpenMessageActions(val messageId: String) : RoomAction
     data object DismissMessageActions : RoomAction
     data class CopyMessage(val messageId: String) : RoomAction
@@ -188,6 +217,8 @@ class RoomViewModel @Inject constructor(
     private val reportRoom: ReportRoomUseCase,
     private val recallRoomMessage: RecallRoomMessageUseCase,
     private val renameRoom: RenameRoomUseCase,
+    private val updateRoomLocalPrefs: UpdateRoomLocalPrefsUseCase,
+    private val roomLocalAssetStore: com.vault.vanishx.data.media.RoomLocalAssetStore,
     private val deleteLocalMessage: DeleteLocalMessageUseCase,
     private val mailboxRepository: MailboxRepository,
     private val identityRepository: IdentityRepository,
@@ -208,6 +239,7 @@ class RoomViewModel @Inject constructor(
     val uiState: StateFlow<RoomUiState> = _uiState.asStateFlow()
 
     private var observeJob: Job? = null
+    private var metaObserveJob: Job? = null
     private var expiryJob: Job? = null
     private var engagementJob: Job? = null
     private var lastPeerPingAtMs = 0L
@@ -222,6 +254,7 @@ class RoomViewModel @Inject constructor(
 
     override fun onCleared() {
         observeJob?.cancel()
+        metaObserveJob?.cancel()
         expiryJob?.cancel()
         engagementJob?.cancel()
         val deviceId = presenceDeviceId.ifBlank { _uiState.value.myDeviceId }
@@ -335,8 +368,8 @@ class RoomViewModel @Inject constructor(
             RoomAction.OpenRenameDialog -> _uiState.update { state ->
                 state.copy(
                     showRenameDialog = true,
-                    renameDraft = state.room?.title.orEmpty().ifBlank {
-                        state.room?.nickname.orEmpty()
+                    renameDraft = state.room?.nickname.orEmpty().ifBlank {
+                        state.room?.title.orEmpty()
                     },
                     errorMessage = null,
                 )
@@ -348,6 +381,42 @@ class RoomViewModel @Inject constructor(
                 it.copy(renameDraft = action.value)
             }
             RoomAction.ConfirmRename -> confirmRename()
+            RoomAction.OpenRoomOptions -> _uiState.update {
+                it.copy(showRoomOptions = true, errorMessage = null)
+            }
+            RoomAction.DismissRoomOptions -> _uiState.update { it.copy(showRoomOptions = false) }
+            RoomAction.OpenMediaLibrary -> _uiState.update {
+                it.copy(showMediaLibrary = true, showRoomOptions = false)
+            }
+            RoomAction.DismissMediaLibrary -> _uiState.update { it.copy(showMediaLibrary = false) }
+            RoomAction.OpenWallpaperSheet -> _uiState.update {
+                it.copy(showWallpaperSheet = true)
+            }
+            RoomAction.DismissWallpaperSheet -> _uiState.update { it.copy(showWallpaperSheet = false) }
+            is RoomAction.SetWallpaperPreset -> setWallpaperPreset(action.token)
+            RoomAction.ToggleRoomMuted -> toggleMuted()
+            RoomAction.ToggleRoomFavorite -> toggleFavorite()
+            is RoomAction.SetRoomAvatar -> setAvatar(action.uri)
+            RoomAction.ResetRoomAvatar -> resetAvatar()
+            is RoomAction.SetRoomWallpaper -> setWallpaper(action.uri)
+            RoomAction.ResetRoomWallpaper -> resetWallpaper()
+            RoomAction.OpenRoomSearch -> _uiState.update {
+                it.copy(showRoomSearch = true, searchQuery = "", searchMatchIds = emptyList(), searchMatchIndex = 0)
+            }
+            RoomAction.DismissRoomSearch -> _uiState.update {
+                it.copy(
+                    showRoomSearch = false,
+                    searchQuery = "",
+                    searchMatchIds = emptyList(),
+                    searchMatchIndex = 0,
+                    highlightMessageId = null,
+                    scrollToMessageId = null,
+                )
+            }
+            is RoomAction.SearchQueryChanged -> applySearchQuery(action.value)
+            RoomAction.SearchNextMatch -> moveSearchMatch(+1)
+            RoomAction.SearchPrevMatch -> moveSearchMatch(-1)
+            RoomAction.ConsumeScrollToMessage -> _uiState.update { it.copy(scrollToMessageId = null) }
             is RoomAction.OpenMessageActions -> _uiState.update {
                 it.copy(actionMessageId = action.messageId)
             }
@@ -474,6 +543,131 @@ class RoomViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    private fun toggleMuted() {
+        val muted = !(_uiState.value.room?.muted ?: false)
+        flow { emit(updateRoomLocalPrefs.setMuted(roomId, muted)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { room -> _uiState.update { it.copy(room = room) } }
+            .catch { e -> _uiState.update { it.copy(errorMessage = friendlyError(e)) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun toggleFavorite() {
+        val favorite = !(_uiState.value.room?.favorite ?: false)
+        flow { emit(updateRoomLocalPrefs.setFavorite(roomId, favorite)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { room -> _uiState.update { it.copy(room = room) } }
+            .catch { e -> _uiState.update { it.copy(errorMessage = friendlyError(e)) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun setAvatar(uri: Uri) {
+        flow {
+            val path = roomLocalAssetStore.copyAvatar(roomId, uri)
+            emit(updateRoomLocalPrefs.setAvatarPath(roomId, path))
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach { room -> _uiState.update { it.copy(room = room) } }
+            .catch { e -> _uiState.update { it.copy(errorMessage = friendlyError(e)) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun resetAvatar() {
+        flow {
+            roomLocalAssetStore.clearAvatar(roomId)
+            emit(updateRoomLocalPrefs.setAvatarPath(roomId, null))
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach { room -> _uiState.update { it.copy(room = room) } }
+            .catch { e -> _uiState.update { it.copy(errorMessage = friendlyError(e)) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun setWallpaper(uri: Uri) {
+        flow {
+            val path = roomLocalAssetStore.copyWallpaper(roomId, uri)
+            emit(updateRoomLocalPrefs.setWallpaperPath(roomId, path))
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach { room ->
+                _uiState.update {
+                    it.copy(room = room, showWallpaperSheet = false)
+                }
+            }
+            .catch { e -> _uiState.update { it.copy(errorMessage = friendlyError(e)) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun setWallpaperPreset(token: String) {
+        flow { emit(updateRoomLocalPrefs.setWallpaperPath(roomId, token)) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { room ->
+                _uiState.update {
+                    it.copy(room = room, showWallpaperSheet = false)
+                }
+            }
+            .catch { e -> _uiState.update { it.copy(errorMessage = friendlyError(e)) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun resetWallpaper() {
+        flow {
+            roomLocalAssetStore.clearWallpaper(roomId)
+            emit(updateRoomLocalPrefs.setWallpaperPath(roomId, null))
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach { room ->
+                _uiState.update {
+                    it.copy(room = room, showWallpaperSheet = false)
+                }
+            }
+            .catch { e -> _uiState.update { it.copy(errorMessage = friendlyError(e)) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun applySearchQuery(query: String) {
+        val q = query.trim()
+        val matches = if (q.isEmpty()) {
+            emptyList()
+        } else {
+            _uiState.value.messages
+                .asReversed()
+                .filter { msg ->
+                    !msg.recalled &&
+                        (
+                            msg.body.contains(q, ignoreCase = true) ||
+                                (msg.mediaFileName?.contains(q, ignoreCase = true) == true)
+                            )
+                }
+                .map { it.id }
+        }
+        val firstId = matches.firstOrNull()
+        _uiState.update {
+            it.copy(
+                searchQuery = query,
+                searchMatchIds = matches,
+                searchMatchIndex = 0,
+                scrollToMessageId = firstId,
+                highlightMessageId = firstId,
+            )
+        }
+    }
+
+    private fun moveSearchMatch(delta: Int) {
+        val state = _uiState.value
+        val matches = state.searchMatchIds
+        if (matches.isEmpty()) return
+        val next = (state.searchMatchIndex + delta).mod(matches.size)
+        val id = matches[next]
+        _uiState.update {
+            it.copy(
+                searchMatchIndex = next,
+                scrollToMessageId = id,
+                highlightMessageId = id,
+            )
+        }
+    }
+
     private fun pingPeer() {
         val state = _uiState.value
         if (handshakeStatus(state.room, state.isExpired) != RoomHandshakeStatus.WAITING) return
@@ -560,11 +754,18 @@ class RoomViewModel @Inject constructor(
     private fun bootstrap() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         flow {
-            refreshRoomMeta(roomId)
-            emit(getRoom(roomId))
+            // Local-first: paint room + cached messages before network refresh/sync.
+            val room = getRoom(roomId)
+            val localMessages = if (room != null && room.status != MailboxRoom.STATUS_LEFT) {
+                mailboxRepository.getMessages(roomId)
+            } else {
+                emptyList()
+            }
+            emit(BootstrapPayload(room = room, messages = localMessages))
         }
             .flowOn(dispatchersProvider.io)
-            .onEach { room ->
+            .onEach { payload ->
+                val room = payload.room
                 val expired = room?.status == MailboxRoom.STATUS_EXPIRED ||
                     room?.status == MailboxRoom.STATUS_LEFT
                 val openInvite = openInviteOnLoad &&
@@ -574,6 +775,7 @@ class RoomViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         room = room,
+                        messages = payload.messages,
                         isExpired = expired,
                         errorMessage = if (room == null) "Room not found" else null,
                         showInviteSheet = it.showInviteSheet || openInvite,
@@ -585,6 +787,7 @@ class RoomViewModel @Inject constructor(
                     expired -> purgeAndShowExpired()
                     else -> {
                         scheduleExpiry(room)
+                        refreshMetaInBackground()
                         sync(showLoading = false)
                         startObserving()
                         maybeStartEngagement(room)
@@ -601,6 +804,51 @@ class RoomViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
     }
+
+    private fun refreshMetaInBackground() {
+        flow {
+            emit(refreshRoomMeta(roomId))
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach { updated ->
+                if (updated == null) return@onEach
+                applyRoomMetaUpdate(updated)
+            }
+            .catch { e -> Timber.w(e, "refreshRoomMeta failed") }
+            .launchIn(viewModelScope)
+    }
+
+    private fun applyRoomMetaUpdate(updated: MailboxRoom) {
+        val previous = _uiState.value.room
+        val wasWaiting = handshakeStatus(previous, _uiState.value.isExpired) ==
+            RoomHandshakeStatus.WAITING
+        val expired = updated.status == MailboxRoom.STATUS_EXPIRED ||
+            updated.status == MailboxRoom.STATUS_LEFT
+        val nowLive = handshakeStatus(updated, expired) == RoomHandshakeStatus.LIVE
+        val peerJustJoined = wasWaiting &&
+            nowLive &&
+            previous?.role == MailboxRoom.ROLE_CREATOR
+        _uiState.update {
+            it.copy(
+                room = updated,
+                isExpired = expired || it.isExpired,
+                toastMessage = if (peerJustJoined) "peer_joined" else it.toastMessage,
+                showInviteSheet = if (nowLive) false else it.showInviteSheet,
+            )
+        }
+        if (!expired) {
+            scheduleExpiry(updated)
+            if (peerJustJoined) {
+                maybeStartEngagement(updated)
+                sync(showLoading = false)
+            }
+        }
+    }
+
+    private data class BootstrapPayload(
+        val room: MailboxRoom?,
+        val messages: List<ChatMessage>,
+    )
 
     private fun scheduleExpiry(room: MailboxRoom) {
         expiryJob?.cancel()
@@ -620,6 +868,7 @@ class RoomViewModel @Inject constructor(
     private fun onLiveExpiry() {
         if (_uiState.value.isExpired) return
         observeJob?.cancel()
+        metaObserveJob?.cancel()
         engagementJob?.cancel()
         setPresenceOffline()
         _uiState.update {
@@ -693,6 +942,7 @@ class RoomViewModel @Inject constructor(
                     roomNow?.status == MailboxRoom.STATUS_LEFT
                 if (expired) {
                     observeJob?.cancel()
+                    metaObserveJob?.cancel()
                     expiryJob?.cancel()
                     engagementJob?.cancel()
                     setPresenceOffline()
@@ -736,6 +986,7 @@ class RoomViewModel @Inject constructor(
 
     private fun startObserving() {
         observeJob?.cancel()
+        metaObserveJob?.cancel()
         observeJob = remote.observeMessages(roomId)
             .onEach { remoteList ->
                 if (_uiState.value.isExpired) return@onEach
@@ -745,6 +996,7 @@ class RoomViewModel @Inject constructor(
                     roomNow?.status == MailboxRoom.STATUS_LEFT
                 ) {
                     observeJob?.cancel()
+                    metaObserveJob?.cancel()
                     expiryJob?.cancel()
                     engagementJob?.cancel()
                     setPresenceOffline()
@@ -776,6 +1028,15 @@ class RoomViewModel @Inject constructor(
                 Timber.e(e, "Mailbox observe failed")
                 _uiState.update { it.copy(errorMessage = friendlyError(e)) }
             }
+            .flowOn(dispatchersProvider.io)
+            .launchIn(viewModelScope)
+        metaObserveJob = remote.observeRoomMeta(roomId)
+            .onEach {
+                if (_uiState.value.isExpired) return@onEach
+                val updated = refreshRoomMeta(roomId) ?: return@onEach
+                applyRoomMetaUpdate(updated)
+            }
+            .catch { e -> Timber.w(e, "Room meta observe failed") }
             .flowOn(dispatchersProvider.io)
             .launchIn(viewModelScope)
     }
@@ -911,6 +1172,7 @@ class RoomViewModel @Inject constructor(
             .flowOn(dispatchersProvider.io)
             .onEach {
                 observeJob?.cancel()
+                metaObserveJob?.cancel()
                 expiryJob?.cancel()
                 engagementJob?.cancel()
                 setPresenceOffline()
@@ -948,6 +1210,7 @@ class RoomViewModel @Inject constructor(
         }
         flow {
             wipeRoomMedia.wipeRoom(roomId, deleteRemote = true)
+            roomLocalAssetStore.wipeRoom(roomId)
             mailboxRepository.deleteMessagesForRoom(roomId)
             mailboxRepository.upsertRoom(room.copy(status = MailboxRoom.STATUS_LEFT))
             emit(Unit)
@@ -955,6 +1218,7 @@ class RoomViewModel @Inject constructor(
             .flowOn(dispatchersProvider.io)
             .onEach {
                 observeJob?.cancel()
+                metaObserveJob?.cancel()
                 expiryJob?.cancel()
                 engagementJob?.cancel()
                 setPresenceOffline()
@@ -1066,6 +1330,9 @@ class RoomViewModel @Inject constructor(
                             runCatching {
                                 remote.setReadWatermark(roomId, deviceId, lastId)
                             }.onFailure { Timber.w(it, "setReadWatermark failed") }
+                            runCatching {
+                                mailboxRepository.markRoomRead(roomId, lastId)
+                            }.onFailure { Timber.w(it, "markRoomRead failed") }
                         }
                     }
             }
@@ -1168,6 +1435,8 @@ class RoomViewModel @Inject constructor(
         message.contains("Pro required", ignoreCase = true) ->
             "Recall after 24h needs Pro (enable Pro stub on Home in staging debug)."
         message.contains("Only your own", ignoreCase = true) -> "You can only recall your own messages"
+        message.contains("File too large", ignoreCase = true) ->
+            "Photo must be under 10 MB"
         message.contains("Room title required", ignoreCase = true) -> "Enter a room name"
         message.contains("Room title too long", ignoreCase = true) -> "Name is too long"
         else -> null

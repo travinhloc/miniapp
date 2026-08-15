@@ -13,7 +13,11 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
@@ -47,8 +51,13 @@ class VanishXScanActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_vanishx_scan)
+        applyScanToolbarInsets()
 
         barcodeView = findViewById(R.id.zxing_barcode_scanner)
         capture = CaptureManager(this, barcodeView)
@@ -144,6 +153,16 @@ class VanishXScanActivity : ComponentActivity() {
         }
         val options = BitmapFactory.Options().apply { inSampleSize = sample }
         return contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+    }
+
+    private fun applyScanToolbarInsets() {
+        val toolbar = findViewById<View>(R.id.scan_toolbar)
+        val initialBottom = toolbar.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, initialBottom + bars.bottom)
+            insets
+        }
     }
 
     private fun showGalleryError() {

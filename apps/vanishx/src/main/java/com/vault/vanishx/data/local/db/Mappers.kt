@@ -16,6 +16,11 @@ fun MailboxRoomEntity.toDomain(): MailboxRoom = MailboxRoom(
     icebreaker = icebreaker,
     hostPro = hostPro,
     activatedAt = activatedAt,
+    muted = muted,
+    favorite = favorite,
+    avatarLocalPath = avatarLocalPath,
+    wallpaperLocalPath = wallpaperLocalPath,
+    lastReadMessageId = lastReadMessageId,
 )
 
 fun MailboxRoom.toEntity(): MailboxRoomEntity = MailboxRoomEntity(
@@ -31,6 +36,11 @@ fun MailboxRoom.toEntity(): MailboxRoomEntity = MailboxRoomEntity(
     icebreaker = icebreaker,
     hostPro = hostPro,
     activatedAt = activatedAt,
+    muted = muted,
+    favorite = favorite,
+    avatarLocalPath = avatarLocalPath,
+    wallpaperLocalPath = wallpaperLocalPath,
+    lastReadMessageId = lastReadMessageId,
 )
 
 fun MessageEntity.toDomain(): ChatMessage = ChatMessage(

@@ -104,6 +104,7 @@ internal fun WaitingStage(
                     pulse = true,
                     size = RoomUiDimens.waitingHeroAvatar,
                     neonColor = VanishXColors.NeonAmber,
+                    imagePath = room?.avatarLocalPath,
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(

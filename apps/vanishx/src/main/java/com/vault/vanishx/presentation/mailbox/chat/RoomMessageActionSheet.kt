@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,6 +42,7 @@ import com.vault.vanishx.domain.model.RecallPolicy
 import com.vault.vanishx.presentation.mailbox.RoomAction
 import com.vault.vanishx.presentation.mailbox.RoomUiState
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxSheetInsets
 
 private val reactionEmojis = listOf("❤️", "👍", "😂", "😮", "😢", "😡")
 
@@ -67,10 +69,12 @@ internal fun RoomMessageActionSheet(
         onDismissRequest = { onAction(RoomAction.DismissMessageActions) },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = VanishXColors.Surface,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .vanishxSheetInsets()
                 .padding(horizontal = RoomUiDimens.spacingMedium)
                 .padding(bottom = RoomUiDimens.spacingMedium),
         ) {

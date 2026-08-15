@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -44,6 +43,7 @@ import com.vault.vanishx.data.security.SecurityPinStore
 import com.vault.vanishx.presentation.components.PinDots
 import com.vault.vanishx.presentation.components.PinPad
 import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -135,7 +135,7 @@ private fun LockContent(
         modifier = Modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
-            .statusBarsPadding()
+            .vanishxScreenInsets()
             .padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,

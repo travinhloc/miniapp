@@ -69,7 +69,8 @@
     <string name="history_filter_open">Đang mở</string>
     <string name="history_filter_expired">Đã hết hạn</string>
     <string name="history_filter_all">Tất cả</string>
-    <string name="history_empty">Không có phòng trong bộ lọc này.</string>
+    <string name="history_empty">Không có phòng trong mục này.</string>
+    <string name="history_empty_none">Chưa có phòng nào.</string>
     <string name="history_note">Gói miễn phí chỉ mở phòng còn hạn. Phòng hết hạn cần VanishX Pro để xem lại.</string>
     <string name="history_open_pro">Mở bằng Pro</string>
     <string name="history_action_none">—</string>
@@ -103,9 +104,9 @@
     <string name="create_mode_instant_desc">Vào phòng · hiện lời mời Copy / Chia sẻ / QR · chờ đối phương chấp nhận</string>
     <string name="create_mode_later_title">Để sau</string>
     <string name="create_mode_later_desc">Lưu link trên Home · mở khi sẵn sàng gửi</string>
-    <string name="create_icebreaker_label">Lời mở đầu (tuỳ chọn)</string>
-    <string name="create_icebreaker_hint">VD: Tôi bên BĐS căn hộ hôm qua…</string>
-    <string name="create_icebreaker_help">Hiện trên lời mời · đối phương thấy trước khi chấp nhận</string>
+    <string name="create_icebreaker_label">Ghi chú mời (tuỳ chọn)</string>
+    <string name="create_icebreaker_hint">VD: Tôi bên căn hộ hôm qua…</string>
+    <string name="create_icebreaker_help">Người được mời đọc trước khi chấp nhận. Không gửi vào khung chat.</string>
     <string name="create_defaults_note">Mặc định: biệt danh tự tạo · hết hạn sau 24 giờ (đổi trong phòng sau)</string>
     <string name="create_action">Tiếp tục</string>
     <string name="create_creating">Đang tạo…</string>
@@ -134,7 +135,7 @@
     <!-- Join · Lời mời chat (story 7.6) -->
     <string name="join_request_title">Lời mời chat</string>
     <string name="join_request_subtitle">Phòng #%1$s · từ Host</string>
-    <string name="join_request_icebreaker_label">Lời mở đầu</string>
+    <string name="join_request_icebreaker_label">Ghi chú từ người tạo</string>
     <string name="join_request_privacy">Tự hủy sau 24 giờ · không lưu lịch sử trên server</string>
     <string name="join_nickname_change">Đổi</string>
     <string name="join_nickname_save">Lưu</string>
@@ -145,6 +146,9 @@
     <string name="join_block_body">Chặn theo public key. Bạn sẽ không nhận yêu cầu từ người này nữa trên máy này, và lời mời này sẽ không được chấp nhận.</string>
     <string name="join_block_confirm">Chặn</string>
     <string name="join_later_toast">Đã lưu · chưa chấp nhận — Host vẫn đang chờ</string>
+    <string name="home_pending_invite">Lời mời đã lưu · chưa chấp nhận</string>
+    <string name="home_pending_invite_open">Mở</string>
+    <string name="room_peer_joined">Đối phương đã vào phòng</string>
     <string name="join_blocked_toast">Đã chặn. Lời mời này chưa được chấp nhận.</string>
     <string name="join_error_peer_blocked">Bạn đã chặn Host này trên máy. Bỏ chặn để vào phòng của họ.</string>
     <string name="join_unblock_and_chat">Bỏ chặn &amp; Chat</string>
@@ -251,8 +255,8 @@
     <string name="room_scroll_to_bottom">Xuống dưới</string>
     <string name="room_day_today">Hôm nay</string>
     <string name="room_day_yesterday">Hôm qua</string>
-    <string name="room_rename_title">Tên phòng</string>
-    <string name="room_rename_hint">Tên hiển thị</string>
+    <string name="room_rename_title">Tên gợi nhớ</string>
+    <string name="room_rename_hint">Tên gợi nhớ trên máy</string>
     <string name="room_rename_save">Lưu</string>
     <string name="room_rename_placeholder">Chạm để đặt tên</string>
     <string name="room_rename_required">Nhập tên phòng</string>
@@ -289,7 +293,7 @@
     <string name="lock_wrong_pin">PIN sai. Còn %1$d lần trước khi tạm khoá.</string>
     <string name="lock_use_bio">Vân tay / khuôn mặt</string>
     <string name="lock_ok">OK</string>
-    <string name="lock_ok_hint">Nhập 4 số, rồi bấm OK</string>
+    <string name="lock_ok_hint">Nhập 4 số — tự mở khóa, hoặc bấm OK</string>
     <string name="lock_cooldown_title">Tạm khoá nhập PIN</string>
     <string name="lock_cooldown_subtitle">Sai quá nhiều lần. Thử lại khi hết thời gian chờ.</string>
     <string name="lock_cooldown_tier_hint">Bậc %1$d · lần sau lâu hơn (60s → 5p → 24h)</string>
@@ -379,4 +383,60 @@
     <string name="room_media_saved">Đã lưu vào máy</string>
     <string name="room_media_save_failed">Không lưu được tệp đính kèm</string>
     <string name="room_media_missing">Không có tệp đính kèm</string>
+
+    <!-- Epic 12 Room Options -->
+    <string name="room_options_title">Tùy chọn</string>
+    <string name="room_options_change_avatar">Đổi ảnh</string>
+    <string name="room_options_reset_avatar">Dùng mặc định</string>
+    <string name="room_options_search">Tìm tin</string>
+    <string name="room_options_wallpaper">Hình nền</string>
+    <string name="room_options_mute">Tắt thông báo</string>
+    <string name="room_options_unmute">Bật thông báo</string>
+    <string name="room_options_favorite">Yêu thích</string>
+    <string name="room_options_nickname">Tên gợi nhớ</string>
+    <string name="room_options_media_section">Ảnh, file</string>
+    <string name="room_options_media_empty">Chưa có media trên máy</string>
+    <string name="room_options_safety_section">Riêng tư &amp; phòng</string>
+    <string name="room_options_reset_wallpaper">Đặt lại hình nền</string>
+    <string name="room_options_media_see_all">Xem tất cả</string>
+    <string name="room_wallpaper_presets">Màu có sẵn</string>
+    <string name="room_wallpaper_from_gallery">Chọn từ thư viện</string>
+    <string name="room_media_library_title">Ảnh, file</string>
+    <string name="room_media_library_tab_media">Ảnh (%1$d)</string>
+    <string name="room_media_library_tab_docs">File (%1$d)</string>
+    <string name="room_media_library_tab_audio">Tin nhắn thoại (%1$d)</string>
+    <string name="room_media_library_empty_media">Chưa có ảnh hoặc video</string>
+    <string name="room_media_library_empty_docs">Chưa có file nào</string>
+    <string name="room_media_library_empty_audio">Chưa có tin nhắn thoại</string>
+    <string name="room_media_library_voice_item">Tin nhắn thoại</string>
+    <string name="room_avatar_too_large">Ảnh phải dưới 10 MB</string>
+    <string name="room_search_hint">Tìm tin nhắn</string>
+    <string name="room_search_prev">Kết quả trước</string>
+    <string name="room_search_next">Kết quả sau</string>
+
+    <string name="conv_preview_waiting">Chờ chấp nhận · Chưa ai vào</string>
+    <string name="conv_preview_expired">Đã hết hạn</string>
+    <string name="conv_preview_recalled">Đã thu hồi</string>
+    <string name="conv_preview_sensitive">Tin nhạy cảm</string>
+    <string name="conv_preview_image">Ảnh</string>
+    <string name="conv_preview_file">File</string>
+    <string name="conv_preview_video">Video</string>
+    <string name="conv_preview_empty">Chưa có tin nhắn</string>
+    <string name="conv_preview_left">Đã chặn / rời phòng</string>
+    <string name="conv_preview_you">Bạn: %1$s</string>
+    <string name="home_search_hint">Tìm kiếm</string>
+    <string name="home_filter_all">Tất cả</string>
+    <string name="home_filter_open">Đang mở</string>
+    <string name="home_filter_expired">Hết hạn</string>
+    <string name="home_filter_favorite">Yêu thích</string>
+    <string name="home_empty_title">Chưa có đoạn chat</string>
+    <string name="home_empty_create">Tạo phòng</string>
+    <string name="home_empty_paste">Dán lời mời</string>
+    <string name="home_menu_create">Tạo phòng</string>
+    <string name="home_menu_paste">Dán lời mời</string>
+    <string name="home_invite_qr">QR</string>
+    <string name="home_invite_sheet_title">Mời vào phòng</string>
+    <string name="home_history_link">Hết hạn &amp; kho máy → Lịch sử</string>
+    <string name="history_filter_favorite">Yêu thích</string>
+    <string name="history_search_hint">Tìm phòng</string>
 </resources>

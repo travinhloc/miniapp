@@ -8,6 +8,7 @@ internal object RoomUiDimens {
     val spacingMedium = 16.dp
     val composerGap = 8.dp
     val bubbleMaxWidth = 280.dp
+    const val bubbleMaxFraction = 0.75f
     val bubbleCorner = 16.dp
     val mediaCorner = 16.dp
     /** Reaction pill hangs this far past the bubble/media bottom edge. */

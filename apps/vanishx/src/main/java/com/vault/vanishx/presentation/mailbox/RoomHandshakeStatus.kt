@@ -17,6 +17,6 @@ enum class RoomHandshakeStatus {
 fun handshakeStatus(room: MailboxRoom?, isExpired: Boolean): RoomHandshakeStatus = when {
     room == null || isExpired -> RoomHandshakeStatus.NONE
     room.status != MailboxRoom.STATUS_ACTIVE -> RoomHandshakeStatus.NONE
-    room.activatedAt > 0L || !room.peerPub.isNullOrBlank() -> RoomHandshakeStatus.LIVE
-    else -> RoomHandshakeStatus.WAITING
+    room.isAwaitingGuest() -> RoomHandshakeStatus.WAITING
+    else -> RoomHandshakeStatus.LIVE
 }

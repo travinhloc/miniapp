@@ -25,8 +25,8 @@ class RenameRoomUseCaseTest {
         coEvery { repo.getRoom("r1") } returns room
 
         val updated = RenameRoomUseCase(repo).invoke("r1", "  Night vault  ")
-        updated.title shouldBe "Night vault"
-        coVerify { repo.upsertRoom(match { it.title == "Night vault" }) }
+        updated.nickname shouldBe "Night vault"
+        coVerify { repo.upsertRoom(match { it.nickname == "Night vault" }) }
     }
 
     @Test
