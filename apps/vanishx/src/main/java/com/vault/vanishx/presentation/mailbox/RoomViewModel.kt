@@ -362,7 +362,7 @@ class RoomViewModel @Inject constructor(
             RoomAction.StubChangeTtl -> _uiState.update {
                 it.copy(
                     showBentoSheet = false,
-                    infoMessage = "Changing TTL will arrive in a later build.",
+                    infoMessage = INFO_TTL_STUB,
                 )
             }
             RoomAction.OpenRenameDialog -> _uiState.update { state ->
@@ -1480,5 +1480,6 @@ class RoomViewModel @Inject constructor(
         const val MS_PER_SEC = 1_000L
         const val PRESENCE_GRACE_MS = 60_000L
         const val TYPING_TTL_MS = 3_000L
+        const val INFO_TTL_STUB = "ttl_stub"
     }
 }

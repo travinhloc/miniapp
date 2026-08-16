@@ -1,10 +1,13 @@
 package com.vault.vanishx.presentation.security
 
 import androidx.lifecycle.viewModelScope
+import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.BuildConfig
 import com.vault.vanishx.data.security.SecurityPinStore
+import com.vault.vanishx.domain.model.BlockedPeer
+import com.vault.vanishx.domain.repository.BlockRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.presentation.history.HistoryDestination
@@ -15,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -30,6 +34,8 @@ data class SecuritySettingsUiState(
     val panicPinConfirm: String = "",
     val flagSecureEnabled: Boolean = true,
     val autoWipeEnabled: Boolean = false,
+    val biometricEnabled: Boolean = false,
+    val blockedPeers: List<BlockedPeer> = emptyList(),
     val showProStubToggle: Boolean = false,
     val isProStub: Boolean = false,
     val infoMessage: String? = null,
@@ -52,15 +58,19 @@ sealed interface SecuritySettingsAction {
     data object ToggleProStub : SecuritySettingsAction
     data class SetFlagSecure(val enabled: Boolean) : SecuritySettingsAction
     data class SetAutoWipe(val enabled: Boolean) : SecuritySettingsAction
+    data class SetBiometric(val enabled: Boolean) : SecuritySettingsAction
+    data class UnblockPeer(val peerPub: String) : SecuritySettingsAction
     data object Back : SecuritySettingsAction
 }
 
 @HiltViewModel
-@Suppress("ComplexMethod")
+@Suppress("ComplexMethod", "TooManyFunctions", "LargeClass")
 class SecuritySettingsViewModel @Inject constructor(
     private val securityPinStore: SecurityPinStore,
     private val ensureIdentity: EnsureIdentityUseCase,
     private val proEntitlement: ProEntitlementRepository,
+    private val blockRepository: BlockRepository,
+    private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
 
     private val _uiState = MutableStateFlow(refreshState(anonymousId = null))
@@ -74,6 +84,7 @@ class SecuritySettingsViewModel @Inject constructor(
             .onEach { id -> _uiState.update { it.copy(anonymousId = id) } }
             .catch { /* optional identity display */ }
             .launchIn(viewModelScope)
+        refreshBlockedPeers()
     }
 
     fun onAction(action: SecuritySettingsAction) {
@@ -112,6 +123,11 @@ class SecuritySettingsViewModel @Inject constructor(
                 securityPinStore.setAutoWipeEnabled(action.enabled)
                 _uiState.update { it.copy(autoWipeEnabled = action.enabled) }
             }
+            is SecuritySettingsAction.SetBiometric -> {
+                securityPinStore.setBiometricEnabled(action.enabled)
+                _uiState.update { it.copy(biometricEnabled = action.enabled) }
+            }
+            is SecuritySettingsAction.UnblockPeer -> unblockPeer(action.peerPub)
             SecuritySettingsAction.Back -> launch { _navigator.emit(BaseDestination.Up()) }
         }
     }
@@ -136,7 +152,8 @@ class SecuritySettingsViewModel @Inject constructor(
         }
         runCatching { securityPinStore.setUnlockPin(state.unlockPin) }
             .onSuccess {
-                _uiState.value = refreshState(state.anonymousId).copy(infoMessage = "Unlock PIN saved")
+                _uiState.value = refreshState(state.anonymousId, state.blockedPeers)
+                    .copy(infoMessage = "Unlock PIN saved")
             }
             .onFailure { e ->
                 _uiState.update { it.copy(errorMessage = e.message ?: e::class.java.simpleName) }
@@ -151,7 +168,8 @@ class SecuritySettingsViewModel @Inject constructor(
         }
         runCatching { securityPinStore.setPanicPin(state.panicPin) }
             .onSuccess {
-                _uiState.value = refreshState(state.anonymousId).copy(infoMessage = "Panic PIN saved")
+                _uiState.value = refreshState(state.anonymousId, state.blockedPeers)
+                    .copy(infoMessage = "Panic PIN saved")
             }
             .onFailure { e ->
                 _uiState.update { it.copy(errorMessage = e.message ?: e::class.java.simpleName) }
@@ -159,28 +177,58 @@ class SecuritySettingsViewModel @Inject constructor(
     }
 
     private fun clearUnlock() {
-        val anonymousId = _uiState.value.anonymousId
+        val state = _uiState.value
         securityPinStore.clearUnlockPin()
-        _uiState.value = refreshState(anonymousId).copy(infoMessage = "Unlock PIN removed")
+        _uiState.value = refreshState(state.anonymousId, state.blockedPeers)
+            .copy(infoMessage = "Unlock PIN removed")
     }
 
     private fun clearPanic() {
-        val anonymousId = _uiState.value.anonymousId
+        val state = _uiState.value
         securityPinStore.clearPanicPin()
-        _uiState.value = refreshState(anonymousId).copy(infoMessage = "Panic PIN removed")
+        _uiState.value = refreshState(state.anonymousId, state.blockedPeers)
+            .copy(infoMessage = "Panic PIN removed")
     }
 
     private fun clearFeedback() {
         _uiState.update { it.copy(errorMessage = null, infoMessage = null) }
     }
 
-    private fun refreshState(anonymousId: String?): SecuritySettingsUiState =
+    private fun unblockPeer(peerPub: String) {
+        flow {
+            blockRepository.unblock(peerPub)
+            emit(blockRepository.listBlocked())
+        }
+            .flowOn(dispatchersProvider.io)
+            .onEach { list ->
+                _uiState.update { it.copy(blockedPeers = list, errorMessage = null) }
+            }
+            .catch { e ->
+                _uiState.update { it.copy(errorMessage = e.message ?: e::class.java.simpleName) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun refreshBlockedPeers() {
+        flow { emit(blockRepository.listBlocked()) }
+            .flowOn(dispatchersProvider.io)
+            .onEach { list -> _uiState.update { it.copy(blockedPeers = list) } }
+            .catch { /* empty list stays */ }
+            .launchIn(viewModelScope)
+    }
+
+    private fun refreshState(
+        anonymousId: String?,
+        blockedPeers: List<BlockedPeer> = emptyList(),
+    ): SecuritySettingsUiState =
         SecuritySettingsUiState(
             anonymousId = anonymousId,
             hasUnlockPin = securityPinStore.hasUnlockPin(),
             hasPanicPin = securityPinStore.hasPanicPin(),
             flagSecureEnabled = securityPinStore.isFlagSecureEnabled(),
             autoWipeEnabled = securityPinStore.isAutoWipeEnabled(),
+            biometricEnabled = securityPinStore.isBiometricEnabled(),
+            blockedPeers = blockedPeers,
             showProStubToggle = isProStubToggleEnabled(),
             isProStub = proEntitlement.isProNow(),
         )

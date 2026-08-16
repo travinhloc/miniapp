@@ -168,6 +168,9 @@
     <string name="room_title">Phòng ···%1$s</string>
     <string name="room_ttl_remaining">Còn hạn: %1$s</string>
     <string name="room_empty_hint">Chưa có tin. Hãy phóng một mũi tên đã mã hóa.</string>
+    <string name="need_pro_title">Cần VanishX Pro</string>
+    <string name="need_pro_body">Tính năng này nằm ngoài gói miễn phí. Mở Pro trên máy này để tiếp tục.</string>
+    <string name="need_pro_confirm">Xem Pro</string>
     <string name="room_expired_title">Phòng đã hết hạn</string>
     <string name="room_expired_body">Phòng đã hết hạn. Tin trên máy chủ đã xóa. Bản lưu trên máy có thể mở bằng Pro.</string>
     <string name="room_locked_title">Phòng đã hết hạn</string>
@@ -176,14 +179,14 @@
     <string name="room_archive_banner">Chỉ xem · đã ẩn ô nhập tin</string>
     <string name="room_ping">Gọi lại phòng</string>
     <string name="room_ping_title">Gọi lại phòng?</string>
-    <string name="room_ping_body">Kiểm tra phòng còn trên máy chủ. Không tạo phòng mới.</string>
+    <string name="room_ping_body">Kiểm tra phòng còn trên mạng. Không tạo phòng mới.</string>
     <string name="room_ping_confirm">Gọi lại</string>
     <string name="room_empty_e2e_title">Mã hóa đầu cuối</string>
     <string name="room_empty_e2e_body">Tin nhắn được bảo vệ trên máy bạn.</string>
     <string name="room_composer_hint">Tin nhắn</string>
     <string name="room_send">Gửi</string>
     <string name="room_sent_tag">Đã phóng · không thu hồi</string>
-    <string name="room_syncing">Đang đồng bộ hộp thư…</string>
+    <string name="room_syncing">Đang đồng bộ tin…</string>
     <string name="room_retry_sync">Thử đồng bộ lại</string>
     <string name="room_menu">⋯</string>
     <string name="room_block">Chặn đối phương</string>
@@ -232,9 +235,9 @@
     <string name="room_bento_title">Thao tác nhanh</string>
     <string name="room_bento_burn">Hủy phòng</string>
     <string name="room_bento_burn_sub">Rời phòng và xóa chat trên máy này</string>
-    <string name="room_bento_ttl">TTL phòng</string>
-    <string name="room_bento_ttl_sub">Đổi hạn — sắp có</string>
-    <string name="room_bento_ttl_stub">Đổi TTL sẽ có trong bản sau.</string>
+    <string name="room_bento_ttl">Thời gian còn lại</string>
+    <string name="room_bento_ttl_sub">Đổi hạn phòng — sắp có</string>
+    <string name="room_bento_ttl_stub">Đổi đồng hồ phòng sẽ có trong bản sau.</string>
     <string name="room_bento_fingerprint">Vân tay khóa</string>
     <string name="room_bento_fingerprint_sub">Đối chiếu mã an toàn đầu cuối</string>
     <string name="room_bento_block">Chặn đối phương</string>
@@ -324,6 +327,16 @@
     <string name="settings_section_identity">Danh tính</string>
     <string name="settings_section_security">Bảo mật</string>
     <string name="settings_section_pro">Pro (staging)</string>
+    <string name="settings_section_privacy">Riêng tư</string>
+    <string name="settings_bio_title">Vân tay / khuôn mặt</string>
+    <string name="settings_bio_sub">Mở khóa không cần gõ PIN khi máy hỗ trợ</string>
+    <string name="settings_blocked_row_title">Đã chặn</string>
+    <string name="settings_blocked_row_sub">Người đã chặn trên máy này</string>
+    <string name="settings_blocked_title">Đã chặn</string>
+    <string name="settings_blocked_hint">Chặn theo public key. Bỏ chặn để nhận lại lời mời từ họ trên máy này.</string>
+    <string name="settings_blocked_empty">Chưa chặn ai.</string>
+    <string name="settings_blocked_peer_label">Đối phương ···%1$s</string>
+    <string name="settings_blocked_unblock">Bỏ chặn</string>
     <string name="settings_section_data">Dữ liệu</string>
     <string name="settings_section_about">Giới thiệu</string>
     <string name="settings_identity_loading">Đang tải ID ẩn danh…</string>
@@ -358,9 +371,9 @@
 
     <!-- FCM -->
     <string name="fcm_channel_id">vanishx_mailbox</string>
-    <string name="fcm_channel_name">Hộp thư</string>
+    <string name="fcm_channel_name">Tin nhắn</string>
     <string name="fcm_channel_description">Thông báo khi phòng tạm có thể có tin mới</string>
-    <string name="fcm_notification_title">Hoạt động hộp thư mới</string>
+    <string name="fcm_notification_title">Tin nhắn mới</string>
     <string name="fcm_notification_body">Mở phòng để đồng bộ tin đã mã hóa.</string>
     <!-- Media -->
     <string name="room_attach_cd">Đính kèm media</string>

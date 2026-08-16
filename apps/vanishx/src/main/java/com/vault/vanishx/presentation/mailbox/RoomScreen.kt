@@ -16,15 +16,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -277,6 +273,7 @@ private fun RoomContent(
     onPickGallery: () -> Unit,
     onPickDocument: () -> Unit,
 ) {
+    var showNeedPro by remember { mutableStateOf(false) }
     val showComposer = !uiState.isLoading &&
         uiState.room?.status == MailboxRoom.STATUS_ACTIVE &&
         !uiState.isExpired
@@ -316,8 +313,9 @@ private fun RoomContent(
             uiState.isLoading -> RoomLoading(modifier = Modifier.weight(1f))
             uiState.room?.status == MailboxRoom.STATUS_LEFT -> RoomLeft(modifier = Modifier.weight(1f))
             uiState.isExpired && !uiState.isPro -> RoomExpiredFree(
-                modifier = Modifier.weight(1f),
+                onNeedPro = { showNeedPro = true },
                 onAction = onAction,
+                modifier = Modifier.weight(1f),
             )
             uiState.isExpired && uiState.isPro -> RoomExpiredProArchive(
                 uiState = uiState,
@@ -429,62 +427,44 @@ private fun RoomContent(
     }
 
     if (uiState.showRenameDialog) {
-        AlertDialog(
-            onDismissRequest = { onAction(RoomAction.DismissRenameDialog) },
-            title = { Text(text = stringResource(R.string.room_rename_title)) },
-            text = {
+        VanishXAlertDialog(
+            title = stringResource(R.string.room_rename_title),
+            body = stringResource(R.string.room_rename_hint),
+            confirmLabel = stringResource(R.string.room_rename_save),
+            dismissLabel = stringResource(R.string.action_back),
+            confirmEnabled = uiState.renameDraft.isNotBlank(),
+            onConfirm = { onAction(RoomAction.ConfirmRename) },
+            onDismiss = { onAction(RoomAction.DismissRenameDialog) },
+            extraContent = {
                 OutlinedTextField(
                     value = uiState.renameDraft,
                     onValueChange = { onAction(RoomAction.RenameDraftChanged(it)) },
                     singleLine = true,
-                    label = { Text(text = stringResource(R.string.room_rename_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = { onAction(RoomAction.ConfirmRename) }) {
-                    Text(text = stringResource(R.string.room_rename_save))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onAction(RoomAction.DismissRenameDialog) }) {
-                    Text(text = stringResource(R.string.action_back))
-                }
             },
         )
     }
 
     if (uiState.showReportDialog) {
-        AlertDialog(
-            onDismissRequest = { onAction(RoomAction.DismissReport) },
-            title = { Text(text = stringResource(R.string.room_report_title)) },
-            text = {
-                Column {
-                    Text(text = stringResource(R.string.room_report_body))
-                    Spacer(modifier = Modifier.height(RoomUiDimens.spacingSmall))
-                    OutlinedTextField(
-                        value = uiState.reportReason,
-                        onValueChange = { onAction(RoomAction.ReportReasonChanged(it)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(text = stringResource(R.string.room_report_reason_hint))
-                        },
-                        maxLines = REPORT_REASON_MAX_LINES,
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { onAction(RoomAction.SubmitReport) },
-                    enabled = !uiState.isReporting,
-                ) {
-                    Text(text = stringResource(R.string.room_report_submit))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onAction(RoomAction.DismissReport) }) {
-                    Text(text = stringResource(R.string.action_back))
-                }
+        VanishXAlertDialog(
+            title = stringResource(R.string.room_report_title),
+            body = stringResource(R.string.room_report_body),
+            confirmLabel = stringResource(R.string.room_report_submit),
+            dismissLabel = stringResource(R.string.action_back),
+            confirmEnabled = !uiState.isReporting,
+            onConfirm = { onAction(RoomAction.SubmitReport) },
+            onDismiss = { onAction(RoomAction.DismissReport) },
+            extraContent = {
+                OutlinedTextField(
+                    value = uiState.reportReason,
+                    onValueChange = { onAction(RoomAction.ReportReasonChanged(it)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(text = stringResource(R.string.room_report_reason_hint))
+                    },
+                    maxLines = REPORT_REASON_MAX_LINES,
+                )
             },
         )
     }
@@ -533,7 +513,11 @@ private fun RoomContent(
             isPro = uiState.isPro,
             onDismiss = { onAction(RoomAction.DismissMediaViewer) },
             onSave = {
-                onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+                if (uiState.isPro) {
+                    onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+                } else {
+                    showNeedPro = true
+                }
             },
         )
     }
@@ -561,40 +545,42 @@ private fun RoomContent(
         uiState.messages.firstOrNull { it.id == id }
     }
     if (detailsMessage != null) {
-        AlertDialog(
-            onDismissRequest = { onAction(RoomAction.DismissMessageDetails) },
-            title = { Text(text = stringResource(R.string.room_action_details)) },
-            text = {
-                Column {
-                    Text(
-                        text = stringResource(
-                            R.string.room_details_sent_at,
-                            formatMessageTime(detailsMessage.sentAt),
-                        ),
-                    )
-                    Spacer(modifier = Modifier.height(RoomUiDimens.spacingSmall))
-                    Text(
-                        text = stringResource(
-                            when {
-                                detailsMessage.direction !=
-                                    com.vault.vanishx.domain.model.ChatMessage.DIRECTION_OUT ->
-                                    R.string.room_details_status_received
-                                isMessageAtOrBeforeWatermark(
-                                    detailsMessage.id,
-                                    uiState.peerReadWatermarkId,
-                                    uiState.messages,
-                                ) -> R.string.room_details_status_read
-                                else -> R.string.room_details_status_sent
-                            },
-                        ),
-                    )
-                }
+        val status = stringResource(
+            when {
+                detailsMessage.direction != ChatMessage.DIRECTION_OUT ->
+                    R.string.room_details_status_received
+                isMessageAtOrBeforeWatermark(
+                    detailsMessage.id,
+                    uiState.peerReadWatermarkId,
+                    uiState.messages,
+                ) -> R.string.room_details_status_read
+                else -> R.string.room_details_status_sent
             },
-            confirmButton = {
-                TextButton(onClick = { onAction(RoomAction.DismissMessageDetails) }) {
-                    Text(text = stringResource(R.string.room_safety_close))
-                }
+        )
+        VanishXAlertDialog(
+            title = stringResource(R.string.room_action_details),
+            body = stringResource(
+                R.string.room_details_sent_at,
+                formatMessageTime(detailsMessage.sentAt),
+            ) + "\n" + status,
+            confirmLabel = stringResource(R.string.room_safety_close),
+            onConfirm = { onAction(RoomAction.DismissMessageDetails) },
+            onDismiss = { onAction(RoomAction.DismissMessageDetails) },
+        )
+    }
+
+    if (showNeedPro) {
+        VanishXAlertDialog(
+            title = stringResource(R.string.need_pro_title),
+            body = stringResource(R.string.need_pro_body),
+            confirmLabel = stringResource(R.string.need_pro_confirm),
+            dismissLabel = stringResource(R.string.action_back),
+            tone = VanishXAlertTone.Accent,
+            onConfirm = {
+                showNeedPro = false
+                onAction(RoomAction.OpenPaywall)
             },
+            onDismiss = { showNeedPro = false },
         )
     }
 }

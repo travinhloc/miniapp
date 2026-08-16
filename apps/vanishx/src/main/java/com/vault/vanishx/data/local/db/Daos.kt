@@ -67,6 +67,9 @@ interface BlockedPeerDao {
     @Query("SELECT * FROM blocked_peers WHERE peerPub = :peerPub LIMIT 1")
     suspend fun get(peerPub: String): BlockedPeerEntity?
 
+    @Query("SELECT * FROM blocked_peers ORDER BY blockedAt DESC")
+    suspend fun listAll(): List<BlockedPeerEntity>
+
     @Query("SELECT peerPub FROM blocked_peers")
     suspend fun listPeerPubs(): List<String>
 

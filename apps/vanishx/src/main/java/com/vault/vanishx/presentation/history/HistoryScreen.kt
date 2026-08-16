@@ -37,6 +37,9 @@ import com.vault.vanishx.domain.model.ConversationPreview
 import com.vault.vanishx.domain.model.ConversationPreviewKind
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -50,6 +53,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
+import com.vault.vanishx.presentation.components.VanishXAlertDialog
+import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.VanishXTheme
@@ -181,6 +186,7 @@ private fun HistoryScreenContent(
                         room = room,
                         isPro = uiState.isPro,
                         onOpen = { onAction(HistoryAction.OpenRoom(room.row.id)) },
+                        onOpenPaywall = { onAction(HistoryAction.OpenPaywall) },
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -274,7 +280,9 @@ private fun HistoryRoomRow(
     room: HistoryRoomItem,
     isPro: Boolean,
     onOpen: () -> Unit,
+    onOpenPaywall: () -> Unit,
 ) {
+    var showNeedPro by remember { mutableStateOf(false) }
     val row = room.row
     Surface(
         shape = RoundedCornerShape(CardCorner),
@@ -314,7 +322,7 @@ private fun HistoryRoomRow(
                     }
                     row.isExpired && !isPro -> {
                         OutlinedButton(
-                            onClick = onOpen,
+                            onClick = { showNeedPro = true },
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = VanishXColors.Accent,
@@ -338,6 +346,20 @@ private fun HistoryRoomRow(
                 }
             }
         }
+    }
+    if (showNeedPro) {
+        VanishXAlertDialog(
+            title = stringResource(R.string.need_pro_title),
+            body = stringResource(R.string.need_pro_body),
+            confirmLabel = stringResource(R.string.need_pro_confirm),
+            dismissLabel = stringResource(R.string.action_back),
+            tone = VanishXAlertTone.Accent,
+            onConfirm = {
+                showNeedPro = false
+                onOpenPaywall()
+            },
+            onDismiss = { showNeedPro = false },
+        )
     }
 }
 
