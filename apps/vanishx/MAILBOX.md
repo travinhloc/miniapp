@@ -67,7 +67,7 @@ mailbox envelope, preserving the existing pickup-queue behavior.
 - Home resume (4.1): `SyncActiveMailboxesUseCase` re-resolves TTL, purges expired, syncs active rooms
 - **Pickup queue:** outbound ciphertext stays on RTDB until the **peer** downloads it (or TTL / recall). Sender sync must not delete own messages just because they exist locally.
 - FCM (3.1): `firebase-messaging` · topic `vx_room_{roomId}` · notification → `vanishx://open/{roomId}`
-- Pending invite (3.1 / 14.1 / 14.3): `PendingInviteStore` + URI capture; clipboard `VANISHX_INVITE` **once per cold start** if no App Link (`CaptureClipboardInviteUseCase`). Android 12+ paste toast accepted (E14-6). New invites are `https://{host}/join?token=` (opaque). `vanishx://r/…` still parses.
+- Pending invite (3.1 / 14.1 / 14.3 / **14.4**): store canonical HTTPS URI · Home observes pending → Join (Unlock/Setup first; **no** auto-Accept). Clipboard payload is never persisted. Panic wipe clears pending.
 - Block / Report (3.3): local `blocked_peers` by peer pubkey · leave room · RTDB `/reports`
 - Pro recall (4.2): stub Pro (staging debug) · `RecallRoomMessageUseCase` deletes RTDB message if still present · local `recalled` flag (IAP deferred)
 

@@ -52,7 +52,25 @@ class HomeViewModel @Inject constructor(
         proEntitlement.isPro
             .onEach { pro -> _uiState.update { it.copy(isProStub = pro) } }
             .launchIn(viewModelScope)
+        observePendingInvite()
         bootstrapIdentity()
+    }
+
+    private var routedPendingUri: String? = null
+
+    private fun observePendingInvite() {
+        pendingInviteStore.peek()
+        pendingInviteStore.pending
+            .onEach { uri ->
+                _uiState.update { it.copy(pendingInviteUri = uri) }
+                if (uri == null) {
+                    routedPendingUri = null
+                } else if (uri != routedPendingUri) {
+                    routedPendingUri = uri
+                    _navigator.emit(MailboxDestination.Join)
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun bootstrapIdentity() {
@@ -66,12 +84,6 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 refreshRooms()
-                refreshPendingInvite()
-                // Story 7.6: a pending invite (deep link / post-install) must go through the
-                // Message Request sheet — never auto-accept the handshake on cold start.
-                if (pendingInviteStore.peek() != null) {
-                    _navigator.emit(MailboxDestination.Join)
-                }
             }
             .flowOn(dispatchersProvider.io)
             .catch { e ->

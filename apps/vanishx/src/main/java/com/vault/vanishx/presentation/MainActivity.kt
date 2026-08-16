@@ -114,7 +114,8 @@ class MainActivity : FragmentActivity() {
                         val showLock = securityPinStore.hasUnlockPin() && !sessionUnlocked
                         Box(modifier = Modifier.fillMaxSize()) {
                             AppNavGraph(navController = rememberNavController())
-                            // Dialog sits above ModalBottomSheet windows (Join Message Request).
+                            // Lock overlay is the auth gate (story 14.4): pending Join sits underneath
+                            // until PIN/bio; no Login screen. Setup runs before Main on first run.
                             if (showLock) {
                                 Dialog(
                                     onDismissRequest = {},

@@ -93,6 +93,17 @@ class JoinRoomViewModelTest {
     }
 
     @Test
+    fun `Back keeps pending invite`() = runTest {
+        every { pendingInviteStore.peek() } returns "https://vanihx-staging.web.app/join?token=x"
+        val viewModel = viewModel()
+        viewModel.navigator.test {
+            viewModel.onAction(JoinRoomAction.Back)
+            awaitItem() shouldBe BaseDestination.Up()
+        }
+        coVerify(exactly = 0) { pendingInviteStore.clear() }
+    }
+
+    @Test
     fun `SaveForLater never runs the handshake and keeps the invite for later`() = runTest {
         every { pendingInviteStore.peek() } returns null
         writeMeta("r1")
