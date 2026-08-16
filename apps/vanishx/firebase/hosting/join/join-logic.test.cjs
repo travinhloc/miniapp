@@ -75,6 +75,28 @@ test("classify UA", () => {
 });
 
 test("Play urls use production applicationId", () => {
-    assert.equal(join.playMarketUrl(), "market://details?id=com.vault.vanishx");
     assert.match(join.playHttpsUrl(), /play\.google\.com.*com\.vault\.vanishx/);
+    assert.equal(join.playMarketUrl, undefined);
+});
+
+test("detects Zalo in-app browser", () => {
+    assert.equal(join.isInAppBrowser("Mozilla/5.0 (Linux; Android 14) Zalo android"), true);
+    assert.equal(join.isInAppBrowser("Mozilla/5.0 (Linux; Android 14) Chrome/120.0.0.0"), false);
+});
+
+test("staging host opens staging package, not Play", () => {
+    assert.equal(join.androidAppPackage("vanihx-staging.web.app"), "com.vault.vanishx.staging");
+    assert.equal(join.shouldFallbackToPlay("vanihx-staging.web.app"), false);
+    const intent = join.androidIntentUrl(
+        "https://vanihx-staging.web.app/join?token=abc",
+        "vanihx-staging.web.app",
+    );
+    assert.match(intent, /^intent:\/\/vanihx-staging\.web\.app\/join\?token=abc/);
+    assert.match(intent, /package=com\.vault\.vanishx\.staging/);
+    assert.equal(intent.includes("room-secret"), false);
+});
+
+test("prod host may fall back to Play", () => {
+    assert.equal(join.androidAppPackage("vanishx.app"), "com.vault.vanishx");
+    assert.equal(join.shouldFallbackToPlay("vanishx.app"), true);
 });

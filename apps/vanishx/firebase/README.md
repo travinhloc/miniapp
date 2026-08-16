@@ -15,7 +15,7 @@ firebase deploy --only hosting
 Serves:
 
 - `https://vanihx-staging.web.app/.well-known/assetlinks.json`
-- `/join?token=` landing (story 14.2): clipboard `VANISHX_INVITE` · Android → Play · iOS copy-only · desktop QR
+- `/join?token=` landing (story 14.2): clipboard `VANISHX_INVITE` · Android opens installed app (`intent://` + staging/prod package) · Play only if prod host and page still visible · iOS copy-only · desktop QR
 
 `assetlinks.json` currently lists **debug** SHA-256 for `com.vault.vanishx.staging`. Add the **release** fingerprint before Play / productionDebug signed with the release keystore (R.2).
 

@@ -39,11 +39,22 @@
         return ok;
     }
 
+    function openApp(canonical, token) {
+        var scheme = J.vanishxSchemeUrl(token);
+        if (scheme) {
+            window.location.href = scheme;
+            return;
+        }
+        var intent = J.androidIntentUrl(canonical, window.location.host);
+        if (intent) window.location.href = intent;
+    }
+
     function openPlay() {
-        window.location.href = J.playMarketUrl();
-        setTimeout(function () {
-            window.location.href = J.playHttpsUrl();
-        }, 400);
+        window.location.href = J.playHttpsUrl();
+    }
+
+    function pageStillVisible() {
+        return document.visibilityState !== "hidden";
     }
 
     function renderQr(url) {
@@ -77,11 +88,31 @@
     if (ua === "android") {
         show("panel-android");
         copyText(payload);
+        var inApp = J.isInAppBrowser(navigator.userAgent);
+        var allowPlay = J.shouldFallbackToPlay(window.location.host);
+        if (inApp) {
+            $("android-lead").textContent =
+                "Zalo/Facebook không mở app tự động. Bấm Mở VanishX, rồi Tiếp tục.";
+        } else if (!allowPlay) {
+            $("android-lead").textContent = "Bấm Mở VanishX nếu app không tự hiện.";
+        }
+        if (!allowPlay) {
+            $("btn-play").style.display = "none";
+        }
+        $("btn-open-app").addEventListener("click", function (ev) {
+            ev.preventDefault();
+            openApp(canonical, resolved.token);
+        });
         $("btn-play").addEventListener("click", function (ev) {
             ev.preventDefault();
             openPlay();
         });
-        setTimeout(openPlay, J.PLAY_DELAY_MS);
+        if (!inApp) {
+            openApp(canonical, resolved.token);
+            setTimeout(function () {
+                if (pageStillVisible() && allowPlay) openPlay();
+            }, J.PLAY_DELAY_MS);
+        }
         return;
     }
 

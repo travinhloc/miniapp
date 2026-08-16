@@ -67,9 +67,10 @@
 
   <div id="panel-android" class="panel">
     <h1>Lời mời VanishX</h1>
-    <p class="lead">Sắp mở cửa hàng. Nếu app đã cài, mở VanishX để vào lời mời.</p>
-    <div class="status">Đã chép lời mời · mở Play sau 1 giây</div>
-    <button type="button" class="btn btn-primary" id="btn-play">Mở Google Play</button>
+    <p class="lead" id="android-lead">Bấm Mở VanishX để vào lời mời.</p>
+    <div class="status" id="android-status">Đã chép lời mời</div>
+    <button type="button" class="btn btn-primary" id="btn-open-app">Mở VanishX</button>
+    <button type="button" class="btn btn-ghost" id="btn-play">Mở Google Play</button>
   </div>
 
   <div id="panel-ios" class="panel">
@@ -94,8 +95,8 @@
     <div class="status err">Không ghi clipboard · không mở Play</div>
   </div>
 
-  <script src="qrcode.min.js"></script>
-  <script src="join-logic.js"></script>
-  <script src="join-boot.js"></script>
+  <script src="qrcode.min.js?v=14"></script>
+  <script src="join-logic.js?v=14"></script>
+  <script src="join-boot.js?v=14"></script>
 </body>
 </html>

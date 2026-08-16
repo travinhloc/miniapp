@@ -11,6 +11,7 @@
     var PREFIX = "VANISHX_INVITE";
     var ACTION = "JOIN_ROOM";
     var PLAY_PACKAGE = "com.vault.vanishx";
+    var STAGING_PACKAGE = "com.vault.vanishx.staging";
     var DISPLAY_PREFIX_LEN = 8;
     var DAY_MS = 24 * 60 * 60 * 1000;
     var PLAY_DELAY_MS = 1100;
@@ -94,8 +95,53 @@
         return "desktop";
     }
 
-    function playMarketUrl() {
-        return "market://details?id=" + PLAY_PACKAGE;
+    function isInAppBrowser(ua) {
+        return /Zalo|FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|Bytedance|TikTok/i.test(ua || "");
+    }
+
+    function readJsonString(json, key) {
+        var m = new RegExp('"' + key + '"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"').exec(json);
+        return m ? m[1].replace(/\\(.)/g, "$1") : null;
+    }
+
+    function vanishxSchemeUrl(token) {
+        var json = base64UrlToUtf8(token);
+        if (!json || !isV1InviteJson(json)) return null;
+        var roomId = readJsonString(json, "r");
+        var roomKey = readJsonString(json, "k");
+        var exp = readExpiresAt(json);
+        if (!roomId || !roomKey) return null;
+        var url = "vanishx://r/" + encodeURIComponent(roomId) + "?k=" + encodeURIComponent(roomKey);
+        if (exp > 0) url += "&e=" + exp;
+        return url;
+    }
+
+    function androidAppPackage(host) {
+        var h = (host || "").split(":")[0].toLowerCase();
+        if (h === "vanihx-staging.web.app" || h === "vanihx-staging.firebaseapp.com") {
+            return STAGING_PACKAGE;
+        }
+        return PLAY_PACKAGE;
+    }
+
+    function shouldFallbackToPlay(host) {
+        return androidAppPackage(host) === PLAY_PACKAGE;
+    }
+
+    /**
+     * Chrome intent that opens the installed app without App Links verification.
+     * Path/query only — no roomId or key.
+     */
+    function androidIntentUrl(canonical, host) {
+        var url;
+        try {
+            url = new URL(canonical);
+        } catch (e) {
+            return null;
+        }
+        var pkg = androidAppPackage(host || url.host);
+        return "intent://" + url.host + url.pathname + url.search +
+            "#Intent;scheme=https;package=" + pkg + ";end";
     }
 
     function playHttpsUrl() {
@@ -134,12 +180,17 @@
     return {
         PREFIX: PREFIX,
         PLAY_PACKAGE: PLAY_PACKAGE,
+        STAGING_PACKAGE: STAGING_PACKAGE,
         PLAY_DELAY_MS: PLAY_DELAY_MS,
         DISPLAY_PREFIX_LEN: DISPLAY_PREFIX_LEN,
         extractToken: extractToken,
         clipboardPayload: clipboardPayload,
         classifyUa: classifyUa,
-        playMarketUrl: playMarketUrl,
+        isInAppBrowser: isInAppBrowser,
+        vanishxSchemeUrl: vanishxSchemeUrl,
+        androidAppPackage: androidAppPackage,
+        shouldFallbackToPlay: shouldFallbackToPlay,
+        androidIntentUrl: androidIntentUrl,
         playHttpsUrl: playHttpsUrl,
         displayShort: displayShort,
         canonicalJoinUrl: canonicalJoinUrl,
