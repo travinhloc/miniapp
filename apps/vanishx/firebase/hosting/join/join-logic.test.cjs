@@ -100,3 +100,25 @@ test("prod host may fall back to Play", () => {
     assert.equal(join.androidAppPackage("vanishx.app"), "com.vault.vanishx");
     assert.equal(join.shouldFallbackToPlay("vanishx.app"), true);
 });
+
+test("desktop never auto-opens Play", () => {
+    const mac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
+    assert.equal(join.classifyUa(mac), "desktop");
+    assert.equal(join.shouldSchedulePlayFallback(mac, "vanishx.app", false), false);
+    assert.equal(
+        join.shouldSchedulePlayFallback(
+            "Mozilla/5.0 (Linux; Android 14) Chrome/120",
+            "vanishx.app",
+            false,
+        ),
+        true,
+    );
+    assert.equal(
+        join.shouldSchedulePlayFallback(
+            "Mozilla/5.0 (Linux; Android 14) Zalo android",
+            "vanishx.app",
+            true,
+        ),
+        false,
+    );
+});

@@ -3,12 +3,14 @@ package com.vault.vanishx.presentation.mailbox
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.miniapp.core.mvvm.BaseDestination
+import com.vault.vanishx.data.invite.InviteJoinCleanup
 import com.vault.vanishx.data.invite.PendingInviteStore
 import com.vault.vanishx.data.remote.InMemoryMailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteRoomMeta
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.BlockRepository
 import com.vault.vanishx.domain.usecase.JoinRoomUseCase
+import com.vault.vanishx.domain.usecase.VerifyInviteUseCase
 import com.vault.vanishx.test.CoroutineTestRule
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -31,12 +33,15 @@ class JoinRoomViewModelTest {
     private val pendingInviteStore: PendingInviteStore = mockk(relaxed = true)
     private val blockRepository: BlockRepository = mockk(relaxed = true)
     private val remote = InMemoryMailboxRemoteDataSource()
+    private val joinCleanup: InviteJoinCleanup = mockk(relaxed = true)
+
+    private fun verifyInvite() = VerifyInviteUseCase(remote, pendingInviteStore, joinCleanup)
 
     private fun viewModel(savedState: Map<String, String?> = emptyMap()) = JoinRoomViewModel(
         savedStateHandle = SavedStateHandle(savedState),
         joinRoom = joinRoom,
         pendingInviteStore = pendingInviteStore,
-        remote = remote,
+        verifyInvite = verifyInvite(),
         blockRepository = blockRepository,
         dispatchersProvider = coroutinesRule.testDispatcherProvider,
     )
@@ -94,7 +99,7 @@ class JoinRoomViewModelTest {
 
     @Test
     fun `Back keeps pending invite`() = runTest {
-        every { pendingInviteStore.peek() } returns "https://vanihx-staging.web.app/join?token=x"
+        every { pendingInviteStore.peek() } returns null
         val viewModel = viewModel()
         viewModel.navigator.test {
             viewModel.onAction(JoinRoomAction.Back)
@@ -137,5 +142,40 @@ class JoinRoomViewModelTest {
         coVerify(exactly = 0) { joinRoom(any<String>(), any()) }
         coVerify { blockRepository.block("hostPub", any()) }
         coVerify { pendingInviteStore.clear() }
+    }
+
+    @Test
+    fun `missing remote meta shows JOIN-2 and does not open Request`() = runTest {
+        every { pendingInviteStore.peek() } returns null
+        val viewModel = viewModel()
+        viewModel.onAction(JoinRoomAction.InputChanged("vanishx://r/missing?k=key1"))
+        viewModel.onAction(JoinRoomAction.RequestPreview)
+        advanceUntilIdle()
+
+        viewModel.uiState.value.preview shouldBe null
+        viewModel.uiState.value.errorMessage shouldBe VerifyInviteUseCase.NOT_FOUND
+        coVerify { joinCleanup.clearPendingAndClipboard() }
+    }
+
+    @Test
+    fun `expired remote meta shows JOIN-2`() = runTest {
+        every { pendingInviteStore.peek() } returns null
+        remote.writeRoomMeta(
+            "r1",
+            RemoteRoomMeta(
+                createdAt = 1L,
+                expiresAt = 1L,
+                creatorPub = "hostPub",
+                hostPro = false,
+            ),
+        )
+        val viewModel = viewModel()
+        viewModel.onAction(JoinRoomAction.InputChanged("vanishx://r/r1?k=key1"))
+        viewModel.onAction(JoinRoomAction.RequestPreview)
+        advanceUntilIdle()
+
+        viewModel.uiState.value.preview shouldBe null
+        viewModel.uiState.value.errorMessage shouldBe VerifyInviteUseCase.EXPIRED
+        coVerify { joinCleanup.clearPendingAndClipboard() }
     }
 }

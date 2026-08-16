@@ -151,6 +151,10 @@
     <string name="room_peer_joined">Đối phương đã vào phòng</string>
     <string name="join_blocked_toast">Đã chặn. Lời mời này chưa được chấp nhận.</string>
     <string name="join_error_peer_blocked">Bạn đã chặn Host này trên máy. Bỏ chặn để vào phòng của họ.</string>
+    <string name="join_error_unavailable">Lời mời này không còn hiệu lực</string>
+    <string name="join_error_expired">Lời mời đã hết hạn</string>
+    <string name="join_error_invalid">Link hoặc mã mời không hợp lệ</string>
+    <string name="join_error_empty">Chưa có lời mời</string>
     <string name="join_unblock_and_chat">Bỏ chặn &amp; Chat</string>
     <string name="join_peer_blocked_hint">Host này đang trong danh sách chặn.</string>
 

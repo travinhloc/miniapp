@@ -5,6 +5,7 @@ import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteRoomMeta
 import com.vault.vanishx.domain.model.InviteUriCodec
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.RemoteRoomClock
 import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.domain.model.RoomTtlOption
 import com.vault.vanishx.domain.repository.BlockRepository
@@ -24,7 +25,7 @@ class JoinRoomUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(rawInvite: String, nickname: String? = null): MailboxRoom {
         val invite = InviteUriCodec.parse(rawInvite)
-            ?: error("Invalid invite link or code")
+            ?: error(VerifyInviteUseCase.INVALID)
         return invoke(invite, nickname)
     }
 
@@ -39,8 +40,11 @@ class JoinRoomUseCase @Inject constructor(
         }
 
         val remoteMeta = runCatching { remote.readRoomMeta(invite.roomId) }.getOrNull()
-            ?: error("Room not found on mailbox")
+            ?: error(VerifyInviteUseCase.NOT_FOUND)
         rejectIfBlocked(remoteMeta.creatorPub)
+        if (RemoteRoomClock.isExpired(remoteMeta.expiresAt, remoteMeta.hostPro, System.currentTimeMillis())) {
+            error(VerifyInviteUseCase.EXPIRED)
+        }
 
         val activatedMeta = activateIfNeeded(invite.roomId, remoteMeta)
         val room = buildMemberRoom(invite, activatedMeta, nickname)
@@ -99,30 +103,19 @@ class JoinRoomUseCase @Inject constructor(
         remoteMeta: RemoteRoomMeta,
         nickname: String?,
     ): MailboxRoom {
-        val now = System.currentTimeMillis()
         val expiresAt = remoteMeta.expiresAt
-        val status = if (isRemoteRoomExpired(expiresAt, remoteMeta.hostPro, now)) {
-            MailboxRoom.STATUS_EXPIRED
-        } else {
-            MailboxRoom.STATUS_ACTIVE
-        }
         return MailboxRoom(
             id = invite.roomId,
             roomKey = invite.roomKey,
             createdAt = remoteMeta.createdAt,
             expiresAt = expiresAt,
             nickname = nickname?.trim()?.takeIf { it.isNotEmpty() },
-            status = status,
+            status = MailboxRoom.STATUS_ACTIVE,
             role = MailboxRoom.ROLE_MEMBER,
             peerPub = remoteMeta.creatorPub,
             icebreaker = remoteMeta.icebreaker,
             hostPro = remoteMeta.hostPro,
             activatedAt = remoteMeta.activatedAt ?: 0L,
         )
-    }
-
-    private fun isRemoteRoomExpired(expiresAt: Long, hostPro: Boolean, nowMs: Long): Boolean {
-        if (hostPro || expiresAt <= 0L) return false
-        return nowMs >= expiresAt
     }
 }

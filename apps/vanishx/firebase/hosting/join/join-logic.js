@@ -128,6 +128,11 @@
         return androidAppPackage(host) === PLAY_PACKAGE;
     }
 
+    /** Play auto-open is Android Chrome only — never desktop / iOS / in-app browsers. */
+    function shouldSchedulePlayFallback(ua, host, inApp) {
+        return classifyUa(ua) === "android" && !inApp && shouldFallbackToPlay(host);
+    }
+
     /**
      * Chrome intent that opens the installed app without App Links verification.
      * Path/query only — no roomId or key.
@@ -190,6 +195,7 @@
         vanishxSchemeUrl: vanishxSchemeUrl,
         androidAppPackage: androidAppPackage,
         shouldFallbackToPlay: shouldFallbackToPlay,
+        shouldSchedulePlayFallback: shouldSchedulePlayFallback,
         androidIntentUrl: androidIntentUrl,
         playHttpsUrl: playHttpsUrl,
         displayShort: displayShort,

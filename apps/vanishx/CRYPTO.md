@@ -49,6 +49,9 @@ See [`MAILBOX.md`](MAILBOX.md) — RTDB schema, rules, Anonymous Auth, remote da
 | Room id | 16 random bytes → URL-safe Base64, take 22 chars |
 | Room key | 32 random bytes → URL-safe Base64 (E2EE in 2.3) |
 | Invite URI | Canonical `https://{host}/join?token=` (opaque v1) · fallback `vanishx://r/{roomId}?k={roomKey}&e=` |
+| Token v1 | Base64URL JSON `{"v":1,"r","k","e"}` — **not** joinable as 8-char display prefix |
+| App Links | Staging `vanihx-staging.web.app` (`assetlinks.json`) · prod host `vanishx.app` later |
+| Verify | `RemoteRoomMeta` fetch (no REST `/invites/verify`) · 404/TTL → JOIN-2, clear pending + clipboard |
 | QR | ZXing encode + JourneyApps scan |
 | TTL Free Host | Clock starts when guest **enters** · default 24h |
 | TTL Pro Host | No room clock (chat forever) |
@@ -119,7 +122,7 @@ Plaintext never leaves the device. Free has **no recall**. Pro recall (4.2) = st
 - `data/remote/FirebaseMediaStorageRemoteDataSource.kt` — Storage blobs  
 - `data/billing/StubProEntitlementRepository.kt` — Pro stub  
 - `domain/usecase/EnsureIdentityUseCase.kt` — identity bootstrap  
-- `domain/usecase/CreateRoomUseCase.kt` / `JoinRoomUseCase.kt` — invite flow  
+- `domain/usecase/CreateRoomUseCase.kt` / `JoinRoomUseCase.kt` / `VerifyInviteUseCase.kt` — invite flow  
 - `domain/usecase/SendRoomMessageUseCase.kt` / `SyncRoomMailboxUseCase.kt` — text  
 - `domain/usecase/SendRoomMediaUseCase.kt` / `WipeRoomMediaUseCase.kt` — media  
 - `domain/usecase/RecallRoomMessageUseCase.kt` — Pro recall  

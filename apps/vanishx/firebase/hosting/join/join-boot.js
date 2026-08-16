@@ -110,7 +110,11 @@
         if (!inApp) {
             openApp(canonical, resolved.token);
             setTimeout(function () {
-                if (pageStillVisible() && allowPlay) openPlay();
+                if (pageStillVisible() && J.shouldSchedulePlayFallback(
+                    navigator.userAgent,
+                    window.location.host,
+                    inApp
+                )) openPlay();
             }, J.PLAY_DELAY_MS);
         }
         return;

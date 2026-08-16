@@ -151,6 +151,10 @@
     <string name="room_peer_joined">The other person joined the room</string>
     <string name="join_blocked_toast">Blocked. This request was not accepted.</string>
     <string name="join_error_peer_blocked">You blocked this host on this device. Unblock to join their rooms again.</string>
+    <string name="join_error_unavailable">This invite is no longer available</string>
+    <string name="join_error_expired">This invite has expired</string>
+    <string name="join_error_invalid">Invalid invite link or code</string>
+    <string name="join_error_empty">Invite is empty</string>
     <string name="join_unblock_and_chat">Unblock &amp; Chat</string>
     <string name="join_peer_blocked_hint">This host is on your block list.</string>
 
