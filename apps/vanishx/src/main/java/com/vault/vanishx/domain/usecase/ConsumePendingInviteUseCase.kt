@@ -1,34 +1,19 @@
 package com.vault.vanishx.domain.usecase
 
 import com.vault.vanishx.data.invite.PendingInviteStore
-import com.vault.vanishx.domain.model.InviteUriCodec
-import com.vault.vanishx.domain.model.MailboxRoom
-import timber.log.Timber
+import com.vault.vanishx.domain.model.InvitePendingCodec
 import javax.inject.Inject
 
 /**
- * After identity bootstrap: join any pending invite saved from a cold-start deep link.
+ * Persists a deep-link invite for the Message Request gate. Does **not** auto-Accept
+ * (story 14.4) — Home peeks and opens Join.
  */
 class ConsumePendingInviteUseCase @Inject constructor(
     private val pendingInviteStore: PendingInviteStore,
-    private val joinRoom: JoinRoomUseCase,
 ) {
-    suspend operator fun invoke(): MailboxRoom? {
-        val raw = pendingInviteStore.consume() ?: return null
-        return runCatching {
-            joinRoom(raw)
-        }.onFailure { e ->
-            Timber.w(e, "Pending invite join failed; restoring URI")
-            pendingInviteStore.save(raw)
-        }.getOrNull()
-    }
-
     fun captureIfInvite(uri: String?): Boolean {
-        val trimmed = uri?.trim().orEmpty()
-        val valid = trimmed.isNotEmpty() && InviteUriCodec.parse(trimmed) != null
-        if (valid) {
-            pendingInviteStore.save(trimmed)
-        }
-        return valid
+        val canonical = InvitePendingCodec.canonicalize(uri) ?: return false
+        pendingInviteStore.save(canonical)
+        return true
     }
 }

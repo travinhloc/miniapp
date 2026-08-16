@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions", "ComplexMethod")
+@file:Suppress("TooManyFunctions", "ComplexMethod", "UnstableCollections")
 
 package com.vault.vanishx.presentation.security
 
@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -25,11 +26,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,6 +45,7 @@ import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.BuildConfig
 import com.vault.vanishx.R
+import com.vault.vanishx.domain.model.BlockedPeer
 import com.vault.vanishx.presentation.components.SettingsCard
 import com.vault.vanishx.presentation.components.SettingsDangerNote
 import com.vault.vanishx.presentation.components.SettingsGroupLabel
@@ -52,15 +56,17 @@ import com.vault.vanishx.presentation.components.SettingsRowDivider
 import com.vault.vanishx.presentation.components.SettingsSwitchRow
 import com.vault.vanishx.presentation.components.SettingsTopBar
 import com.vault.vanishx.presentation.extensions.collectAsEffect
-import com.vault.vanishx.presentation.theme.VanishXColors
-import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import com.vault.vanishx.presentation.MainActivity
 import androidx.compose.ui.platform.LocalContext
+import androidx.fragment.app.FragmentActivity
+import com.vault.vanishx.presentation.theme.VanishXColors
+import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 
 private enum class SettingsPanel {
     Root,
     UnlockPin,
     PanicPin,
+    Blocked,
 }
 
 @Composable
@@ -160,6 +166,16 @@ private fun SecuritySettingsContent(
                     onClear = { onAction(SecuritySettingsAction.ClearPanicPin) },
                 )
             }
+            SettingsPanel.Blocked -> {
+                SettingsTopBar(
+                    title = stringResource(R.string.settings_blocked_title),
+                    onBack = { onPanelChange(SettingsPanel.Root) },
+                )
+                BlockedPeersPanel(
+                    peers = uiState.blockedPeers,
+                    onUnblock = { onAction(SecuritySettingsAction.UnblockPeer(it)) },
+                )
+            }
         }
 
         FeedbackMessages(uiState = uiState)
@@ -200,6 +216,16 @@ private fun SettingsRootPanel(
                     if (uiState.hasUnlockPin) R.string.settings_status_on else R.string.settings_status_off,
                 ),
             )
+            val activity = LocalContext.current as? FragmentActivity
+            if (activity != null && BiometricUnlockHelper.canAuthenticate(activity)) {
+                SettingsRowDivider()
+                SettingsSwitchRow(
+                    title = stringResource(R.string.settings_bio_title),
+                    subtitle = stringResource(R.string.settings_bio_sub),
+                    checked = uiState.biometricEnabled,
+                    onCheckedChange = { onAction(SecuritySettingsAction.SetBiometric(it)) },
+                )
+            }
             SettingsRowDivider()
             SettingsNavRow(
                 title = stringResource(R.string.settings_panic_row_title),
@@ -212,14 +238,14 @@ private fun SettingsRootPanel(
                 ),
             )
             SettingsRowDivider()
-            val activity = LocalContext.current as? MainActivity
+            val flagSecureActivity = LocalContext.current as? MainActivity
             SettingsSwitchRow(
                 title = stringResource(R.string.settings_flag_secure_title),
                 subtitle = stringResource(R.string.settings_flag_secure_sub),
                 checked = uiState.flagSecureEnabled,
                 onCheckedChange = { enabled ->
                     onAction(SecuritySettingsAction.SetFlagSecure(enabled))
-                    activity?.applyFlagSecure(enabled)
+                    flagSecureActivity?.applyFlagSecure(enabled)
                 },
             )
             SettingsRowDivider()
@@ -231,6 +257,18 @@ private fun SettingsRootPanel(
                 leadingTone = SettingsLeadingTone.Warn,
             )
             SettingsDangerNote(text = stringResource(R.string.settings_pin_wrong_warning))
+        }
+
+        SettingsGroupLabel(text = stringResource(R.string.settings_section_privacy))
+        SettingsCard {
+            SettingsNavRow(
+                title = stringResource(R.string.settings_blocked_row_title),
+                subtitle = stringResource(R.string.settings_blocked_row_sub),
+                onClick = { onPanelChange(SettingsPanel.Blocked) },
+                leadingIcon = Icons.Filled.Person,
+                trailingStatus = uiState.blockedPeers.size.toString(),
+                showChevron = true,
+            )
         }
 
         SettingsGroupLabel(text = stringResource(R.string.settings_section_pro))
@@ -279,6 +317,63 @@ private fun SettingsRootPanel(
         }
     }
 }
+
+@Composable
+private fun BlockedPeersPanel(
+    peers: List<BlockedPeer>,
+    onUnblock: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_blocked_hint),
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
+            color = VanishXColors.Muted,
+        )
+        if (peers.isEmpty()) {
+            Text(
+                text = stringResource(R.string.settings_blocked_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = VanishXColors.Muted,
+            )
+        } else {
+            SettingsCard {
+                peers.forEachIndexed { index, peer ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.settings_blocked_peer_label,
+                                peer.peerPub.takeLast(PUB_SUFFIX),
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = VanishXColors.OnSurface,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { onUnblock(peer.peerPub) }) {
+                            Text(text = stringResource(R.string.settings_blocked_unblock))
+                        }
+                    }
+                    if (index < peers.lastIndex) {
+                        SettingsRowDivider()
+                    }
+                }
+            }
+        }
+    }
+}
+
+private const val PUB_SUFFIX = 8
 
 @Composable
 private fun PinFormPanel(

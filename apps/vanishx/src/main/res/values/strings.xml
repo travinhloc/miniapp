@@ -151,6 +151,10 @@
     <string name="room_peer_joined">The other person joined the room</string>
     <string name="join_blocked_toast">Blocked. This request was not accepted.</string>
     <string name="join_error_peer_blocked">You blocked this host on this device. Unblock to join their rooms again.</string>
+    <string name="join_error_unavailable">This invite is no longer available</string>
+    <string name="join_error_expired">This invite has expired</string>
+    <string name="join_error_invalid">Invalid invite link or code</string>
+    <string name="join_error_empty">Invite is empty</string>
     <string name="join_unblock_and_chat">Unblock &amp; Chat</string>
     <string name="join_peer_blocked_hint">This host is on your block list.</string>
 
@@ -164,22 +168,25 @@
     <string name="room_title">Room ···%1$s</string>
     <string name="room_ttl_remaining">Time left: %1$s</string>
     <string name="room_empty_hint">No messages yet. Send an encrypted arrow.</string>
-    <string name="room_expired_title">Mailbox expired</string>
-    <string name="room_expired_body">This room has expired. Remote messages were purged. Local archive may still be available with Pro.</string>
+    <string name="need_pro_title">VanishX Pro needed</string>
+    <string name="need_pro_body">This stays on the free plan unless you unlock Pro on this device.</string>
+    <string name="need_pro_confirm">See Pro</string>
+    <string name="room_expired_title">Room expired</string>
+    <string name="room_expired_body">This room has expired. Messages on the server were removed. A local copy may still open with Pro.</string>
     <string name="room_locked_title">Room expired</string>
     <string name="room_locked_body">Chat is locked on Free. Unlock with Pro to read the local archive.</string>
     <string name="room_back_history">Back to history</string>
     <string name="room_archive_banner">Read-only archive · composer hidden</string>
     <string name="room_ping">Ping room</string>
     <string name="room_ping_title">Ping this room?</string>
-    <string name="room_ping_body">Checks whether remote room meta still exists. Does not create a new room.</string>
+    <string name="room_ping_body">Checks whether the room still exists on the network. Does not create a new room.</string>
     <string name="room_ping_confirm">Ping</string>
     <string name="room_empty_e2e_title">End-to-end encrypted</string>
     <string name="room_empty_e2e_body">Messages stay protected on your device.</string>
     <string name="room_composer_hint">Message</string>
     <string name="room_send">Send</string>
     <string name="room_sent_tag">Sent · cannot recall</string>
-    <string name="room_syncing">Syncing mailbox…</string>
+    <string name="room_syncing">Syncing messages…</string>
     <string name="room_retry_sync">Retry sync</string>
     <string name="room_menu">⋯</string>
     <string name="room_block">Block peer</string>
@@ -228,9 +235,9 @@
     <string name="room_bento_title">Quick actions</string>
     <string name="room_bento_burn">Burn room</string>
     <string name="room_bento_burn_sub">Leave and clear this chat on this device</string>
-    <string name="room_bento_ttl">Room TTL</string>
-    <string name="room_bento_ttl_sub">Change expiry — coming soon</string>
-    <string name="room_bento_ttl_stub">Changing TTL will arrive in a later build.</string>
+    <string name="room_bento_ttl">Time left</string>
+    <string name="room_bento_ttl_sub">Change how long the room lasts — coming soon</string>
+    <string name="room_bento_ttl_stub">Changing the room timer will arrive in a later build.</string>
     <string name="room_bento_fingerprint">Key fingerprint</string>
     <string name="room_bento_fingerprint_sub">Verify end-to-end safety numbers</string>
     <string name="room_bento_block">Block peer</string>
@@ -320,6 +327,16 @@
     <string name="settings_section_identity">Identity</string>
     <string name="settings_section_security">Security</string>
     <string name="settings_section_pro">Pro (staging)</string>
+    <string name="settings_section_privacy">Privacy</string>
+    <string name="settings_bio_title">Fingerprint / face</string>
+    <string name="settings_bio_sub">Unlock without typing PIN when this device supports it</string>
+    <string name="settings_blocked_row_title">Blocked</string>
+    <string name="settings_blocked_row_sub">Peers blocked on this device</string>
+    <string name="settings_blocked_title">Blocked</string>
+    <string name="settings_blocked_hint">Blocked by public key. Unblock to receive their requests again on this device.</string>
+    <string name="settings_blocked_empty">Nobody is blocked yet.</string>
+    <string name="settings_blocked_peer_label">Peer ···%1$s</string>
+    <string name="settings_blocked_unblock">Unblock</string>
     <string name="settings_section_data">Data</string>
     <string name="settings_section_about">About</string>
     <string name="settings_identity_loading">Loading anonymous ID…</string>
@@ -354,9 +371,9 @@
 
     <!-- FCM -->
     <string name="fcm_channel_id">vanishx_mailbox</string>
-    <string name="fcm_channel_name">Mailbox</string>
+    <string name="fcm_channel_name">Messages</string>
     <string name="fcm_channel_description">Alerts when a temporary room may have new messages</string>
-    <string name="fcm_notification_title">New mailbox activity</string>
+    <string name="fcm_notification_title">New message</string>
     <string name="fcm_notification_body">Open the room to sync encrypted messages.</string>
     <!-- Media -->
     <string name="room_attach_cd">Attach media</string>

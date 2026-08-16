@@ -96,9 +96,16 @@ android {
     productFlavors {
         create(Flavors.STAGING) {
             applicationIdSuffix = ".staging"
+            buildConfigField("String", "INVITE_HTTPS_HOST", "\"vanihx-staging.web.app\"")
+            manifestPlaceholders["appLinkHost"] = "vanihx-staging.web.app"
+            manifestPlaceholders["appLinkHostAlt"] = "vanihx-staging.firebaseapp.com"
         }
 
-        create(Flavors.PRODUCTION) {}
+        create(Flavors.PRODUCTION) {
+            buildConfigField("String", "INVITE_HTTPS_HOST", "\"vanishx.app\"")
+            manifestPlaceholders["appLinkHost"] = "vanishx.app"
+            manifestPlaceholders["appLinkHostAlt"] = "www.vanishx.app"
+        }
     }
 
     sourceSets["test"].resources {

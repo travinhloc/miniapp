@@ -1,6 +1,12 @@
+@file:Suppress("LongParameterList")
+
 package com.vault.vanishx.presentation.components
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -26,6 +32,8 @@ fun VanishXAlertDialog(
     onDismiss: () -> Unit,
     tone: VanishXAlertTone = VanishXAlertTone.Primary,
     dismissLabel: String? = null,
+    confirmEnabled: Boolean = true,
+    extraContent: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val confirmColors = when (tone) {
         VanishXAlertTone.Primary -> ButtonDefaults.buttonColors(
@@ -53,15 +61,22 @@ fun VanishXAlertDialog(
             Text(text = title, style = MaterialTheme.typography.titleLarge)
         },
         text = {
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column {
+                Text(
+                    text = body,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                extraContent?.let { extra ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    extra()
+                }
+            }
         },
         confirmButton = {
             Button(
                 onClick = onConfirm,
+                enabled = confirmEnabled,
                 colors = confirmColors,
                 shape = RoundedCornerShape(ButtonCorner),
                 modifier = Modifier.fillMaxWidth(CONFIRM_BUTTON_WIDTH_FRACTION),

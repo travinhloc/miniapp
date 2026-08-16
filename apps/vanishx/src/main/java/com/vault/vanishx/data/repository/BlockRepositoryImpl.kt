@@ -2,6 +2,7 @@ package com.vault.vanishx.data.repository
 
 import com.vault.vanishx.data.local.db.BlockedPeerEntity
 import com.vault.vanishx.data.local.db.VanishxLocalDatabase
+import com.vault.vanishx.domain.model.BlockedPeer
 import com.vault.vanishx.domain.repository.BlockRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,6 +15,13 @@ class BlockRepositoryImpl @Inject constructor(
     override suspend fun isBlocked(peerPub: String): Boolean =
         localDatabase.withDatabase { db ->
             db.blockedPeerDao().get(peerPub) != null
+        }
+
+    override suspend fun listBlocked(): List<BlockedPeer> =
+        localDatabase.withDatabase { db ->
+            db.blockedPeerDao().listAll().map { entity ->
+                BlockedPeer(peerPub = entity.peerPub, blockedAt = entity.blockedAt)
+            }
         }
 
     override suspend fun block(peerPub: String, blockedAt: Long) {

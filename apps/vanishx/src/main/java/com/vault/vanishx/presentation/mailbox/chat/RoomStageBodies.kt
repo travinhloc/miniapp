@@ -46,7 +46,7 @@ internal fun RoomLoading(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .fillMaxWidth(if (mine) 0.62f else 0.72f)
                         .height(if (index == 2) 72.dp else 44.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(RoomUiDimens.bubbleCorner))
                         .background(VanishXColors.Surface2.copy(alpha = 0.85f)),
                 )
             }
@@ -56,6 +56,7 @@ internal fun RoomLoading(modifier: Modifier = Modifier) {
 
 @Composable
 internal fun RoomExpiredFree(
+    onNeedPro: () -> Unit,
     onAction: (RoomAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -82,7 +83,7 @@ internal fun RoomExpiredFree(
             )
             Spacer(modifier = Modifier.height(RoomUiDimens.spacingMedium))
             Button(
-                onClick = { onAction(RoomAction.OpenPaywall) },
+                onClick = onNeedPro,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = VanishXColors.Primary,
                     contentColor = VanishXColors.OnPrimary,
@@ -200,7 +201,10 @@ internal fun FeedbackMessages(uiState: RoomUiState) {
     }
     uiState.infoMessage?.let { info ->
         Text(
-            text = info,
+            text = when (info) {
+                "ttl_stub" -> stringResource(R.string.room_bento_ttl_stub)
+                else -> info
+            },
             style = MaterialTheme.typography.bodySmall,
             color = VanishXColors.Muted,
             modifier = Modifier

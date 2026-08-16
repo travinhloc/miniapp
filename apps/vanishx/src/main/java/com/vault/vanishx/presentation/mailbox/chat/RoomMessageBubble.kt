@@ -322,7 +322,7 @@ internal fun RoomMessageBubble(
                     Text(
                         text = message.body,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             lineHeight = 20.sp,
                         ),
                         color = if (mine) VanishXColors.OnPrimary else VanishXColors.OnSurface,

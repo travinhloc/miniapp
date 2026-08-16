@@ -56,6 +56,7 @@ import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
 import com.vault.vanishx.data.security.AppLockSession
+import com.vault.vanishx.domain.usecase.VerifyInviteUseCase
 import com.vault.vanishx.presentation.components.VanishXAlertDialog
 import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
@@ -531,5 +532,13 @@ private fun joinErrorText(error: String): String =
     when {
         error.contains("Peer is blocked", ignoreCase = true) ->
             stringResource(R.string.join_error_peer_blocked)
+        error == VerifyInviteUseCase.NOT_FOUND ->
+            stringResource(R.string.join_error_unavailable)
+        error == VerifyInviteUseCase.EXPIRED ->
+            stringResource(R.string.join_error_expired)
+        error == VerifyInviteUseCase.INVALID ->
+            stringResource(R.string.join_error_invalid)
+        error == VerifyInviteUseCase.EMPTY ->
+            stringResource(R.string.join_error_empty)
         else -> error
     }

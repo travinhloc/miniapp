@@ -131,6 +131,27 @@ class CreateJoinRoomUseCaseTest {
     }
 
     @Test
+    fun `join expired Free room fails without upsert`() = runTest {
+        coEvery { mailboxRepository.getRoom("rExp") } returns null
+        val now = System.currentTimeMillis()
+        remote.writeRoomMeta(
+            "rExp",
+            RemoteRoomMeta(
+                createdAt = now - 10_000L,
+                expiresAt = now - 1L,
+                creatorPub = "hostPub",
+                hostPro = false,
+                activatedAt = now - 10_000L,
+            ),
+        )
+
+        runCatching { joinUseCase().invoke(RoomInvite(roomId = "rExp", roomKey = "k1")) }
+            .exceptionOrNull()?.message shouldBe VerifyInviteUseCase.EXPIRED
+        coVerify(exactly = 0) { mailboxRepository.upsertRoom(any()) }
+        pushTopics.subscribed shouldBe emptyList()
+    }
+
+    @Test
     fun `create persists local room and remote meta`() = runTest {
         every { proEntitlement.isProNow() } returns false
         coEvery { identityRepository.ensureIdentity() } returns Identity("vx_a", "pub")

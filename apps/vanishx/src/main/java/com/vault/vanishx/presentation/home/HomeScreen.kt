@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -193,6 +194,7 @@ private fun HomeScreenContent(
                 val text = clipboard.getText()?.text.orEmpty()
                 onAction(HomeAction.PasteInvite(text))
             },
+            onSettings = { onAction(HomeAction.OpenSettings) },
         )
         Row(
             modifier = Modifier
@@ -309,6 +311,7 @@ private fun HomeSearchBar(
     onPlusDismiss: () -> Unit,
     onCreate: () -> Unit,
     onPaste: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -357,6 +360,13 @@ private fun HomeSearchBar(
                     onClick = onPaste,
                 )
             }
+        }
+        IconButton(onClick = onSettings) {
+            Icon(
+                Icons.Filled.Settings,
+                contentDescription = stringResource(R.string.home_settings),
+                tint = VanishXColors.OnSurface,
+            )
         }
     }
 }

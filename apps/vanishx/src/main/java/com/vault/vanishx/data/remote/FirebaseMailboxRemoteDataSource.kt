@@ -1,4 +1,4 @@
-@file:Suppress("LargeClass", "TooManyFunctions")
+@file:Suppress("LargeClass", "TooManyFunctions", "ReturnCount")
 
 package com.vault.vanishx.data.remote
 

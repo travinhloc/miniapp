@@ -6,12 +6,11 @@ import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.data.invite.PendingInviteStore
-import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemoteRoomMeta
-import com.vault.vanishx.domain.model.InviteUriCodec
 import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.domain.repository.BlockRepository
 import com.vault.vanishx.domain.usecase.JoinRoomUseCase
+import com.vault.vanishx.domain.usecase.VerifyInviteUseCase
 import com.vault.vanishx.presentation.util.GuestNicknameGenerator
 import com.vault.vanishx.presentation.util.formatRemainingMs
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -84,7 +83,7 @@ class JoinRoomViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val joinRoom: JoinRoomUseCase,
     private val pendingInviteStore: PendingInviteStore,
-    private val remote: MailboxRemoteDataSource,
+    private val verifyInvite: VerifyInviteUseCase,
     private val blockRepository: BlockRepository,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
@@ -152,26 +151,48 @@ class JoinRoomViewModel @Inject constructor(
     private fun showPreview(raw: String) {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) {
-            _uiState.update { it.copy(errorMessage = "Invite is empty") }
-            return
-        }
-        val invite = InviteUriCodec.parse(trimmed)
-        if (invite == null) {
-            _uiState.update { it.copy(errorMessage = "Invalid invite link or code", preview = null) }
+            _uiState.update { it.copy(errorMessage = VerifyInviteUseCase.EMPTY) }
             return
         }
         _uiState.update { it.copy(isPreviewLoading = true, errorMessage = null) }
-        flow { emit(runCatching { remote.readRoomMeta(invite.roomId) }.getOrNull()) }
+        flow { emit(verifyInvite(trimmed)) }
             .flowOn(dispatchersProvider.io)
-            .onEach { meta ->
-                val creatorPub = meta?.creatorPub
-                val blocked = !creatorPub.isNullOrBlank() && blockRepository.isBlocked(creatorPub)
+            .onEach { result ->
+                when (result) {
+                    is VerifyInviteUseCase.Result.Dead -> _uiState.update {
+                        it.copy(
+                            isPreviewLoading = false,
+                            preview = null,
+                            errorMessage = result.message,
+                        )
+                    }
+                    is VerifyInviteUseCase.Result.Live -> {
+                        val creatorPub = result.meta.creatorPub
+                        val blocked = !creatorPub.isNullOrBlank() &&
+                            blockRepository.isBlocked(creatorPub)
+                        _uiState.update {
+                            it.copy(
+                                isPreviewLoading = false,
+                                preview = result.invite.toPreview(
+                                    trimmed,
+                                    result.meta,
+                                    isPeerBlocked = blocked,
+                                ),
+                                nickname = it.nickname.ifBlank {
+                                    GuestNicknameGenerator.generate(result.invite.roomId)
+                                },
+                                errorMessage = if (blocked) PEER_BLOCKED_ERROR else null,
+                            )
+                        }
+                    }
+                }
+            }
+            .catch { e ->
                 _uiState.update {
                     it.copy(
                         isPreviewLoading = false,
-                        preview = invite.toPreview(trimmed, meta, isPeerBlocked = blocked),
-                        nickname = it.nickname.ifBlank { GuestNicknameGenerator.generate(invite.roomId) },
-                        errorMessage = if (blocked) PEER_BLOCKED_ERROR else null,
+                        preview = null,
+                        errorMessage = e.message ?: VerifyInviteUseCase.NOT_FOUND,
                     )
                 }
             }
@@ -182,7 +203,7 @@ class JoinRoomViewModel @Inject constructor(
         if (_uiState.value.isJoining) return
         val raw = _uiState.value.preview?.rawInvite ?: _uiState.value.input.trim()
         if (raw.isEmpty()) {
-            _uiState.update { it.copy(errorMessage = "Invite is empty") }
+            _uiState.update { it.copy(errorMessage = VerifyInviteUseCase.EMPTY) }
             return
         }
         val nickname = _uiState.value.nickname.takeIf { it.isNotBlank() }

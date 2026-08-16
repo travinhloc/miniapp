@@ -1,3 +1,5 @@
+@file:Suppress("ModifierComposable")
+
 package com.vault.vanishx.presentation.theme
 
 import androidx.compose.foundation.layout.WindowInsets
