@@ -1,6 +1,7 @@
 package com.vault.vanishx.presentation.mailbox
 
 import androidx.lifecycle.SavedStateHandle
+import com.vault.vanishx.data.push.RoomForegroundTracker
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.domain.model.Identity
 import com.vault.vanishx.domain.model.MailboxRoom
@@ -18,15 +19,18 @@ import com.vault.vanishx.domain.usecase.ReportRoomUseCase
 import com.vault.vanishx.domain.usecase.SendRoomMessageUseCase
 import com.vault.vanishx.domain.usecase.SyncMailboxResult
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
+import com.vault.vanishx.domain.usecase.WritePingSignalUseCase
 import com.vault.vanishx.test.CoroutineTestRule
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -43,6 +47,8 @@ class RoomViewModelTest {
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase = mockk(relaxed = true)
     private val pingRoom: PingRoomUseCase = mockk(relaxed = true)
     private val pingPeer: PingPeerUseCase = mockk()
+    private val writePingSignal: WritePingSignalUseCase = mockk(relaxed = true)
+    private val roomForegroundTracker: RoomForegroundTracker = mockk(relaxed = true)
     private val blockPeer: BlockPeerUseCase = mockk(relaxed = true)
     private val reportRoom: ReportRoomUseCase = mockk(relaxed = true)
     private val recallRoomMessage: RecallRoomMessageUseCase = mockk(relaxed = true)
@@ -99,6 +105,8 @@ class RoomViewModelTest {
             purgeExpiredRoom = purgeExpiredRoom,
             pingRoom = pingRoom,
             pingPeerUseCase = pingPeer,
+            writePingSignal = writePingSignal,
+            roomForegroundTracker = roomForegroundTracker,
             blockPeer = blockPeer,
             reportRoom = reportRoom,
             recallRoomMessage = recallRoomMessage,
@@ -120,8 +128,10 @@ class RoomViewModelTest {
         val viewModel = viewModel(waitingRoom())
 
         viewModel.onAction(RoomAction.PingPeer)
+        advanceUntilIdle()
 
         viewModel.uiState.value.pingPeerEvent shouldBe PingPeerEvent.Sent
+        coVerify { writePingSignal("room1") }
     }
 
     @Test
@@ -132,6 +142,7 @@ class RoomViewModelTest {
         viewModel.onAction(RoomAction.PingPeer)
 
         viewModel.uiState.value.pingPeerEvent shouldBe PingPeerEvent.Cooldown(secondsRemaining = 5)
+        coVerify(exactly = 0) { writePingSignal(any()) }
     }
 
     @Test

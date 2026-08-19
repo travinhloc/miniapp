@@ -14,6 +14,7 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
     private val roomMeta = ConcurrentHashMap<String, RemoteRoomMeta>()
     private val messages = ConcurrentHashMap<String, RemoteMailboxMessage>()
     private val reports = ConcurrentHashMap<String, RemoteReport>()
+    private val signals = ConcurrentHashMap<String, RemoteRoomSignal>()
     private val presence = ConcurrentHashMap<String, RemotePresence>()
     private val readMarks = ConcurrentHashMap<String, RemoteReadWatermark>()
     private val typing = ConcurrentHashMap<String, RemoteTyping>()
@@ -77,6 +78,14 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
         report.reason?.let { require(it.length <= RemoteReport.MAX_REASON_LENGTH) }
         ensureAuthenticated()
         reports[report.reportId] = report
+    }
+
+    override suspend fun writeRoomSignal(roomId: String, signal: RemoteRoomSignal) {
+        require(signal.type == RemoteRoomSignal.TYPE_PING)
+        require(signal.fromPub.length in 1..RemoteRoomSignal.MAX_PUB_LENGTH)
+        ensureAuthenticated()
+        signals["$roomId/${signal.signalId}"] = signal
+        engagementRevisions.value += 1
     }
 
     override fun observeMessages(roomId: String): Flow<List<RemoteMailboxMessage>> =
@@ -163,6 +172,11 @@ class InMemoryMailboxRemoteDataSource : MailboxRemoteDataSource {
     fun reportFor(reportId: String): RemoteReport? = reports[reportId]
 
     fun allReports(): List<RemoteReport> = reports.values.toList()
+
+    fun signalsFor(roomId: String): List<RemoteRoomSignal> {
+        val prefix = "$roomId/"
+        return signals.entries.filter { it.key.startsWith(prefix) }.map { it.value }
+    }
 
     private fun listMessagesBlocking(roomId: String): List<RemoteMailboxMessage> {
         val prefix = "$roomId/"

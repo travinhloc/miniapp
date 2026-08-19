@@ -26,9 +26,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.vault.vanishx.data.security.AppLockSession
 import com.vault.vanishx.data.security.SecurityPinStore
+import com.vault.vanishx.domain.model.OpenRoomDeepLink
 import com.vault.vanishx.domain.usecase.CaptureClipboardInviteUseCase
 import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
 import com.vault.vanishx.presentation.invite.InviteBootstrapSession
+import com.vault.vanishx.presentation.mailbox.PendingOpenRoomStore
 import com.vault.vanishx.presentation.security.AuthSetupScreen
 import com.vault.vanishx.presentation.security.LockScreen
 import com.vault.vanishx.presentation.splash.SplashScreen
@@ -58,6 +60,9 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var appLockSession: AppLockSession
 
+    @Inject
+    lateinit var pendingOpenRoom: PendingOpenRoomStore
+
     @Suppress("LongMethod", "ComplexMethod", "MagicNumber")
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -67,6 +72,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         applyFlagSecure(securityPinStore.isFlagSecureEnabled())
         captureInviteIntent(intent)
+        offerOpenRoomFromPush(intent)
         setContent {
             VanishXTheme {
                 var phase by remember {
@@ -113,7 +119,10 @@ class MainActivity : FragmentActivity() {
                     RootPhase.Main -> {
                         val showLock = securityPinStore.hasUnlockPin() && !sessionUnlocked
                         Box(modifier = Modifier.fillMaxSize()) {
-                            AppNavGraph(navController = rememberNavController())
+                            AppNavGraph(
+                                navController = rememberNavController(),
+                                pendingOpenRoom = pendingOpenRoom,
+                            )
                             // Lock overlay is the auth gate (story 14.4): pending Join sits underneath
                             // until PIN/bio; no Login screen. Setup runs before Main on first run.
                             if (showLock) {
@@ -143,6 +152,7 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         captureInviteIntent(intent)
+        offerOpenRoomFromPush(intent)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -164,6 +174,10 @@ class MainActivity : FragmentActivity() {
     private fun captureInviteIntent(intent: Intent?) {
         val saved = consumePendingInvite.captureIfInvite(intent?.dataString)
         InviteBootstrapSession.onUriCaptureResult(saved)
+    }
+
+    private fun offerOpenRoomFromPush(intent: Intent?) {
+        OpenRoomDeepLink.roomIdFrom(intent?.dataString)?.let { pendingOpenRoom.offer(it) }
     }
 
     private fun maybeCaptureClipboardInvite() {

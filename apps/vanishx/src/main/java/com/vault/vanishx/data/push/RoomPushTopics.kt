@@ -8,6 +8,11 @@ interface RoomPushTopics {
     suspend fun subscribe(roomId: String)
     suspend fun unsubscribe(roomId: String)
 
+    /** After mute: FCM topic resubscribe is flaky unless we subscribe twice. */
+    suspend fun resubscribe(roomId: String) {
+        subscribe(roomId)
+    }
+
     companion object {
         fun topicFor(roomId: String): String = "vx_room_$roomId"
     }

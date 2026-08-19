@@ -36,6 +36,10 @@ Transient ciphertext relay on **Firebase Realtime Database**. Plaintext never le
   reactions/{messageId}/{deviceId}/
     emoji: string               // ≤8 chars
     at: number
+  signals/{signalId}/           // Epic 15.3 Ping — not a chat message
+    type: "ping"
+    fromPub: string
+    createdAt: number
 
 /reports/{reportId}     // UGC (story 3.3) — client write-only
   roomId: string
@@ -66,7 +70,7 @@ mailbox envelope, preserving the existing pickup-queue behavior.
 - Expired room (4.1): `PurgeExpiredRoomUseCase` clears local SQLCipher messages + remote `messages/` node (meta kept)
 - Home resume (4.1): `SyncActiveMailboxesUseCase` re-resolves TTL, purges expired, syncs active rooms
 - **Pickup queue:** outbound ciphertext stays on RTDB until the **peer** downloads it (or TTL / recall). Sender sync must not delete own messages just because they exist locally.
-- FCM (3.1): `firebase-messaging` · topic `vx_room_{roomId}` · notification → `vanishx://open/{roomId}`
+- FCM (3.1 receive · **Epic 15 Done** fan-out): `firebase-messaging` · topic `vx_room_{roomId}` · data-only → `vanishx://open/{roomId}` · mute = unsubscribe (15.2) · Ping `/signals` (15.3)
 - Pending invite (3.1 / 14.1 / 14.3 / **14.4** / **14.5**): store canonical HTTPS URI · Home observes pending → Join (Unlock/Setup first; **no** auto-Accept). Clipboard payload is never persisted. Panic wipe clears pending. Dead invite (meta 404 / Free TTL) clears pending + clipboard before Message Request.
 - Block / Report (3.3): local `blocked_peers` by peer pubkey · leave room · RTDB `/reports`
 - Pro recall (4.2): stub Pro (staging debug) · `RecallRoomMessageUseCase` deletes RTDB message if still present · local `recalled` flag (IAP deferred)
@@ -104,4 +108,4 @@ See [`STORAGE.md`](STORAGE.md) · [`CRYPTO.md`](CRYPTO.md) · product spec `vani
 
 ## Out of scope
 
-- WebRTC · Cloud Functions fan-out · Caption (E11-5)
+- WebRTC · Caption (E11-5)

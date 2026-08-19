@@ -1,5 +1,6 @@
 package com.vault.vanishx.domain.usecase
 
+import com.vault.vanishx.data.push.RoomPushTopics
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.MailboxRepository
 import javax.inject.Inject
@@ -7,9 +8,17 @@ import javax.inject.Inject
 /** Patch local-only room prefs (mute / favorite / avatar / wallpaper). */
 class UpdateRoomLocalPrefsUseCase @Inject constructor(
     private val mailboxRepository: MailboxRepository,
+    private val roomPushTopics: RoomPushTopics,
 ) {
-    suspend fun setMuted(roomId: String, muted: Boolean): MailboxRoom =
-        patch(roomId) { it.copy(muted = muted) }
+    suspend fun setMuted(roomId: String, muted: Boolean): MailboxRoom {
+        val updated = patch(roomId) { it.copy(muted = muted) }
+        if (muted) {
+            roomPushTopics.unsubscribe(roomId)
+        } else {
+            roomPushTopics.resubscribe(roomId)
+        }
+        return updated
+    }
 
     suspend fun setFavorite(roomId: String, favorite: Boolean): MailboxRoom =
         patch(roomId) { it.copy(favorite = favorite) }

@@ -12,8 +12,8 @@ Docs **không nằm trong repo này**. Nguồn sự thật:
 
 1. `vanishx-engine-vi.md` — PRD / core MVP  
 2. `vanishx-project-planning.md` — timeline  
-3. `stories/README.md` + story đang làm (**6.1** UX · **R.1–R.4** · E11–E14 Done → `completed/11.*` · `completed/12.*` · `completed/13.*` · `completed/14.*`)  
-4. `stories/completed/` — epic/story Done (1–5, 7–9, **11**, **12**, **13**, **14**)  
+3. `stories/README.md` + story đang làm (**6.1** UX · **R.1–R.4** · E11–E15 Done → `completed/11.*` · `completed/12.*` · `completed/13.*` · `completed/14.*` · `completed/15.*`)  
+4. `stories/completed/` — epic/story Done (1–5, 7–9, **11**, **12**, **13**, **14**, **15**)  
 5. `vanishx-ui-ux-sprint-backlog.md` — Confirm PO / Chat backlog  
 6. `vanishx-production-dod.md` + `stories/R.0.epic.md` — Epic R Release Prod / soft-launch  
 7. `mockup/main.html` — UI M2 Night gallery  
@@ -55,6 +55,6 @@ Xem `.cursor/rules/vanishx-docs.mdc` trong repo này.
 ## Core MVP (nhắc nhanh)
 
 Crypto + SQLCipher + Firebase mailbox + create/join + gửi/nhận text + TTL/purge + sync-on-open.  
-**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5–9 · **Epic 11** Media · **Epic 12** Chat Detail / Room Options · **Epic 13** Conversation surfaces · **Epic 14** Deferred Deep Link.  
+**Đã ship:** Panic · App lock · FCM · Block/Report · Pro stub · Epic 5–9 · **Epic 11** Media · **Epic 12** Chat Detail / Room Options · **Epic 13** Conversation surfaces · **Epic 14** Deferred Deep Link · **Epic 15** Notification Center.  
 Follow-up media: `vanishx-docs/tmp/from-epic-11.md`.  
-**Đang mở:** Epic **6.1** UX residual · Epic **R** Release Prod (R.1–R.4 · archive was 6.2).
+**Đang mở:** Epic **6.1** UX residual · Epic **R** Release Prod (R.1–R.4 · archive was 6.2). Prod Functions = R.1.
