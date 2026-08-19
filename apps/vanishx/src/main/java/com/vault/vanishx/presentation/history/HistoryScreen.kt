@@ -2,6 +2,11 @@
 
 package com.vault.vanishx.presentation.history
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,6 +62,7 @@ import com.vault.vanishx.R
 import com.vault.vanishx.presentation.components.VanishXAlertDialog
 import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
+import com.vault.vanishx.presentation.mailbox.chat.RoomInviteSheet
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.VanishXTheme
 import com.vault.vanishx.presentation.theme.vanishxScreenInsets
@@ -69,11 +76,28 @@ fun HistoryScreen(
     navigator: (BaseDestination) -> Unit,
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     viewModel.navigator.collectAsEffect { destination -> navigator(destination) }
 
     HistoryScreenContent(
         uiState = uiState,
         onAction = viewModel::onAction,
+        onCopyInvite = { uri ->
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("VanishX invite", uri))
+            Toast.makeText(context, context.getString(R.string.create_copied), Toast.LENGTH_SHORT).show()
+            viewModel.onAction(HistoryAction.DismissWaitingInvite)
+        },
+        onShareInvite = { uri ->
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, uri)
+            }
+            context.startActivity(
+                Intent.createChooser(intent, context.getString(R.string.create_share)),
+            )
+            viewModel.onAction(HistoryAction.DismissWaitingInvite)
+        },
     )
 }
 
@@ -82,7 +106,17 @@ private fun HistoryScreenContent(
     uiState: HistoryUiState,
     onAction: (HistoryAction) -> Unit,
     modifier: Modifier = Modifier,
+    onCopyInvite: (String) -> Unit = {},
+    onShareInvite: (String) -> Unit = {},
 ) {
+    uiState.waitingInviteUri?.let { uri ->
+        RoomInviteSheet(
+            inviteUri = uri,
+            onCopy = onCopyInvite,
+            onShare = onShareInvite,
+            onDismiss = { onAction(HistoryAction.DismissWaitingInvite) },
+        )
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -138,6 +172,11 @@ private fun HistoryScreenContent(
                     onClick = { onAction(HistoryAction.SetFilter(HistoryRoomFilter.Open)) },
                 )
                 HistoryFilterChip(
+                    label = stringResource(R.string.history_filter_waiting),
+                    selected = uiState.filter == HistoryRoomFilter.Waiting,
+                    onClick = { onAction(HistoryAction.SetFilter(HistoryRoomFilter.Waiting)) },
+                )
+                HistoryFilterChip(
                     label = stringResource(R.string.history_filter_expired),
                     selected = uiState.filter == HistoryRoomFilter.Expired,
                     onClick = { onAction(HistoryAction.SetFilter(HistoryRoomFilter.Expired)) },
@@ -187,6 +226,11 @@ private fun HistoryScreenContent(
                         isPro = uiState.isPro,
                         onOpen = { onAction(HistoryAction.OpenRoom(room.row.id)) },
                         onOpenPaywall = { onAction(HistoryAction.OpenPaywall) },
+                        onShareWaiting = if (room.row.isWaiting) {
+                            { onAction(HistoryAction.ShareWaiting(room.row.id)) }
+                        } else {
+                            null
+                        },
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -281,6 +325,7 @@ private fun HistoryRoomRow(
     isPro: Boolean,
     onOpen: () -> Unit,
     onOpenPaywall: () -> Unit,
+    onShareWaiting: (() -> Unit)? = null,
 ) {
     var showNeedPro by remember { mutableStateOf(false) }
     val row = room.row
@@ -299,6 +344,7 @@ private fun HistoryRoomRow(
                 model = row,
                 onClick = onOpen,
                 showTtlRing = false,
+                onQrClick = onShareWaiting,
             )
             Text(
                 text = historyMetaLabel(room.meta),
@@ -365,6 +411,7 @@ private fun HistoryRoomRow(
 
 @Composable
 private fun historyMetaLabel(meta: HistoryRoomMeta): String = when (meta) {
+    HistoryRoomMeta.Waiting -> stringResource(R.string.history_meta_waiting)
     HistoryRoomMeta.Creator -> stringResource(R.string.history_meta_creator)
     HistoryRoomMeta.Member -> stringResource(R.string.history_meta_member)
     HistoryRoomMeta.Archived -> stringResource(R.string.history_meta_archived)

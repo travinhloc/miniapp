@@ -6,11 +6,9 @@ import com.miniapp.core.mvvm.BaseViewModel
 import com.vault.vanishx.BuildConfig
 import com.vault.vanishx.data.invite.PendingInviteStore
 import com.vault.vanishx.domain.model.InviteUriCodec
-import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
-import com.vault.vanishx.presentation.conversation.ConversationRowModel
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
 import com.vault.vanishx.domain.usecase.SyncActiveMailboxesUseCase
 import com.vault.vanishx.presentation.history.HistoryDestination
@@ -116,17 +114,13 @@ class HomeViewModel @Inject constructor(
             val isPro = _uiState.value.isProStub
             val rooms = mailboxRepository.getAllRooms()
             val items = rooms
-                .filter { it.status != MailboxRoom.STATUS_LEFT }
+                .filter { it.isHomeListEligible(now) }
                 .map { room ->
                     val last = mailboxRepository.getLatestVisibleMessage(room.id, now)
                     val messages = mailboxRepository.getMessages(room.id)
                     room.toConversationRow(last, messages, isPro, now)
                 }
-                .sortedWith(
-                    compareBy<ConversationRowModel> { !it.isFavorite }
-                        .thenBy { it.isExpired }
-                        .thenByDescending { it.remainingMs },
-                )
+                .sortedForHome()
             emit(items)
         }
             .flowOn(dispatchersProvider.io)
