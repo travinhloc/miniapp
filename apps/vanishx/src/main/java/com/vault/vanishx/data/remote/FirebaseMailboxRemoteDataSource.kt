@@ -130,6 +130,20 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         }
     }
 
+    override suspend fun writeRoomSignal(roomId: String, signal: RemoteRoomSignal) {
+        require(signal.type == RemoteRoomSignal.TYPE_PING)
+        require(signal.fromPub.length in 1..RemoteRoomSignal.MAX_PUB_LENGTH)
+        ensureAuthenticated()
+        withContext(dispatchersProvider.io) {
+            val payload = mapOf(
+                KEY_TYPE to signal.type,
+                KEY_FROM_PUB to signal.fromPub,
+                KEY_CREATED_AT to signal.createdAt,
+            )
+            roomRef(roomId).child(PATH_SIGNALS).child(signal.signalId).setValue(payload).await()
+        }
+    }
+
     override suspend fun writeReport(report: RemoteReport) {
         require(report.roomId.length in 1..RemoteReport.MAX_ROOM_ID_LENGTH)
         require(report.reporterPub.length in 1..RemoteReport.MAX_PUB_LENGTH)
@@ -389,6 +403,7 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         const val PATH_READ = "read"
         const val PATH_TYPING = "typing"
         const val PATH_REACTIONS = "reactions"
+        const val PATH_SIGNALS = "signals"
         const val KEY_CREATED_AT = "createdAt"
         const val KEY_EXPIRES_AT = "expiresAt"
         const val KEY_HOST_PRO = "hostPro"
@@ -406,5 +421,7 @@ class FirebaseMailboxRemoteDataSource @Inject constructor(
         const val KEY_MESSAGE_ID = "messageId"
         const val KEY_AT = "at"
         const val KEY_EMOJI = "emoji"
+        const val KEY_TYPE = "type"
+        const val KEY_FROM_PUB = "fromPub"
     }
 }

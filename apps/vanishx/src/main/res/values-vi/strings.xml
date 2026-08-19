@@ -228,7 +228,7 @@
     <string name="room_composer_locked_hint">Composer khoá · chờ chấp nhận</string>
     <string name="room_handshake_qr_cd">Mã QR mời vào phòng</string>
     <string name="room_live_pill">Live</string>
-    <string name="room_ping_peer_sent">Đã gửi Ping (thông báo minh hoạ).</string>
+    <string name="room_ping_peer_sent">Đã gửi Ping.</string>
     <string name="room_ping_peer_cooldown">Đợi %1$d giây rồi Ping lại.</string>
 
     <!-- Epic 8 · Bento / Safety / ephemeral -->
@@ -375,6 +375,8 @@
     <string name="fcm_channel_description">Thông báo khi phòng tạm có thể có tin mới</string>
     <string name="fcm_notification_title">Tin nhắn mới</string>
     <string name="fcm_notification_body">Mở phòng để đồng bộ tin đã mã hóa.</string>
+    <string name="fcm_ping_title">Đang chờ trong phòng</string>
+    <string name="fcm_ping_body">Mở phòng — đang chờ bạn.</string>
     <!-- Media -->
     <string name="room_attach_cd">Đính kèm media</string>
     <string name="room_attach_more_cd">Thêm tùy chọn</string>

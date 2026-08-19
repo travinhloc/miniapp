@@ -2,6 +2,7 @@
 
 package com.vault.vanishx.presentation.mailbox
 
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import android.net.Uri
@@ -36,6 +37,8 @@ import com.vault.vanishx.domain.usecase.SendRoomMediaUseCase
 import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
 import com.vault.vanishx.domain.usecase.UpdateRoomLocalPrefsUseCase
 import com.vault.vanishx.domain.usecase.WipeRoomMediaUseCase
+import com.vault.vanishx.domain.usecase.WritePingSignalUseCase
+import com.vault.vanishx.data.push.RoomForegroundTracker
 import com.vault.vanishx.presentation.paywall.PaywallDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -213,6 +216,8 @@ class RoomViewModel @Inject constructor(
     private val purgeExpiredRoom: PurgeExpiredRoomUseCase,
     private val pingRoom: PingRoomUseCase,
     private val pingPeerUseCase: PingPeerUseCase,
+    private val writePingSignal: WritePingSignalUseCase,
+    private val roomForegroundTracker: RoomForegroundTracker,
     private val blockPeer: BlockPeerUseCase,
     private val reportRoom: ReportRoomUseCase,
     private val recallRoomMessage: RecallRoomMessageUseCase,
@@ -668,6 +673,14 @@ class RoomViewModel @Inject constructor(
         }
     }
 
+    fun onRoomLifecycle(event: Lifecycle.Event) {
+        when (event) {
+            Lifecycle.Event.ON_RESUME -> roomForegroundTracker.enter(roomId)
+            Lifecycle.Event.ON_PAUSE -> roomForegroundTracker.leave(roomId)
+            else -> Unit
+        }
+    }
+
     private fun pingPeer() {
         val state = _uiState.value
         if (handshakeStatus(state.room, state.isExpired) != RoomHandshakeStatus.WAITING) return
@@ -675,6 +688,10 @@ class RoomViewModel @Inject constructor(
         if (result.sent) {
             lastPeerPingAtMs = System.currentTimeMillis()
             _uiState.update { it.copy(pingPeerEvent = PingPeerEvent.Sent) }
+            viewModelScope.launch {
+                runCatching { writePingSignal(roomId) }
+                    .onFailure { e -> Timber.w(e, "Ping signal write failed") }
+            }
         } else {
             val seconds = ((result.cooldownRemainingMs + MS_PER_SEC - 1) / MS_PER_SEC).toInt().coerceAtLeast(1)
             _uiState.update { it.copy(pingPeerEvent = PingPeerEvent.Cooldown(seconds)) }

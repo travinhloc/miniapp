@@ -22,7 +22,7 @@ data class MailboxRoom(
     val hostPro: Boolean = false,
     /** Epoch ms when the guest first entered the room (activate). `0` = not yet. */
     val activatedAt: Long = 0L,
-    /** Local-only mute preference (FCM honor later). */
+    /** Local-only mute preference — unsubscribe FCM topic when true (Epic 15.2). */
     val muted: Boolean = false,
     /** Local-only favorite pin for Home/History. */
     val favorite: Boolean = false,

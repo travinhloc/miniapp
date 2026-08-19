@@ -8,13 +8,21 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import com.miniapp.core.mvvm.BaseDestination
+import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.presentation.home.homeNavGraph
 import com.vault.vanishx.presentation.mailbox.MailboxDestination
+import com.vault.vanishx.presentation.mailbox.PendingOpenRoomStore
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
+    pendingOpenRoom: PendingOpenRoomStore,
 ) {
+    pendingOpenRoom.roomId.collectAsEffect { roomId ->
+        if (roomId.isNullOrBlank()) return@collectAsEffect
+        pendingOpenRoom.consume()
+        navController.navigate(MailboxDestination.Room(roomId))
+    }
     NavHost(
         navController = navController,
         route = AppDestination.RootNavGraph.route,
