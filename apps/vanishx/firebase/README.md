@@ -18,7 +18,18 @@ firebase deploy --only functions,database
 - Payload builder: `functions/push-payload.js` (no ciphertext)
 - Runtime: **Node 22** · RTDB triggers **1st gen** (`require("firebase-functions/v1")`) — tránh Eventarc IAM của 2nd gen
 
-Prod Functions wait on **R.1**. Client never holds an FCM server key.
+Prod Functions wait on **R.1** (project Firebase prod riêng). Client never holds an FCM server key.
+
+## Production project (R.1)
+
+Staging stays `vanihx-staging` (`.firebaserc` default). Prod = **project khác**.
+
+```bash
+firebase use --add    # alias production → <prod-project-id>
+firebase deploy --only database,functions,hosting
+```
+
+Download the prod Android `google-services.json` (`com.vault.vanishx`) into `apps/vanishx/src/production/` — **do not commit**.
 
 ## Deploy App Links (story 14.1)
 

@@ -1,21 +1,42 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.kts.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# VanishX productionRelease (R.2)
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+-keepattributes SourceFile,LineNumberTable,RuntimeVisibleAnnotations,AnnotationDefault
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Hilt / Dagger
+-dontwarn dagger.**
+-keep class dagger.** { *; }
+-keep class javax.inject.** { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Firebase
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+-keep class com.google.android.gms.** { *; }
+
+# SQLCipher / Room
+-keep class net.sqlcipher.** { *; }
+-keep class net.zetetic.** { *; }
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-dontwarn androidx.room.paging.**
+
+# Tink
+-keep class com.google.crypto.tink.** { *; }
+
+# ZXing embedded
+-keep class com.google.zxing.** { *; }
+-keep class com.journeyapps.barcodescanner.** { *; }
+
+# Coil / Media3
+-dontwarn coil.**
+-dontwarn androidx.media3.**
+
+# Kotlin
+-dontwarn kotlin.**
+-keep class kotlin.Metadata { *; }
+
+# Parcelable
+-keepclassmembers class * implements android.os.Parcelable {
+    public static final ** CREATOR;
+}

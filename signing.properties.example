@@ -1,0 +1,4 @@
+# Copy to signing.properties (gitignored). Used only for productionRelease.
+KEYSTORE_PASSWORD=
+KEY_PASSWORD=
+KEY_ALIAS=release
