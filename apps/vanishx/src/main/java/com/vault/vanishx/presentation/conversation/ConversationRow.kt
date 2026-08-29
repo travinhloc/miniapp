@@ -246,6 +246,7 @@ private fun previewLabel(preview: ConversationPreview): String {
         ConversationPreviewKind.Image -> stringResource(R.string.conv_preview_image)
         ConversationPreviewKind.File -> stringResource(R.string.conv_preview_file)
         ConversationPreviewKind.Video -> stringResource(R.string.conv_preview_video)
+        ConversationPreviewKind.Voice -> stringResource(R.string.conv_preview_voice)
         ConversationPreviewKind.Left -> stringResource(R.string.conv_preview_left)
         ConversationPreviewKind.Empty -> stringResource(R.string.conv_preview_empty)
         ConversationPreviewKind.Text -> preview.snippet.orEmpty()

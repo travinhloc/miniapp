@@ -1,4 +1,11 @@
-@file:Suppress("TooManyFunctions", "ComplexMethod", "ComplexCondition", "ModifierMissing")
+@file:Suppress(
+    "TooManyFunctions",
+    "ComplexMethod",
+    "ComplexCondition",
+    "ModifierMissing",
+    "ReturnCount",
+    "MagicNumber",
+)
 
 package com.vault.vanishx.presentation.mailbox
 
@@ -7,11 +14,17 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import com.vault.vanishx.presentation.util.appDetailsSettingsIntent
+import androidx.compose.runtime.saveable.rememberSaveable
+import android.provider.Settings
+import android.net.Uri
+import android.Manifest
+import android.os.SystemClock
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -25,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -36,16 +50,29 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
+import com.vault.vanishx.domain.model.AttachmentMeta
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.MediaLimits
 import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.presentation.components.VanishXAlertDialog
 import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
+import com.vault.vanishx.data.media.ImagePrepareHelper
+import com.vault.vanishx.data.media.VideoPrepareHelper
+import com.vault.vanishx.data.media.VoiceRecorder
 import com.vault.vanishx.presentation.mailbox.chat.AttachTraySheet
+import com.vault.vanishx.presentation.mailbox.chat.CameraCaptureScreen
+import com.vault.vanishx.presentation.mailbox.chat.CameraCaptureTab
+import com.vault.vanishx.presentation.mailbox.chat.DocumentViewerScreen
+import com.vault.vanishx.presentation.mailbox.chat.GalleryAttachSheet
 import com.vault.vanishx.presentation.mailbox.chat.FeedbackMessages
 import com.vault.vanishx.presentation.mailbox.chat.REPORT_REASON_MAX_LINES
 import com.vault.vanishx.presentation.mailbox.chat.RoomActiveBody
@@ -67,15 +94,17 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomSafetySheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomScreenshotBanner
 import com.vault.vanishx.presentation.mailbox.chat.RoomUiDimens
 import com.vault.vanishx.presentation.mailbox.chat.RoomWallpaperSheet
-import com.vault.vanishx.presentation.mailbox.chat.VoiceRecordTray
+import com.vault.vanishx.presentation.mailbox.chat.VoiceRecordHud
 import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
 import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
 import com.vault.vanishx.presentation.mailbox.chat.isMessageAtOrBeforeWatermark
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import timber.log.Timber
-
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RoomScreen(
     viewModel: RoomViewModel = hiltViewModel(),
@@ -83,24 +112,117 @@ fun RoomScreen(
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var showVoiceTray by remember { mutableStateOf(false) }
+    var showCameraCapture by remember { mutableStateOf(false) }
+    var showGallerySheet by remember { mutableStateOf(false) }
+    var cameraInitialTab by remember { mutableStateOf(CameraCaptureTab.Photo) }
+    var showVoicePermission by remember { mutableStateOf(false) }
+    var voicePermissionRequested by rememberSaveable { mutableStateOf(false) }
+    var isVoiceRecording by remember { mutableStateOf(false) }
+    var voiceCancelArmed by remember { mutableStateOf(false) }
+    var voiceElapsedMs by remember { mutableLongStateOf(0L) }
+    val voicePermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
+    val voiceRecorder = remember(context) { VoiceRecorder(context.applicationContext) }
+    val imagePrepareHelper = remember(context) {
+        ImagePrepareHelper(context.applicationContext)
+    }
+    val videoPrepareHelper = remember(context) {
+        VideoPrepareHelper(context.applicationContext)
+    }
     val appLockSession = remember(context) {
         EntryPointAccessors.fromActivity(
             context as Activity,
             AppLockEntryPoint::class.java,
         ).appLockSession()
     }
-    val galleryPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia(),
-    ) { uri ->
+
+    val appSettingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
         appLockSession.endExternalUi()
-        if (uri != null) {
-            onAttachmentSelected(
-                context = context,
+    }
+
+    DisposableEffect(voiceRecorder) {
+        onDispose { voiceRecorder.release() }
+    }
+
+    LaunchedEffect(isVoiceRecording) {
+        if (!isVoiceRecording) {
+            voiceElapsedMs = 0L
+            return@LaunchedEffect
+        }
+        val startedAt = SystemClock.elapsedRealtime()
+        while (isActive && isVoiceRecording) {
+            voiceElapsedMs = (SystemClock.elapsedRealtime() - startedAt)
+                .coerceAtMost(MediaLimits.VOICE_MAX_DURATION_MS)
+            delay(50L)
+        }
+    }
+
+    fun finishVoiceSend() {
+        if (!isVoiceRecording && !voiceRecorder.isRecording) return
+        isVoiceRecording = false
+        voiceCancelArmed = false
+        val file = voiceRecorder.stop()
+        if (file == null) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.room_voice_too_short),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return
+        }
+        viewModel.onAction(
+            RoomAction.SendMedia(
+                uri = voiceRecorder.uriFor(file),
+                mime = "audio/mp4",
+                displayName = file.name,
+            ),
+        )
+    }
+
+    fun finishVoiceCancel() {
+        if (!isVoiceRecording && !voiceRecorder.isRecording) return
+        isVoiceRecording = false
+        voiceCancelArmed = false
+        voiceRecorder.cancel()
+    }
+
+    fun tryStartVoiceRecording(): Boolean {
+        if (uiState.isSendingMedia || isVoiceRecording) return false
+        if (!voicePermission.status.isGranted) {
+            showVoicePermission = true
+            return false
+        }
+        return runCatching {
+            voiceRecorder.start(onMaxDuration = { finishVoiceSend() })
+            voiceCancelArmed = false
+            voiceElapsedMs = 0L
+            isVoiceRecording = true
+            true
+        }.getOrElse { error ->
+            Timber.e(error, "Voice record start failed")
+            voiceRecorder.cancel()
+            Toast.makeText(
+                context,
+                context.getString(R.string.room_voice_record_failed),
+                Toast.LENGTH_SHORT,
+            ).show()
+            false
+        }
+    }
+    val galleryPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(MediaLimits.PHOTO_MULTI_SELECT_MAX),
+    ) { uris ->
+        appLockSession.endExternalUi()
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        val items = MediaLimits.clampPhotoMultiSelect(uris).map { uri ->
+            RoomAction.SendMedia(
                 uri = uri,
-                onAction = viewModel::onAction,
+                mime = resolveAttachmentMime(context, uri),
+                displayName = resolveAttachmentDisplayName(context, uri),
             )
         }
+        viewModel.onAction(RoomAction.SendMediaQueue(items))
     }
     val avatarPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
@@ -172,11 +294,21 @@ fun RoomScreen(
 
     LaunchedEffect(uiState.toastMessage) {
         val key = uiState.toastMessage ?: return@LaunchedEffect
-        val message = when (key) {
-            "peer_joined" -> context.getString(R.string.room_peer_joined)
-            "sensitive_copy_blocked" -> context.getString(R.string.room_copy_blocked_sensitive)
-            "media_saved" -> context.getString(R.string.room_media_saved)
-            "media_save_failed" -> context.getString(R.string.room_media_save_failed)
+        val message = when {
+            key == "peer_joined" -> context.getString(R.string.room_peer_joined)
+            key == "sensitive_copy_blocked" -> context.getString(R.string.room_copy_blocked_sensitive)
+            key == "media_saved" -> context.getString(R.string.room_media_saved)
+            key == "media_save_failed" -> context.getString(R.string.room_media_save_failed)
+            key.startsWith("media_sending|") -> {
+                val parts = key.split('|')
+                val current = parts.getOrNull(1)?.toIntOrNull()
+                val total = parts.getOrNull(2)?.toIntOrNull()
+                if (current != null && total != null) {
+                    context.getString(R.string.room_media_sending_progress, current, total)
+                } else {
+                    context.getString(R.string.room_media_uploading)
+                }
+            }
             else -> key
         }
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -207,31 +339,38 @@ fun RoomScreen(
             onOpenMore = {
                 viewModel.onAction(RoomAction.AttachClicked)
             },
-            onOpenVoice = { showVoiceTray = true },
+            onVoicePressStart = { tryStartVoiceRecording() },
+            onVoiceDrag = { armed ->
+                if (isVoiceRecording) {
+                    voiceCancelArmed = armed
+                }
+            },
+            onVoicePressEnd = { cancelled ->
+                if (!isVoiceRecording) return@RoomContent
+                if (cancelled || voiceCancelArmed) {
+                    finishVoiceCancel()
+                } else {
+                    finishVoiceSend()
+                }
+            },
             onPickGallery = {
-                appLockSession.beginExternalUi()
-                galleryPicker.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
-                )
+                showGallerySheet = true
             },
             onPickDocument = {
                 appLockSession.beginExternalUi()
-                documentPicker.launch(
-                    arrayOf(
-                        "application/pdf",
-                        "text/plain",
-                        "text/markdown",
-                        "text/x-markdown",
-                        "application/zip",
-                        "application/msword",
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        "application/vnd.ms-excel",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        "*/*",
-                    ),
-                )
+                documentPicker.launch(MediaLimits.DOCUMENT_PICKER_MIME)
+            },
+            onOpenCamera = {
+                cameraInitialTab = CameraCaptureTab.Photo
+                showCameraCapture = true
             },
         )
+        if (isVoiceRecording) {
+            VoiceRecordHud(
+                elapsedMs = voiceElapsedMs,
+                cancelArmed = voiceCancelArmed,
+            )
+        }
         if (uiState.showRoomOptions) {
             RoomOptionsScreen(
                 uiState = uiState,
@@ -272,8 +411,82 @@ fun RoomScreen(
         )
     }
 
-    if (showVoiceTray) {
-        VoiceRecordTray(onDismiss = { showVoiceTray = false })
+    if (showVoicePermission) {
+        val permanentlyDenied = !voicePermission.status.isGranted &&
+            !voicePermission.status.shouldShowRationale &&
+            voicePermissionRequested
+        VoicePermissionDialog(
+            showRationale = voicePermission.status.shouldShowRationale,
+            permanentlyDenied = permanentlyDenied,
+            onAllow = {
+                showVoicePermission = false
+                if (permanentlyDenied) {
+                    appLockSession.beginExternalUi()
+                    appSettingsLauncher.launch(appDetailsSettingsIntent(context))
+                } else {
+                    voicePermissionRequested = true
+                    voicePermission.launchPermissionRequest()
+                }
+            },
+            onDismiss = { showVoicePermission = false },
+        )
+    }
+    if (showGallerySheet) {
+        GalleryAttachSheet(
+            enabled = !uiState.isSendingMedia,
+            onDismiss = { showGallerySheet = false },
+            onTakePhoto = {
+                cameraInitialTab = CameraCaptureTab.Photo
+                showCameraCapture = true
+            },
+            onOpenSystemLibrary = {
+                showGallerySheet = false
+                appLockSession.beginExternalUi()
+                galleryPicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                )
+            },
+            onSendSelected = { uris ->
+                val items = MediaLimits.clampPhotoMultiSelect(uris).map { uri ->
+                    RoomAction.SendMedia(
+                        uri = uri,
+                        mime = resolveAttachmentMime(context, uri),
+                        displayName = resolveAttachmentDisplayName(context, uri),
+                    )
+                }
+                viewModel.onAction(RoomAction.SendMediaQueue(items))
+            },
+            onSelectionLimitReached = {
+                Toast.makeText(
+                    context,
+                    context.getString(
+                        R.string.room_gallery_max_selected,
+                        MediaLimits.PHOTO_MULTI_SELECT_MAX,
+                    ),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            },
+        )
+    }
+    if (showCameraCapture) {
+        CameraCaptureScreen(
+            imagePrepareHelper = imagePrepareHelper,
+            videoPrepareHelper = videoPrepareHelper,
+            onDismiss = { showCameraCapture = false },
+            initialTab = cameraInitialTab,
+            onPhotoReady = { uri, displayName ->
+                showCameraCapture = false
+                viewModel.onAction(
+                    RoomAction.SendMedia(uri, "image/jpeg", displayName),
+                )
+            },
+            onVideoReady = { uri, displayName ->
+                showCameraCapture = false
+                viewModel.onAction(
+                    RoomAction.SendMedia(uri, "video/mp4", displayName),
+                )
+            },
+        )
     }
 }
 
@@ -284,9 +497,12 @@ private fun RoomContent(
     onCopyInvite: (String) -> Unit,
     onShareInvite: (String) -> Unit,
     onOpenMore: () -> Unit,
-    onOpenVoice: () -> Unit,
+    onVoicePressStart: () -> Boolean,
+    onVoiceDrag: (Boolean) -> Unit,
+    onVoicePressEnd: (Boolean) -> Unit,
     onPickGallery: () -> Unit,
     onPickDocument: () -> Unit,
+    onOpenCamera: () -> Unit,
 ) {
     var showNeedPro by remember { mutableStateOf(false) }
     val showComposer = !uiState.isLoading &&
@@ -373,6 +589,22 @@ private fun RoomContent(
 
         FeedbackMessages(uiState = uiState)
 
+        val attachErrorRes = when (uiState.errorMessage) {
+            "media_unsupported" -> R.string.room_media_unsupported_type
+            "media_too_large" -> R.string.room_media_too_large
+            else -> null
+        }
+        if (attachErrorRes != null) {
+            VanishXAlertDialog(
+                title = stringResource(R.string.room_attach_error_title),
+                body = stringResource(attachErrorRes),
+                confirmLabel = stringResource(R.string.action_back),
+                tone = VanishXAlertTone.Warn,
+                onConfirm = { onAction(RoomAction.ClearFeedback) },
+                onDismiss = { onAction(RoomAction.ClearFeedback) },
+            )
+        }
+
         if (showComposer) {
             val replySnippet = uiState.replyToMessageId?.let { id ->
                 uiState.messages.firstOrNull { it.id == id }?.let { msg ->
@@ -388,7 +620,9 @@ private fun RoomContent(
                 isSending = uiState.isSending,
                 isSendingMedia = uiState.isSendingMedia,
                 onOpenMore = onOpenMore,
-                onOpenVoice = onOpenVoice,
+                onVoicePressStart = onVoicePressStart,
+                onVoiceDrag = onVoiceDrag,
+                onVoicePressEnd = onVoicePressEnd,
                 onPickGallery = onPickGallery,
                 locked = isHandshakeWaiting,
                 replySnippet = replySnippet,
@@ -401,6 +635,7 @@ private fun RoomContent(
         AttachTraySheet(
             enabled = !uiState.isSendingMedia,
             onPickDocument = onPickDocument,
+            onOpenCamera = onOpenCamera,
             onAction = onAction,
         )
     }
@@ -523,18 +758,33 @@ private fun RoomContent(
         uiState.messages.firstOrNull { it.id == id && it.isMedia }
     }
     if (mediaViewerMessage != null) {
-        MediaViewerDialog(
-            message = mediaViewerMessage,
-            isPro = uiState.isPro,
-            onDismiss = { onAction(RoomAction.DismissMediaViewer) },
-            onSave = {
-                if (uiState.isPro) {
-                    onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
-                } else {
-                    showNeedPro = true
-                }
-            },
-        )
+        if (mediaViewerMessage.mediaKind == AttachmentMeta.KIND_FILE) {
+            DocumentViewerScreen(
+                message = mediaViewerMessage,
+                isPro = uiState.isPro,
+                onBack = { onAction(RoomAction.DismissMediaViewer) },
+                onSave = {
+                    if (uiState.isPro) {
+                        onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+                    } else {
+                        showNeedPro = true
+                    }
+                },
+            )
+        } else {
+            MediaViewerDialog(
+                message = mediaViewerMessage,
+                isPro = uiState.isPro,
+                onDismiss = { onAction(RoomAction.DismissMediaViewer) },
+                onSave = {
+                    if (uiState.isPro) {
+                        onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+                    } else {
+                        showNeedPro = true
+                    }
+                },
+            )
+        }
     }
     if (actionMessage != null) {
         RoomMessageActionSheet(
@@ -640,10 +890,10 @@ private fun resolveAttachmentMime(context: Context, uri: android.net.Uri): Strin
         "mp4", "m4v" -> "video/mp4"
         "webm" -> "video/webm"
         "3gp", "3gpp" -> "video/3gpp"
+        "m4a", "aac" -> "audio/mp4"
         "pdf" -> "application/pdf"
         "txt" -> "text/plain"
         "md", "markdown" -> "text/markdown"
-        "zip" -> "application/zip"
         "doc" -> "application/msword"
         "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         "xls" -> "application/vnd.ms-excel"
@@ -684,4 +934,34 @@ private fun Context.findActivity(): ComponentActivity? {
         current = current.baseContext
     }
     return null
+}
+
+@Composable
+private fun VoicePermissionDialog(
+    showRationale: Boolean,
+    permanentlyDenied: Boolean,
+    onAllow: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    VanishXAlertDialog(
+        title = stringResource(R.string.room_voice_permission_title),
+        body = stringResource(
+            when {
+                permanentlyDenied -> R.string.room_voice_permission_denied_body
+                showRationale -> R.string.room_voice_permission_rationale
+                else -> R.string.room_voice_permission_body
+            },
+        ),
+        confirmLabel = stringResource(
+            if (permanentlyDenied) {
+                R.string.room_permission_open_settings
+            } else {
+                R.string.room_voice_permission_allow
+            },
+        ),
+        dismissLabel = stringResource(R.string.action_back),
+        tone = VanishXAlertTone.Accent,
+        onConfirm = onAllow,
+        onDismiss = onDismiss,
+    )
 }

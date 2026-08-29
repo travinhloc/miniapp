@@ -8,6 +8,7 @@ import android.widget.FrameLayout
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -49,7 +50,14 @@ internal fun MediaViewerDialog(
                         .fillMaxWidth()
                         .heightIn(max = 360.dp),
                 )
-                AttachmentMeta.KIND_VIDEO -> VideoPlayer(path = message.mediaLocalPath)
+                AttachmentMeta.KIND_VIDEO -> MediaPathPlayer(
+                    path = message.mediaLocalPath,
+                    aspectRatio = 16f / 9f,
+                )
+                AttachmentMeta.KIND_VOICE -> MediaPathPlayer(
+                    path = message.mediaLocalPath,
+                    aspectRatio = null,
+                )
                 else -> Text(message.mediaFileName ?: stringResource(R.string.room_media_file))
             }
         },
@@ -70,24 +78,44 @@ internal fun MediaViewerDialog(
     )
 }
 
+/** Resolves absolute file path or `content://` URI string for playback. */
+internal fun resolveMediaPlaybackUri(path: String?): Uri? {
+    if (path.isNullOrBlank()) return null
+    val file = File(path)
+    if (file.exists()) return Uri.fromFile(file)
+    return runCatching { Uri.parse(path) }.getOrNull()
+}
+
 @Composable
-private fun VideoPlayer(path: String?) {
+internal fun MediaPathPlayer(
+    path: String?,
+    aspectRatio: Float?,
+    modifier: Modifier = Modifier,
+    autoPlay: Boolean = true,
+) {
     val context = LocalContext.current
-    val file = path?.let { File(it) }?.takeIf { it.exists() }
-    if (file == null) {
-        Text(stringResource(R.string.room_media_missing))
+    val uri = remember(path) { resolveMediaPlaybackUri(path) }
+    if (uri == null) {
+        Text(stringResource(R.string.room_media_missing), modifier = modifier)
         return
     }
-    val player = remember(file.absolutePath) {
+    val player = remember(uri) {
         ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+            setMediaItem(MediaItem.fromUri(uri))
             prepare()
-            playWhenReady = true
+            playWhenReady = autoPlay
         }
     }
     DisposableEffect(player) {
         onDispose { player.release() }
     }
+    val baseModifier = modifier.fillMaxWidth().then(
+        if (aspectRatio != null) {
+            Modifier.aspectRatio(aspectRatio)
+        } else {
+            Modifier.height(72.dp)
+        },
+    )
     AndroidView(
         factory = { ctx ->
             PlayerView(ctx).apply {
@@ -99,8 +127,6 @@ private fun VideoPlayer(path: String?) {
                 useController = true
             }
         },
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(16f / 9f),
+        modifier = baseModifier,
     )
 }

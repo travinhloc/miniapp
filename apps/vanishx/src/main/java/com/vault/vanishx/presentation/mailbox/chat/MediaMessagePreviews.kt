@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -136,6 +137,76 @@ internal fun VideoMediaPreview(message: ChatMessage) {
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             )
+        }
+    }
+}
+
+@Composable
+internal fun VoiceMediaPreview(message: ChatMessage, mine: Boolean) {
+    val path = message.mediaLocalPath
+    val context = LocalContext.current
+    val loader = rememberMediaPreviewLoader()
+    var durationMs by remember(path) { mutableStateOf(0L) }
+    LaunchedEffect(path) {
+        if (path.isNullOrBlank()) {
+            durationMs = 0L
+            return@LaunchedEffect
+        }
+        durationMs = withContext(Dispatchers.IO) { loader.mediaDurationMs(context, path) }
+    }
+    val mediaCorner = RoundedCornerShape(RoomUiDimens.mediaCorner)
+    Row(
+        modifier = Modifier
+            .widthIn(min = 160.dp, max = RoomUiDimens.bubbleMaxWidth)
+            .clip(mediaCorner)
+            .background(
+                if (mine) VanishXColors.OnPrimary.copy(alpha = 0.12f)
+                else VanishXColors.Surface.copy(alpha = 0.95f),
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = VanishXColors.Primary.copy(alpha = 0.18f),
+            modifier = Modifier.size(40.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = stringResource(R.string.room_voice_cd),
+                    tint = VanishXColors.Primary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.room_voice_bubble_label),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = if (mine) VanishXColors.OnPrimary else VanishXColors.OnSurface,
+                maxLines = 1,
+            )
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = if (mine) {
+                    VanishXColors.OnPrimary.copy(alpha = 0.2f)
+                } else {
+                    VanishXColors.Primary.copy(alpha = 0.12f)
+                },
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
+                Text(
+                    text = MediaPreviewLoader.formatDuration(durationMs),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.Monospace,
+                    ),
+                    color = if (mine) VanishXColors.OnPrimary else VanishXColors.Primary,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+            }
         }
     }
 }

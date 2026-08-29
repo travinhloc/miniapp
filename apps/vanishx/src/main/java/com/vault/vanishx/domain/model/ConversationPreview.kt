@@ -10,6 +10,7 @@ enum class ConversationPreviewKind {
     Image,
     File,
     Video,
+    Voice,
     Text,
     Empty,
     Left,
@@ -53,6 +54,7 @@ object ConversationPreviewResolver {
             visible.mediaKind == AttachmentMeta.KIND_IMAGE -> ConversationPreviewKind.Image
             visible.mediaKind == AttachmentMeta.KIND_FILE -> ConversationPreviewKind.File
             visible.mediaKind == AttachmentMeta.KIND_VIDEO -> ConversationPreviewKind.Video
+            visible.mediaKind == AttachmentMeta.KIND_VOICE -> ConversationPreviewKind.Voice
             else -> ConversationPreviewKind.Text
         }
         val snippet = if (kind == ConversationPreviewKind.Text) {

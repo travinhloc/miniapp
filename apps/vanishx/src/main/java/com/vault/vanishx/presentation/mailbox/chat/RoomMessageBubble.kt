@@ -362,6 +362,7 @@ private fun MediaMessageBody(message: ChatMessage, mine: Boolean) {
         when (message.mediaKind) {
             "image" -> ImageMediaPreview(message = message)
             "video" -> VideoMediaPreview(message = message)
+            "voice" -> VoiceMediaPreview(message = message, mine = mine)
             else -> DocumentMediaPreview(message = message, mine = mine)
         }
         if (pending) {

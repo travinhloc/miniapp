@@ -189,6 +189,7 @@ internal fun RoomLeft(modifier: Modifier = Modifier) {
 @Composable
 internal fun FeedbackMessages(uiState: RoomUiState) {
     uiState.errorMessage?.let { error ->
+        if (error == "media_unsupported" || error == "media_too_large") return@let
         Text(
             text = error,
             color = VanishXColors.Error,

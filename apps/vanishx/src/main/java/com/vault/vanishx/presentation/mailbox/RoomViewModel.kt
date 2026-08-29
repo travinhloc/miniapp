@@ -41,9 +41,11 @@ import com.vault.vanishx.domain.usecase.WritePingSignalUseCase
 import com.vault.vanishx.data.push.RoomForegroundTracker
 import com.vault.vanishx.presentation.paywall.PaywallDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,6 +58,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -131,6 +134,9 @@ sealed interface RoomAction {
     data object DismissAttachTray : RoomAction
     data object DismissFailedMedia : RoomAction
     data class SendMedia(val uri: Uri, val mime: String, val displayName: String?) : RoomAction
+    /** Sequential photo (or mixed) media sends; clamped to [MediaLimits.PHOTO_MULTI_SELECT_MAX]. */
+    data class SendMediaQueue(val items: List<SendMedia>) : RoomAction
+    data object CancelMediaQueue : RoomAction
     data class OpenMediaViewer(val messageId: String) : RoomAction
     data object DismissMediaViewer : RoomAction
     data class SaveMedia(val messageId: String) : RoomAction
@@ -247,6 +253,8 @@ class RoomViewModel @Inject constructor(
     private var metaObserveJob: Job? = null
     private var expiryJob: Job? = null
     private var engagementJob: Job? = null
+    private var mediaSendJob: Job? = null
+    private var mediaSendGeneration: Int = 0
     private var lastPeerPingAtMs = 0L
     private var presenceDeviceId: String = ""
 
@@ -258,6 +266,7 @@ class RoomViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        cancelMediaQueue()
         observeJob?.cancel()
         metaObserveJob?.cancel()
         expiryJob?.cancel()
@@ -273,7 +282,10 @@ class RoomViewModel @Inject constructor(
 
     fun onAction(action: RoomAction) {
         when (action) {
-            RoomAction.Back -> launch { _navigator.emit(BaseDestination.Up()) }
+            RoomAction.Back -> {
+                cancelMediaQueue()
+                launch { _navigator.emit(BaseDestination.Up()) }
+            }
             RoomAction.Refresh -> sync(showLoading = true)
             RoomAction.Send -> send(sensitive = false)
             RoomAction.AttachClicked -> _uiState.update {
@@ -287,7 +299,9 @@ class RoomViewModel @Inject constructor(
                     },
                 )
             }
-            is RoomAction.SendMedia -> sendMedia(action)
+            is RoomAction.SendMedia -> enqueueMediaSends(listOf(action))
+            is RoomAction.SendMediaQueue -> enqueueMediaSends(action.items)
+            RoomAction.CancelMediaQueue -> cancelMediaQueue()
             is RoomAction.OpenMediaViewer -> _uiState.update { it.copy(mediaViewerMessageId = action.messageId) }
             RoomAction.DismissMediaViewer -> _uiState.update { it.copy(mediaViewerMessageId = null) }
             is RoomAction.SaveMedia -> saveMedia(action.messageId)
@@ -1089,16 +1103,64 @@ class RoomViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private fun sendMedia(action: RoomAction.SendMedia) {
-        if (_uiState.value.isExpired || _uiState.value.isSendingMedia) return
+    private fun cancelMediaQueue() {
+        mediaSendGeneration += 1
+        mediaSendJob?.cancel()
+        mediaSendJob = null
+        if (_uiState.value.isSendingMedia) {
+            _uiState.update { it.copy(isSendingMedia = false) }
+        }
+    }
+
+    private fun enqueueMediaSends(raw: List<RoomAction.SendMedia>) {
+        if (_uiState.value.isExpired) return
+        val items = MediaLimits.clampPhotoMultiSelect(raw)
+        if (items.isEmpty()) return
+        mediaSendJob?.cancel()
+        val generation = mediaSendGeneration + 1
+        mediaSendGeneration = generation
+        mediaSendJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSendingMedia = true,
+                    showAttachTray = false,
+                    errorMessage = null,
+                )
+            }
+            try {
+                val total = items.size
+                items.forEachIndexed { index, action ->
+                    ensureActive()
+                    if (total > 1) {
+                        _uiState.update {
+                            it.copy(toastMessage = "media_sending|${index + 1}|$total")
+                        }
+                    }
+                    sendOneMedia(action, index)
+                }
+            } catch (_: CancellationException) {
+                // Stop remaining; already-sent messages stay.
+            } finally {
+                if (generation == mediaSendGeneration) {
+                    mediaSendJob = null
+                    _uiState.update { it.copy(isSendingMedia = false) }
+                }
+            }
+        }
+    }
+
+    private suspend fun sendOneMedia(action: RoomAction.SendMedia, index: Int) {
         val kind = MediaLimits.kindForMimeOrName(action.mime, action.displayName)
             ?: run {
                 _uiState.update {
-                    it.copy(errorMessage = "Unsupported file type. Use image, short video, PDF, or text.")
+                    it.copy(
+                        errorMessage =
+                            "media_unsupported",
+                    )
                 }
                 return
             }
-        val pendingId = "pending_${System.currentTimeMillis()}"
+        val pendingId = "pending_${System.currentTimeMillis()}_$index"
         val now = System.currentTimeMillis()
         val pending = ChatMessage(
             id = pendingId,
@@ -1115,41 +1177,40 @@ class RoomViewModel @Inject constructor(
         )
         _uiState.update {
             it.copy(
-                isSendingMedia = true,
-                showAttachTray = false,
-                errorMessage = null,
                 messages = (it.messages + pending).sortedBy { msg -> msg.sentAt },
             )
         }
-        flow { emit(sendRoomMedia(roomId, action.uri, action.mime, action.displayName)) }
-            .flowOn(dispatchersProvider.io)
-            .onEach { sent ->
-                _uiState.update { state ->
-                    state.copy(
-                        isSendingMedia = false,
-                        messages = (state.messages.filterNot { it.id == pendingId } + sent)
-                            .distinctBy { it.id }
-                            .sortedBy { it.sentAt },
-                    )
-                }
+        try {
+            val sent = withContext(dispatchersProvider.io) {
+                sendRoomMedia(roomId, action.uri, action.mime, action.displayName)
             }
-            .catch { error ->
-                Timber.e(error, "Media send failed")
-                _uiState.update { state ->
-                    state.copy(
-                        isSendingMedia = false,
-                        errorMessage = friendlyError(error),
-                        messages = state.messages.map { msg ->
-                            if (msg.id == pendingId) {
-                                msg.copy(mediaTransferStatus = ChatMessage.MEDIA_FAILED)
-                            } else {
-                                msg
-                            }
-                        },
-                    )
-                }
+            _uiState.update { state ->
+                state.copy(
+                    messages = (state.messages.filterNot { it.id == pendingId } + sent)
+                        .distinctBy { it.id }
+                        .sortedBy { it.sentAt },
+                )
             }
-            .launchIn(viewModelScope)
+        } catch (error: CancellationException) {
+            _uiState.update { state ->
+                state.copy(messages = state.messages.filterNot { it.id == pendingId })
+            }
+            throw error
+        } catch (error: Exception) {
+            Timber.e(error, "Media send failed")
+            _uiState.update { state ->
+                state.copy(
+                    errorMessage = friendlyError(error),
+                    messages = state.messages.map { msg ->
+                        if (msg.id == pendingId) {
+                            msg.copy(mediaTransferStatus = ChatMessage.MEDIA_FAILED)
+                        } else {
+                            msg
+                        }
+                    },
+                )
+            }
+        }
     }
 
     private fun saveMedia(messageId: String) {
@@ -1467,12 +1528,14 @@ class RoomViewModel @Inject constructor(
             message.contains("Storage", ignoreCase = true) ->
             "Storage permission denied. Publish apps/vanishx/firebase/storage.rules."
         message.contains("Unsupported media type", ignoreCase = true) ->
-            "Unsupported file type. Use image, short video, PDF, or text."
+            "media_unsupported"
         message.contains("Video duration", ignoreCase = true) ->
             "Video must be ${MediaLimits.VIDEO_MAX_DURATION_MS / MS_PER_SEC}s or shorter."
+        message.contains("Voice duration", ignoreCase = true) ->
+            "Voice note must be ${MediaLimits.VOICE_MAX_DURATION_MS / MS_PER_SEC}s or shorter."
         message.contains("exceeds", ignoreCase = true) &&
             message.contains("bytes", ignoreCase = true) ->
-            "File is too large for this chat."
+            "media_too_large"
         message.contains("Unable to decode image", ignoreCase = true) ->
             "Could not read that image."
         message.contains("Unable to open content", ignoreCase = true) ->

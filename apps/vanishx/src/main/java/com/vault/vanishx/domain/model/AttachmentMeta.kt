@@ -17,5 +17,6 @@ data class AttachmentMeta(
         const val KIND_IMAGE = "image"
         const val KIND_FILE = "file"
         const val KIND_VIDEO = "video"
+        const val KIND_VOICE = "voice"
     }
 }
