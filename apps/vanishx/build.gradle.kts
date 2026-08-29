@@ -30,7 +30,14 @@ fun ensureGoogleServicesFromPlaceholder(flavorDir: String) {
 ensureGoogleServicesFromPlaceholder("staging")
 ensureGoogleServicesFromPlaceholder("production")
 
-val signingProperties = loadProperties("$rootDir/signing.properties")
+val signingPropertiesFile = rootProject.file("signing.properties")
+val releaseKeystoreFile = rootProject.file("config/release.keystore")
+val canSignRelease = signingPropertiesFile.exists() && releaseKeystoreFile.exists()
+val signingProperties = if (canSignRelease) {
+    loadProperties(signingPropertiesFile.absolutePath)
+} else {
+    null
+}
 val getVersionCode: () -> Int = {
     if (project.hasProperty("versionCode")) {
         (project.property("versionCode") as String).toInt()
@@ -58,11 +65,14 @@ android {
     }
 
     signingConfigs {
-        create(BuildTypes.RELEASE) {
-            storeFile = file("${rootDir}/config/release.keystore")
-            storePassword = signingProperties.getProperty("KEYSTORE_PASSWORD") as String
-            keyPassword = signingProperties.getProperty("KEY_PASSWORD") as String
-            keyAlias = signingProperties.getProperty("KEY_ALIAS") as String
+        if (canSignRelease) {
+            val props = checkNotNull(signingProperties)
+            create(BuildTypes.RELEASE) {
+                storeFile = releaseKeystoreFile
+                storePassword = props.getProperty("KEYSTORE_PASSWORD")
+                keyPassword = props.getProperty("KEY_PASSWORD")
+                keyAlias = props.getProperty("KEY_ALIAS")
+            }
         }
 
         getByName(BuildTypes.DEBUG) {
@@ -79,7 +89,9 @@ android {
             isDebuggable = false
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs[BuildTypes.RELEASE]
+            if (canSignRelease) {
+                signingConfig = signingConfigs[BuildTypes.RELEASE]
+            }
         }
 
         create(BuildTypes.PRERELEASE) {

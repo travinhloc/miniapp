@@ -81,11 +81,22 @@ mailbox envelope, preserving the existing pickup-queue behavior.
 |--------|------|--------|
 | staging (dev) | `src/staging/google-services.json` | Real `vanihx-staging`; **gitignored** |
 | staging (CI) | `src/staging/google-services.placeholder.json` | Committed; copied to `google-services.json` if missing |
-| production | `src/production/google-services.json` | Placeholder until prod Firebase exists |
+| production (dev) | `src/production/google-services.json` | Real prod project; **gitignored** (R.1) |
+| production (CI) | `src/production/google-services.placeholder.json` | Committed; copied if missing |
 
-Dev: file thật phải có `project_info.firebase_url`. Tạo RTDB rồi tải lại JSON vào `src/staging/`.
+Dev: file thật phải có `project_info.firebase_url`. Staging: tải JSON vào `src/staging/`. Production: cùng bước trên **project riêng** (không dùng `vanihx-staging`).
 
 CI: không có file thật → Gradle copy từ `*.placeholder.json` (đủ cho `process*GoogleServices`).
+
+## Production Firebase (R.1)
+
+Không commit `google-services.json` prod.
+
+1. Firebase Console → project **mới** (Blaze), Android app `com.vault.vanishx` (không suffix `.staging`).
+2. Bật Anonymous Auth · Realtime Database · Storage · Functions khi deploy fan-out.
+3. Tải `google-services.json` vào `apps/vanishx/src/production/google-services.json`.
+4. Từ `apps/vanishx/firebase/`: `firebase use --add` (alias `production`) rồi `firebase deploy --only database` (và `functions` khi sẵn). Rules = `database.rules.json`.
+5. Smoke: `./gradlew :apps:vanishx:assembleProductionDebug` rồi create/join/chat trên 2 máy.
 
 ## Deploy rules
 
@@ -94,7 +105,11 @@ CI: không có file thật → Gradle copy từ `*.placeholder.json` (đủ cho 
 2. Enable **Anonymous** sign-in under Authentication.
 3. Run `./gradlew :apps:vanishx:installStagingDebug`, create/join a room, send a message.
 
-**Staging:** rules đã Publish (2026-08-09), gồm mailbox + engagement (`presence` / `read` / `typing` / `reactions`). Prod vẫn chờ Epic R / DoD.
+**Staging:** rules đã Publish (2026-08-09), gồm mailbox + engagement (`presence` / `read` / `typing` / `reactions`) + `signals` (Epic 15). Prod: bước R.1 ở trên.
+
+## Signing (R.2)
+
+`signing.properties` và `config/release.keystore` **gitignored**. Copy `signing.properties.example` → `signing.properties`. Thiếu file → `productionRelease` minify nhưng không ký (CI). Version: `gradle/libs.versions.toml` `androidVersionCode` / `androidVersionName` (`1` / `1.0.0`) — bump có chủ đích mỗi Play upload.
 
 ## Media attachments (Epic 11)
 

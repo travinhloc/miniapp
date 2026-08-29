@@ -75,12 +75,13 @@ internal fun MailboxRoom.toConversationRow(
     } else {
         ConversationPreviewResolver.unreadInboundCount(messages, lastReadMessageId, nowMs)
     }
+    val activityAt = preview.lastActivityAt.takeIf { it > 0L } ?: createdAt
     return ConversationRowModel(
         id = id,
         displayName = home.displayName,
         initials = home.initials,
         avatarLocalPath = avatarLocalPath,
-        preview = preview,
+        preview = if (preview.lastActivityAt > 0L) preview else preview.copy(lastActivityAt = createdAt),
         unreadCount = unread,
         isFavorite = favorite,
         isMuted = muted,
@@ -90,8 +91,22 @@ internal fun MailboxRoom.toConversationRow(
         hasRoomClock = home.hasRoomClock,
         ttlFraction = home.ttlFraction,
         remainingMs = home.remainingMs,
+        activityAt = activityAt,
     )
 }
+
+/** Home lists live chats only — waiting handshake rooms belong on History. */
+internal fun MailboxRoom.isHomeListEligible(nowMs: Long = System.currentTimeMillis()): Boolean {
+    if (status == MailboxRoom.STATUS_LEFT) return false
+    return !toHomeItem(nowMs).isWaiting
+}
+
+internal fun List<ConversationRowModel>.sortedForHome(): List<ConversationRowModel> =
+    sortedWith(
+        compareBy<ConversationRowModel> { !it.isFavorite }
+            .thenByDescending { it.activityAt },
+    )
+
 
 fun MailboxRoom.toHomeItem(nowMs: Long = System.currentTimeMillis()): HomeRoomItem {
     val resolved = resolvedStatus(nowMs)

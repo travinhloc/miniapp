@@ -46,6 +46,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import java.util.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
@@ -347,7 +348,7 @@ private fun ChatMessage.isDocumentFile(): Boolean =
 private fun formatMediaBytes(bytes: Long): String = when {
     bytes < 1024L -> "$bytes B"
     bytes < 1024L * 1024L -> "${bytes / 1024L} KB"
-    else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+    else -> String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
 }
 
 private const val KIND_AUDIO = "audio"

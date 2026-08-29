@@ -3,6 +3,7 @@ package com.vault.vanishx.presentation.home
 import app.cash.turbine.test
 import com.vault.vanishx.data.invite.PendingInviteStore
 import com.vault.vanishx.domain.model.Identity
+import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.MailboxRepository
 import com.vault.vanishx.domain.repository.ProEntitlementRepository
 import com.vault.vanishx.domain.usecase.EnsureIdentityUseCase
@@ -121,5 +122,59 @@ class HomeViewModelTest {
             viewModel.onAction(HomeAction.OpenSettings)
             awaitItem() shouldBe SecurityDestination.Settings
         }
+    }
+
+    @Test
+    fun `Home omits waiting rooms and sorts favorite then newest`() = runTest {
+        val waiting = MailboxRoom(
+            id = "wait",
+            roomKey = "k",
+            createdAt = 400L,
+            status = MailboxRoom.STATUS_ACTIVE,
+            role = MailboxRoom.ROLE_CREATOR,
+            activatedAt = 0L,
+            favorite = true,
+        )
+        val favorite = MailboxRoom(
+            id = "fav",
+            roomKey = "k",
+            createdAt = 100L,
+            status = MailboxRoom.STATUS_ACTIVE,
+            role = MailboxRoom.ROLE_CREATOR,
+            activatedAt = 1L,
+            favorite = true,
+            title = "Fav",
+        )
+        val liveNew = MailboxRoom(
+            id = "new",
+            roomKey = "k",
+            createdAt = 300L,
+            status = MailboxRoom.STATUS_ACTIVE,
+            role = MailboxRoom.ROLE_MEMBER,
+            activatedAt = 1L,
+            title = "New",
+        )
+        val liveOld = MailboxRoom(
+            id = "old",
+            roomKey = "k",
+            createdAt = 200L,
+            status = MailboxRoom.STATUS_ACTIVE,
+            role = MailboxRoom.ROLE_MEMBER,
+            activatedAt = 1L,
+            title = "Old",
+        )
+        coEvery { mailboxRepository.getAllRooms() } returns listOf(waiting, liveOld, liveNew, favorite)
+        viewModel = HomeViewModel(
+            ensureIdentity = ensureIdentity,
+            syncActiveMailboxes = syncActiveMailboxes,
+            mailboxRepository = mailboxRepository,
+            pendingInviteStore = pendingInviteStore,
+            proEntitlement = proEntitlement,
+            dispatchersProvider = coroutinesRule.testDispatcherProvider,
+        )
+        advanceUntilIdle()
+
+        viewModel.uiState.value.rooms.map { it.id } shouldBe listOf("fav", "new", "old")
+        viewModel.uiState.value.visibleRooms.map { it.id } shouldBe listOf("fav", "new", "old")
     }
 }

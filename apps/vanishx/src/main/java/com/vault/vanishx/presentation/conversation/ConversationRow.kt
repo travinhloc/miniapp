@@ -59,6 +59,8 @@ data class ConversationRowModel(
     val hasRoomClock: Boolean,
     val ttlFraction: Float,
     val remainingMs: Long,
+    /** Last visible activity, or room createdAt when the thread is empty. */
+    val activityAt: Long = 0L,
 )
 
 private val RowHeight = 72.dp

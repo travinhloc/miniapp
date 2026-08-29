@@ -11,7 +11,8 @@ warn("Please provide a summary in the PR description to make it easier to review
 warn("Please add labels to this PR") if github.pr_labels.empty?
 
 # Check commits lint and warn on all checks (instead of failing)
-commit_lint.check warn: :all, disable: [:subject_length]
+# Conventional commits use lowercase subject after type(scope): — disable subject_case.
+commit_lint.check warn: :all, disable: [:subject_length, :subject_case]
 
 # Detekt output check
 detekt_dir = "**/build/reports/detekt/detekt.xml"
@@ -41,20 +42,21 @@ else
   warn("Android Lint report not found. Please run `./gradlew lint` before creating a PR.")
 end
 
-# Show Danger test coverage report from Kover for templates
-# Report coverage of modified files, warn if total project coverage is under 80%
-# or if any modified file's coverage is under 95%
+# Show Danger test coverage report from Kover (monorepo: apps/*, data, domain)
+kover_reports = Dir["apps/*/build/reports/kover/reportCustom.xml"] +
+                Dir["{data,domain}/build/reports/kover/reportCustom.xml"]
 
-kover_file_template = "app/build/reports/kover/reportCustom.xml"
-
-if File.exist?(kover_file_template)
-  markdown "## Kover report for template-compose:"
-  shroud.reportKover moduleName: "Template - Compose Unit Tests",
-                     file: kover_file_template,
-                     totalProjectThreshold: 80,
-                     modifiedFileThreshold: 95,
-                     failIfUnderProjectThreshold: false,
-                     failIfUnderFileThreshold: false
+if kover_reports.any?
+  kover_reports.sort.each do |kover_file|
+    module_name = kover_file.sub(%r{/build/reports/kover/reportCustom\.xml\z}, "")
+    markdown "## Kover report for #{module_name}"
+    shroud.reportKover moduleName: module_name,
+                       file: kover_file,
+                       totalProjectThreshold: 80,
+                       modifiedFileThreshold: 95,
+                       failIfUnderProjectThreshold: false,
+                       failIfUnderFileThreshold: false
+  end
 else
-  warn("Kover report not found at #{kover_file_template}. Please run `./gradlew koverXmlReportCustom` before creating a PR.")
+  warn("Kover report not found under apps/*/build/reports/kover/ or data|domain. Please run `./gradlew koverXmlReportCustom` before creating a PR.")
 end

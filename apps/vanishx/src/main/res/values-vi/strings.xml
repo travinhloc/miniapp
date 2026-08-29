@@ -67,6 +67,7 @@
     <string name="history_title">Lịch sử</string>
     <string name="history_subtitle">Chỉ lưu trên máy này</string>
     <string name="history_filter_open">Đang mở</string>
+    <string name="history_filter_waiting">Chưa active</string>
     <string name="history_filter_expired">Đã hết hạn</string>
     <string name="history_filter_all">Tất cả</string>
     <string name="history_empty">Không có phòng trong mục này.</string>
@@ -74,6 +75,7 @@
     <string name="history_note">Gói miễn phí chỉ mở phòng còn hạn. Phòng hết hạn cần VanishX Pro để xem lại.</string>
     <string name="history_open_pro">Mở bằng Pro</string>
     <string name="history_action_none">—</string>
+    <string name="history_meta_waiting">Chờ khách vào</string>
     <string name="history_meta_creator">Bạn tạo</string>
     <string name="history_meta_member">Đã tham gia</string>
     <string name="history_meta_archived">Đã lưu trên máy</string>

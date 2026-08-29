@@ -67,6 +67,7 @@
     <string name="history_title">History</string>
     <string name="history_subtitle">Stored on this device only</string>
     <string name="history_filter_open">Active</string>
+    <string name="history_filter_waiting">Waiting</string>
     <string name="history_filter_expired">Expired</string>
     <string name="history_filter_all">All</string>
     <string name="history_empty">No rooms in this filter.</string>
@@ -74,6 +75,7 @@
     <string name="history_note">Free can only open active rooms. Expired rooms need VanishX Pro to view again.</string>
     <string name="history_open_pro">Open with Pro</string>
     <string name="history_action_none">—</string>
+    <string name="history_meta_waiting">Waiting for guest</string>
     <string name="history_meta_creator">You created</string>
     <string name="history_meta_member">You joined</string>
     <string name="history_meta_archived">Saved on device</string>
