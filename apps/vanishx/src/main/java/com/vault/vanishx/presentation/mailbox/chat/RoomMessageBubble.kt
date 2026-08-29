@@ -501,11 +501,11 @@ private val sensitiveBlurRadius = 28.dp
 private fun BubbleMetaRow(
     mine: Boolean,
     sentAt: Long,
+    modifier: Modifier = Modifier,
     readReceipt: Boolean = false,
     onLongPress: (() -> Unit)? = null,
     /** Outgoing text bubble uses on-primary; media sits on chat bg. */
     onLightBubble: Boolean = mine,
-    modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
     val timeColor = if (onLightBubble) {

@@ -25,7 +25,6 @@ class RoomNotificationHelper @Inject constructor(
 ) {
 
     fun ensureChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         val channel = NotificationChannel(
             context.getString(R.string.fcm_channel_id),
