@@ -24,6 +24,9 @@ interface MailboxRemoteDataSource {
     /** Removes all message children for [roomId]; room meta is left intact. */
     suspend fun deleteAllMessages(roomId: String)
 
+    /** Handshake Ping under `/rooms/{roomId}/signals/{signalId}` (Epic 15.3). */
+    suspend fun writeRoomSignal(roomId: String, signal: RemoteRoomSignal)
+
     /** Writes a one-shot UGC report under `/reports/{reportId}`. */
     suspend fun writeReport(report: RemoteReport)
 

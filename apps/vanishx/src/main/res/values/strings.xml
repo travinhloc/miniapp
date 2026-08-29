@@ -228,7 +228,7 @@
     <string name="room_composer_locked_hint">Composer locked · waiting for accept</string>
     <string name="room_handshake_qr_cd">Invite QR code</string>
     <string name="room_live_pill">Live</string>
-    <string name="room_ping_peer_sent">Ping sent (demo notification).</string>
+    <string name="room_ping_peer_sent">Ping sent.</string>
     <string name="room_ping_peer_cooldown">Wait %1$ds before pinging again.</string>
 
     <!-- Epic 8 · Bento / Safety / ephemeral -->
@@ -375,6 +375,8 @@
     <string name="fcm_channel_description">Alerts when a temporary room may have new messages</string>
     <string name="fcm_notification_title">New message</string>
     <string name="fcm_notification_body">Open the room to sync encrypted messages.</string>
+    <string name="fcm_ping_title">Waiting in the room</string>
+    <string name="fcm_ping_body">Open the room — someone is waiting for you.</string>
     <!-- Media -->
     <string name="room_attach_cd">Attach media</string>
     <string name="room_attach_more_cd">More attachments</string>

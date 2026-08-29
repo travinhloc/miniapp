@@ -1,8 +1,24 @@
-# VanishX Firebase Hosting (Epic 14)
+# VanishX Firebase (Hosting + Functions)
 
 Staging project: **`vanihx-staging`**
 
 Canonical invite: `https://vanihx-staging.web.app/join?token=`
+
+## Cloud Functions (Epic 15 Done)
+
+Requires **Blaze**. From this directory:
+
+```bash
+npm --prefix functions test
+firebase deploy --only functions,database
+```
+
+- `onMailboxMessageCreated` — data-only FCM to `vx_room_{roomId}` (`type=message`)
+- `onRoomSignalCreated` — Ping fan-out (`type=ping`) then delete the signal node
+- Payload builder: `functions/push-payload.js` (no ciphertext)
+- Runtime: **Node 22** · RTDB triggers **1st gen** (`require("firebase-functions/v1")`) — tránh Eventarc IAM của 2nd gen
+
+Prod Functions wait on **R.1**. Client never holds an FCM server key.
 
 ## Deploy App Links (story 14.1)
 

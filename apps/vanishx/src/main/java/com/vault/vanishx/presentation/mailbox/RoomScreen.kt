@@ -32,6 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
@@ -134,6 +137,18 @@ fun RoomScreen(
         }
     }
     viewModel.navigator.collectAsEffect { destination -> navigator(destination) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, uiState.roomId) {
+        val observer = LifecycleEventObserver { _, event ->
+            viewModel.onRoomLifecycle(event)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.onRoomLifecycle(Lifecycle.Event.ON_PAUSE)
+        }
+    }
 
     LaunchedEffect(uiState.pingPeerEvent) {
         val message = when (val event = uiState.pingPeerEvent) {

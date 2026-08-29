@@ -83,6 +83,23 @@
             }
           }
         },
+        "signals": {
+          "$signalId": {
+            ".validate": "!newData.exists() || (newData.hasChildren(['type', 'fromPub', 'createdAt']) && newData.child('type').val() == 'ping' && newData.child('fromPub').isString() && newData.child('fromPub').val().length > 0 && newData.child('fromPub').val().length <= 512 && newData.child('createdAt').isNumber())",
+            "type": {
+              ".validate": "newData.isString() && newData.val() == 'ping'"
+            },
+            "fromPub": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 512"
+            },
+            "createdAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
         "$other": {
           ".validate": false
         }

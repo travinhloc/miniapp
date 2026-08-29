@@ -8,12 +8,10 @@ data class PingPeerResult(
 )
 
 /**
- * Handshake nudge stub (story 7.7).
+ * Handshake Ping cooldown (story 7.7 / Epic 15.3).
  *
- * There is no client-triggered push to a specific peer device yet — fan-out send stays
- * out of band (Console / Functions), same as [com.vault.vanishx.data.push.RoomPushTopics].
- * Until that lands, "Ping" is a best-effort, in-app notify stub: this use case only
- * rate-limits repeated taps so the caller can surface a simple cooldown message.
+ * Client does not send FCM. After this use case allows a tap,
+ * [WritePingSignalUseCase] writes RTDB `/signals` for Cloud Functions fan-out.
  */
 class PingPeerUseCase @Inject constructor() {
     operator fun invoke(lastPingAtMs: Long, nowMs: Long = System.currentTimeMillis()): PingPeerResult {

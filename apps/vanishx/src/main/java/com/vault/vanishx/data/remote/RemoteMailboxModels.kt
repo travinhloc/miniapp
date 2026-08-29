@@ -32,6 +32,19 @@ data class RemoteMailboxMessage(
     }
 }
 
+/** Handshake nudge (Epic 15.3) — not a mailbox message. */
+data class RemoteRoomSignal(
+    val signalId: String,
+    val type: String,
+    val fromPub: String,
+    val createdAt: Long,
+) {
+    companion object {
+        const val TYPE_PING = "ping"
+        const val MAX_PUB_LENGTH = 512
+    }
+}
+
 /** UGC report payload (story 3.3) — write-only RTDB node. */
 data class RemoteReport(
     val reportId: String,
