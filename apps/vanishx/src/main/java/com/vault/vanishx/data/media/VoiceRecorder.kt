@@ -24,6 +24,15 @@ class VoiceRecorder(private val context: Context) {
 
     val isRecording: Boolean get() = !finished.get()
 
+    /** 0f…1f peak level for live waveform (call on main/UI thread). */
+    fun amplitudeLevel(): Float {
+        val mr = recorder ?: return 0f
+        return runCatching {
+            val amp = mr.maxAmplitude.coerceAtLeast(0)
+            (amp / AMPLITUDE_MAX).coerceIn(0f, 1f)
+        }.getOrDefault(0f)
+    }
+
     fun start(onMaxDuration: () -> Unit): File {
         cancel()
         finished.set(false)
@@ -110,5 +119,6 @@ class VoiceRecorder(private val context: Context) {
         const val AAC_BIT_RATE = 96_000
         const val AAC_SAMPLE_RATE = 44_100
         const val MIN_VALID_BYTES = 256L
+        const val AMPLITUDE_MAX = 32_767f
     }
 }

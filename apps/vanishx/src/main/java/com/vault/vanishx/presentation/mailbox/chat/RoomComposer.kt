@@ -6,8 +6,6 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,7 +32,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -49,12 +46,10 @@ import com.vault.vanishx.presentation.mailbox.RoomAction
 import com.vault.vanishx.presentation.theme.VanishXColors
 
 /**
- * Composer bar (Zalo-like, ref 2026-08-23):
+ * Composer bar (Zalo-like):
  * - empty draft → `[input] […] [mic] [gallery]`
  * - has text → `[input] [send]`
- * - `…` → Document · Camera tray
- * - gallery → in-chat sheet (Chụp ảnh + recent multi-select ≤9)
- * - mic → hold-to-record voice
+ * - mic → opens voice record sheet (tap/hold inside sheet)
  */
 @Composable
 internal fun RoomComposer(
@@ -63,9 +58,7 @@ internal fun RoomComposer(
     onAction: (RoomAction) -> Unit,
     onOpenMore: () -> Unit,
     onPickGallery: () -> Unit,
-    onVoicePressStart: () -> Boolean,
-    onVoiceDrag: (cancelArmed: Boolean) -> Unit,
-    onVoicePressEnd: (cancelled: Boolean) -> Unit,
+    onOpenVoice: () -> Unit,
     locked: Boolean = false,
     replySnippet: String? = null,
     isSendingMedia: Boolean = false,
@@ -77,7 +70,6 @@ internal fun RoomComposer(
     val sendCd = stringResource(R.string.room_send_cd)
     val sendSensitiveCd = stringResource(R.string.room_send_sensitive_cd)
     val voiceCd = stringResource(R.string.room_voice_cd)
-    val cancelThresholdPx = with(LocalDensity.current) { VOICE_CANCEL_THRESHOLD_DP.dp.toPx() }
 
     Column(
         modifier = Modifier
@@ -192,47 +184,10 @@ internal fun RoomComposer(
                                 tint = VanishXColors.Muted,
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .semantics { contentDescription = voiceCd }
-                                .then(
-                                    if (canAttach) {
-                                        Modifier.pointerInput(cancelThresholdPx) {
-                                            awaitEachGesture {
-                                                val down = awaitFirstDown(requireUnconsumed = false)
-                                                down.consume()
-                                                val started = onVoicePressStart()
-                                                if (!started) return@awaitEachGesture
-                                                view.performHapticFeedback(
-                                                    HapticFeedbackConstants.LONG_PRESS,
-                                                )
-                                                var cancelArmed = false
-                                                while (true) {
-                                                    val event = awaitPointerEvent()
-                                                    val change = event.changes.firstOrNull {
-                                                        it.id == down.id
-                                                    } ?: break
-                                                    if (change.pressed) {
-                                                        val dragUp =
-                                                            (down.position.y - change.position.y)
-                                                                .coerceAtLeast(0f)
-                                                        cancelArmed = dragUp >= cancelThresholdPx
-                                                        onVoiceDrag(cancelArmed)
-                                                        change.consume()
-                                                    } else {
-                                                        onVoicePressEnd(cancelArmed)
-                                                        change.consume()
-                                                        break
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        Modifier.alpha(0.4f)
-                                    },
-                                ),
-                            contentAlignment = Alignment.Center,
+                        IconButton(
+                            onClick = onOpenVoice,
+                            enabled = canAttach,
+                            modifier = Modifier.semantics { contentDescription = voiceCd },
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_composer_mic),
@@ -320,5 +275,3 @@ private fun ComposerSendButton(
         )
     }
 }
-
-private const val VOICE_CANCEL_THRESHOLD_DP = 72

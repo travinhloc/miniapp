@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber")
+@file:Suppress("MagicNumber", "ReturnCount", "ModifierReused")
 
 package com.vault.vanishx.presentation.mailbox.chat
 

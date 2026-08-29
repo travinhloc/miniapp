@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions", "LongMethod", "ReturnCount")
+@file:Suppress("TooManyFunctions", "LongMethod", "ReturnCount", "TooGenericExceptionCaught")
 
 package com.vault.vanishx.presentation.mailbox
 
@@ -14,8 +14,12 @@ import com.vault.vanishx.data.remote.RemotePresence
 import com.vault.vanishx.data.remote.RemoteReaction
 import com.vault.vanishx.data.remote.RemoteReadWatermark
 import com.vault.vanishx.data.remote.RemoteTyping
+import com.vault.vanishx.domain.model.AttachmentMeta
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.MediaAlbumItem
+import com.vault.vanishx.domain.model.MediaAlbumMerge
+import com.vault.vanishx.domain.model.MediaAlbumState
 import com.vault.vanishx.domain.model.MediaLimits
 import com.vault.vanishx.domain.model.RecallPolicy
 import com.vault.vanishx.domain.model.firebaseSafeKey
@@ -116,6 +120,10 @@ data class RoomUiState(
     val toastMessage: String? = null,
     val pendingClipboard: String? = null,
     val mediaViewerMessageId: String? = null,
+    /** When [mediaViewerMessageId] is an album, which tile to open. */
+    val mediaViewerAlbumIndex: Int? = null,
+    /** Outgoing multi-media collage bubbles (session-scoped UI aggregation). */
+    val outgoingAlbums: List<MediaAlbumState> = emptyList(),
     val showAttachTray: Boolean = false,
     val pingPeerEvent: PingPeerEvent? = null,
 )
@@ -137,7 +145,7 @@ sealed interface RoomAction {
     /** Sequential photo (or mixed) media sends; clamped to [MediaLimits.PHOTO_MULTI_SELECT_MAX]. */
     data class SendMediaQueue(val items: List<SendMedia>) : RoomAction
     data object CancelMediaQueue : RoomAction
-    data class OpenMediaViewer(val messageId: String) : RoomAction
+    data class OpenMediaViewer(val messageId: String, val albumIndex: Int? = null) : RoomAction
     data object DismissMediaViewer : RoomAction
     data class SaveMedia(val messageId: String) : RoomAction
     data class DraftChanged(val value: String) : RoomAction
@@ -302,8 +310,15 @@ class RoomViewModel @Inject constructor(
             is RoomAction.SendMedia -> enqueueMediaSends(listOf(action))
             is RoomAction.SendMediaQueue -> enqueueMediaSends(action.items)
             RoomAction.CancelMediaQueue -> cancelMediaQueue()
-            is RoomAction.OpenMediaViewer -> _uiState.update { it.copy(mediaViewerMessageId = action.messageId) }
-            RoomAction.DismissMediaViewer -> _uiState.update { it.copy(mediaViewerMessageId = null) }
+            is RoomAction.OpenMediaViewer -> _uiState.update {
+                it.copy(
+                    mediaViewerMessageId = action.messageId,
+                    mediaViewerAlbumIndex = action.albumIndex,
+                )
+            }
+            RoomAction.DismissMediaViewer -> _uiState.update {
+                it.copy(mediaViewerMessageId = null, mediaViewerAlbumIndex = null)
+            }
             is RoomAction.SaveMedia -> saveMedia(action.messageId)
             is RoomAction.DraftChanged -> {
                 _uiState.update {
@@ -806,7 +821,11 @@ class RoomViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         room = room,
-                        messages = payload.messages,
+                        messages = MediaAlbumMerge.merge(
+                            payload.messages,
+                            it.outgoingAlbums,
+                            roomId,
+                        ),
                         isExpired = expired,
                         errorMessage = if (room == null) "Room not found" else null,
                         showInviteSheet = it.showInviteSheet || openInvite,
@@ -992,7 +1011,11 @@ class RoomViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isSyncing = false,
-                        messages = result.messages,
+                        messages = MediaAlbumMerge.merge(
+                            result.messages,
+                            it.outgoingAlbums,
+                            roomId,
+                        ),
                         room = roomNow ?: it.room,
                         infoMessage = if (result.decryptFailures > 0) {
                             "Some messages could not be decrypted"
@@ -1044,7 +1067,11 @@ class RoomViewModel @Inject constructor(
                 }
                 _uiState.update {
                     it.copy(
-                        messages = result.messages,
+                        messages = MediaAlbumMerge.merge(
+                            result.messages,
+                            it.outgoingAlbums,
+                            roomId,
+                        ),
                         room = roomNow ?: it.room,
                         infoMessage = if (result.decryptFailures > 0) {
                             "Some messages could not be decrypted"
@@ -1119,6 +1146,9 @@ class RoomViewModel @Inject constructor(
         mediaSendJob?.cancel()
         val generation = mediaSendGeneration + 1
         mediaSendGeneration = generation
+        val visualAlbum = MediaAlbumMerge.isVisualQueue(
+            items.map { it.mime to it.displayName },
+        )
         mediaSendJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -1128,15 +1158,18 @@ class RoomViewModel @Inject constructor(
                 )
             }
             try {
-                val total = items.size
-                items.forEachIndexed { index, action ->
-                    ensureActive()
-                    if (total > 1) {
-                        _uiState.update {
-                            it.copy(toastMessage = "media_sending|${index + 1}|$total")
+                if (visualAlbum) {
+                    sendAlbumMedia(items)
+                } else {
+                    items.forEachIndexed { index, action ->
+                        ensureActive()
+                        if (items.size > 1) {
+                            _uiState.update {
+                                it.copy(toastMessage = "media_sending|${index + 1}|${items.size}")
+                            }
                         }
+                        sendOneMedia(action, index)
                     }
-                    sendOneMedia(action, index)
                 }
             } catch (_: CancellationException) {
                 // Stop remaining; already-sent messages stay.
@@ -1145,6 +1178,104 @@ class RoomViewModel @Inject constructor(
                     mediaSendJob = null
                     _uiState.update { it.copy(isSendingMedia = false) }
                 }
+            }
+        }
+    }
+
+    private suspend fun sendAlbumMedia(items: List<RoomAction.SendMedia>) {
+        val albumId = "album_${System.currentTimeMillis()}"
+        val now = System.currentTimeMillis()
+        val albumItems = items.mapNotNull { action ->
+            val kind = MediaLimits.kindForMimeOrName(action.mime, action.displayName) ?: return@mapNotNull null
+            MediaAlbumItem(
+                uri = action.uri.toString(),
+                mime = action.mime,
+                displayName = action.displayName,
+                kind = kind,
+                status = ChatMessage.MEDIA_PENDING,
+                localPath = action.uri.toString(),
+            )
+        }
+        if (albumItems.isEmpty()) return
+        if (albumItems.size == 1) {
+            sendOneMedia(items.first(), 0)
+            return
+        }
+        val album = MediaAlbumState(id = albumId, sentAt = now, items = albumItems)
+        _uiState.update { state ->
+            val albums = state.outgoingAlbums + album
+            state.copy(
+                outgoingAlbums = albums,
+                messages = MediaAlbumMerge.merge(
+                    state.messages.filterNot { it.mediaKind == AttachmentMeta.KIND_ALBUM },
+                    albums,
+                    roomId,
+                ),
+            )
+        }
+        for (index in albumItems.indices) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            sendOneAlbumItem(albumId, index, items[index])
+        }
+    }
+
+    private suspend fun sendOneAlbumItem(
+        albumId: String,
+        index: Int,
+        action: RoomAction.SendMedia,
+    ) {
+        try {
+            val sent = withContext(dispatchersProvider.io) {
+                sendRoomMedia(roomId, action.uri, action.mime, action.displayName)
+            }
+            _uiState.update { state ->
+                val albums = state.outgoingAlbums.map { album ->
+                    if (album.id != albumId) return@map album
+                    val nextItems = album.items.toMutableList()
+                    if (index in nextItems.indices) {
+                        nextItems[index] = nextItems[index].copy(
+                            status = ChatMessage.MEDIA_READY,
+                            localPath = sent.mediaLocalPath ?: nextItems[index].localPath,
+                            sentMessageId = sent.id,
+                        )
+                    }
+                    album.copy(items = nextItems)
+                }
+                val syncedBase = state.messages
+                    .filterNot { it.id.startsWith("album_") }
+                    .filterNot { msg -> albums.any { it.memberMessageIds.contains(msg.id) } } +
+                    sent
+                state.copy(
+                    outgoingAlbums = albums,
+                    messages = MediaAlbumMerge.merge(
+                        syncedBase.distinctBy { it.id }.sortedBy { it.sentAt },
+                        albums,
+                        roomId,
+                    ),
+                )
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Timber.e(error, "Album media send failed")
+            _uiState.update { state ->
+                val albums = state.outgoingAlbums.map { album ->
+                    if (album.id != albumId) return@map album
+                    val nextItems = album.items.toMutableList()
+                    if (index in nextItems.indices) {
+                        nextItems[index] = nextItems[index].copy(status = ChatMessage.MEDIA_FAILED)
+                    }
+                    album.copy(items = nextItems)
+                }
+                state.copy(
+                    errorMessage = friendlyError(error),
+                    outgoingAlbums = albums,
+                    messages = MediaAlbumMerge.merge(
+                        state.messages.filterNot { it.id.startsWith("album_") },
+                        albums,
+                        roomId,
+                    ),
+                )
             }
         }
     }
@@ -1175,9 +1306,16 @@ class RoomViewModel @Inject constructor(
             mediaLocalPath = action.uri.toString(),
             mediaTransferStatus = ChatMessage.MEDIA_PENDING,
         )
-        _uiState.update {
-            it.copy(
-                messages = (it.messages + pending).sortedBy { msg -> msg.sentAt },
+        _uiState.update { state ->
+            val base = state.messages.filterNot {
+                it.id == pendingId || it.mediaKind == AttachmentMeta.KIND_ALBUM
+            }
+            state.copy(
+                messages = MediaAlbumMerge.merge(
+                    (base + pending).sortedBy { msg -> msg.sentAt },
+                    state.outgoingAlbums,
+                    roomId,
+                ),
             )
         }
         try {
@@ -1185,15 +1323,25 @@ class RoomViewModel @Inject constructor(
                 sendRoomMedia(roomId, action.uri, action.mime, action.displayName)
             }
             _uiState.update { state ->
+                val base = state.messages.filterNot {
+                    it.id == pendingId || it.mediaKind == AttachmentMeta.KIND_ALBUM
+                }
                 state.copy(
-                    messages = (state.messages.filterNot { it.id == pendingId } + sent)
-                        .distinctBy { it.id }
-                        .sortedBy { it.sentAt },
+                    messages = MediaAlbumMerge.merge(
+                        (base + sent).distinctBy { it.id }.sortedBy { it.sentAt },
+                        state.outgoingAlbums,
+                        roomId,
+                    ),
                 )
             }
         } catch (error: CancellationException) {
             _uiState.update { state ->
-                state.copy(messages = state.messages.filterNot { it.id == pendingId })
+                val base = state.messages.filterNot {
+                    it.id == pendingId || it.mediaKind == AttachmentMeta.KIND_ALBUM
+                }
+                state.copy(
+                    messages = MediaAlbumMerge.merge(base, state.outgoingAlbums, roomId),
+                )
             }
             throw error
         } catch (error: Exception) {

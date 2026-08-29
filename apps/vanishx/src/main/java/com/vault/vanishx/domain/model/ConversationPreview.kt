@@ -51,7 +51,8 @@ object ConversationPreviewResolver {
         val kind = when {
             visible.recalled -> ConversationPreviewKind.Recalled
             visible.sensitive -> ConversationPreviewKind.Sensitive
-            visible.mediaKind == AttachmentMeta.KIND_IMAGE -> ConversationPreviewKind.Image
+            visible.mediaKind == AttachmentMeta.KIND_IMAGE ||
+                visible.mediaKind == AttachmentMeta.KIND_ALBUM -> ConversationPreviewKind.Image
             visible.mediaKind == AttachmentMeta.KIND_FILE -> ConversationPreviewKind.File
             visible.mediaKind == AttachmentMeta.KIND_VIDEO -> ConversationPreviewKind.Video
             visible.mediaKind == AttachmentMeta.KIND_VOICE -> ConversationPreviewKind.Voice

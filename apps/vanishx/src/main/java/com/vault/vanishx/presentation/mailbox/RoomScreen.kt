@@ -19,7 +19,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import android.provider.Settings
 import android.net.Uri
 import android.Manifest
-import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -38,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,12 +65,14 @@ import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
 import com.vault.vanishx.data.media.ImagePrepareHelper
 import com.vault.vanishx.data.media.VideoPrepareHelper
+import com.vault.vanishx.data.media.VoicePlaybackBus
 import com.vault.vanishx.data.media.VoiceRecorder
 import com.vault.vanishx.presentation.mailbox.chat.AttachTraySheet
 import com.vault.vanishx.presentation.mailbox.chat.CameraCaptureScreen
 import com.vault.vanishx.presentation.mailbox.chat.CameraCaptureTab
 import com.vault.vanishx.presentation.mailbox.chat.DocumentViewerScreen
 import com.vault.vanishx.presentation.mailbox.chat.GalleryAttachSheet
+import com.vault.vanishx.presentation.mailbox.chat.GalleryLibraryScreen
 import com.vault.vanishx.presentation.mailbox.chat.FeedbackMessages
 import com.vault.vanishx.presentation.mailbox.chat.REPORT_REASON_MAX_LINES
 import com.vault.vanishx.presentation.mailbox.chat.RoomActiveBody
@@ -94,15 +94,14 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomSafetySheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomScreenshotBanner
 import com.vault.vanishx.presentation.mailbox.chat.RoomUiDimens
 import com.vault.vanishx.presentation.mailbox.chat.RoomWallpaperSheet
-import com.vault.vanishx.presentation.mailbox.chat.VoiceRecordHud
+import com.vault.vanishx.presentation.mailbox.chat.VoiceRecordSheet
 import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
 import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
 import com.vault.vanishx.presentation.mailbox.chat.isMessageAtOrBeforeWatermark
+import com.vault.vanishx.presentation.mailbox.chat.resolveRoomTitle
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import dagger.hilt.android.EntryPointAccessors
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import timber.log.Timber
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -114,12 +113,11 @@ fun RoomScreen(
     val context = LocalContext.current
     var showCameraCapture by remember { mutableStateOf(false) }
     var showGallerySheet by remember { mutableStateOf(false) }
+    var showGalleryLibrary by remember { mutableStateOf(false) }
     var cameraInitialTab by remember { mutableStateOf(CameraCaptureTab.Photo) }
     var showVoicePermission by remember { mutableStateOf(false) }
     var voicePermissionRequested by rememberSaveable { mutableStateOf(false) }
-    var isVoiceRecording by remember { mutableStateOf(false) }
-    var voiceCancelArmed by remember { mutableStateOf(false) }
-    var voiceElapsedMs by remember { mutableLongStateOf(0L) }
+    var showVoiceSheet by remember { mutableStateOf(false) }
     val voicePermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
     val voiceRecorder = remember(context) { VoiceRecorder(context.applicationContext) }
     val imagePrepareHelper = remember(context) {
@@ -142,79 +140,21 @@ fun RoomScreen(
     }
 
     DisposableEffect(voiceRecorder) {
-        onDispose { voiceRecorder.release() }
-    }
-
-    LaunchedEffect(isVoiceRecording) {
-        if (!isVoiceRecording) {
-            voiceElapsedMs = 0L
-            return@LaunchedEffect
-        }
-        val startedAt = SystemClock.elapsedRealtime()
-        while (isActive && isVoiceRecording) {
-            voiceElapsedMs = (SystemClock.elapsedRealtime() - startedAt)
-                .coerceAtMost(MediaLimits.VOICE_MAX_DURATION_MS)
-            delay(50L)
+        onDispose {
+            VoicePlaybackBus.stop()
+            voiceRecorder.release()
         }
     }
 
-    fun finishVoiceSend() {
-        if (!isVoiceRecording && !voiceRecorder.isRecording) return
-        isVoiceRecording = false
-        voiceCancelArmed = false
-        val file = voiceRecorder.stop()
-        if (file == null) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.room_voice_too_short),
-                Toast.LENGTH_SHORT,
-            ).show()
-            return
-        }
-        viewModel.onAction(
-            RoomAction.SendMedia(
-                uri = voiceRecorder.uriFor(file),
-                mime = "audio/mp4",
-                displayName = file.name,
-            ),
-        )
-    }
-
-    fun finishVoiceCancel() {
-        if (!isVoiceRecording && !voiceRecorder.isRecording) return
-        isVoiceRecording = false
-        voiceCancelArmed = false
-        voiceRecorder.cancel()
-    }
-
-    fun tryStartVoiceRecording(): Boolean {
-        if (uiState.isSendingMedia || isVoiceRecording) return false
+    fun openVoiceSheet() {
+        if (uiState.isSendingMedia || showVoiceSheet) return
         if (!voicePermission.status.isGranted) {
             showVoicePermission = true
-            return false
+            return
         }
-        return runCatching {
-            voiceRecorder.start(onMaxDuration = { finishVoiceSend() })
-            voiceCancelArmed = false
-            voiceElapsedMs = 0L
-            isVoiceRecording = true
-            true
-        }.getOrElse { error ->
-            Timber.e(error, "Voice record start failed")
-            voiceRecorder.cancel()
-            Toast.makeText(
-                context,
-                context.getString(R.string.room_voice_record_failed),
-                Toast.LENGTH_SHORT,
-            ).show()
-            false
-        }
+        showVoiceSheet = true
     }
-    val galleryPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia(MediaLimits.PHOTO_MULTI_SELECT_MAX),
-    ) { uris ->
-        appLockSession.endExternalUi()
-        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+    fun sendGallerySelection(uris: List<android.net.Uri>) {
         val items = MediaLimits.clampPhotoMultiSelect(uris).map { uri ->
             RoomAction.SendMedia(
                 uri = uri,
@@ -223,6 +163,17 @@ fun RoomScreen(
             )
         }
         viewModel.onAction(RoomAction.SendMediaQueue(items))
+    }
+
+    fun gallerySelectionLimitToast() {
+        Toast.makeText(
+            context,
+            context.getString(
+                R.string.room_gallery_max_selected,
+                MediaLimits.PHOTO_MULTI_SELECT_MAX,
+            ),
+            Toast.LENGTH_SHORT,
+        ).show()
     }
     val avatarPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
@@ -339,20 +290,7 @@ fun RoomScreen(
             onOpenMore = {
                 viewModel.onAction(RoomAction.AttachClicked)
             },
-            onVoicePressStart = { tryStartVoiceRecording() },
-            onVoiceDrag = { armed ->
-                if (isVoiceRecording) {
-                    voiceCancelArmed = armed
-                }
-            },
-            onVoicePressEnd = { cancelled ->
-                if (!isVoiceRecording) return@RoomContent
-                if (cancelled || voiceCancelArmed) {
-                    finishVoiceCancel()
-                } else {
-                    finishVoiceSend()
-                }
-            },
+            onOpenVoice = { openVoiceSheet() },
             onPickGallery = {
                 showGallerySheet = true
             },
@@ -365,10 +303,34 @@ fun RoomScreen(
                 showCameraCapture = true
             },
         )
-        if (isVoiceRecording) {
-            VoiceRecordHud(
-                elapsedMs = voiceElapsedMs,
-                cancelArmed = voiceCancelArmed,
+        if (showVoiceSheet) {
+            VoiceRecordSheet(
+                voiceRecorder = voiceRecorder,
+                enabled = !uiState.isSendingMedia,
+                onDismiss = { showVoiceSheet = false },
+                onSend = { uri, displayName ->
+                    viewModel.onAction(
+                        RoomAction.SendMedia(
+                            uri = uri,
+                            mime = "audio/mp4",
+                            displayName = displayName,
+                        ),
+                    )
+                },
+                onRecordFailed = {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.room_voice_record_failed),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                },
+                onTooShort = {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.room_voice_too_short),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                },
             )
         }
         if (uiState.showRoomOptions) {
@@ -439,33 +401,31 @@ fun RoomScreen(
                 cameraInitialTab = CameraCaptureTab.Photo
                 showCameraCapture = true
             },
-            onOpenSystemLibrary = {
-                showGallerySheet = false
-                appLockSession.beginExternalUi()
-                galleryPicker.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                )
+            onOpenLibrary = { showGalleryLibrary = true },
+            onSendSelected = { uris ->
+                sendGallerySelection(uris)
+            },
+            onSelectionLimitReached = { gallerySelectionLimitToast() },
+        )
+    }
+    if (showGalleryLibrary) {
+        val recipient = resolveRoomTitle(uiState.room).ifBlank {
+            context.getString(R.string.room_rename_placeholder)
+        }
+        GalleryLibraryScreen(
+            recipientName = recipient,
+            enabled = !uiState.isSendingMedia,
+            onBack = { showGalleryLibrary = false },
+            onTakePhoto = {
+                showGalleryLibrary = false
+                cameraInitialTab = CameraCaptureTab.Photo
+                showCameraCapture = true
             },
             onSendSelected = { uris ->
-                val items = MediaLimits.clampPhotoMultiSelect(uris).map { uri ->
-                    RoomAction.SendMedia(
-                        uri = uri,
-                        mime = resolveAttachmentMime(context, uri),
-                        displayName = resolveAttachmentDisplayName(context, uri),
-                    )
-                }
-                viewModel.onAction(RoomAction.SendMediaQueue(items))
+                showGalleryLibrary = false
+                sendGallerySelection(uris)
             },
-            onSelectionLimitReached = {
-                Toast.makeText(
-                    context,
-                    context.getString(
-                        R.string.room_gallery_max_selected,
-                        MediaLimits.PHOTO_MULTI_SELECT_MAX,
-                    ),
-                    Toast.LENGTH_SHORT,
-                ).show()
-            },
+            onSelectionLimitReached = { gallerySelectionLimitToast() },
         )
     }
     if (showCameraCapture) {
@@ -497,9 +457,7 @@ private fun RoomContent(
     onCopyInvite: (String) -> Unit,
     onShareInvite: (String) -> Unit,
     onOpenMore: () -> Unit,
-    onVoicePressStart: () -> Boolean,
-    onVoiceDrag: (Boolean) -> Unit,
-    onVoicePressEnd: (Boolean) -> Unit,
+    onOpenVoice: () -> Unit,
     onPickGallery: () -> Unit,
     onPickDocument: () -> Unit,
     onOpenCamera: () -> Unit,
@@ -572,13 +530,16 @@ private fun RoomContent(
                 reactionsByMessage = uiState.reactionsByMessage,
                 peerReadWatermarkId = uiState.peerReadWatermarkId,
                 onLongPressMessage = { onAction(RoomAction.OpenMessageActions(it.id)) },
-                onMediaClick = { msg ->
-                    when (msg.mediaTransferStatus) {
-                        ChatMessage.MEDIA_FAILED -> onAction(RoomAction.DismissFailedMedia)
-                        ChatMessage.MEDIA_PENDING -> Unit
-                        else -> onAction(RoomAction.OpenMediaViewer(msg.id))
+                onMediaClick = { msg, albumIndex ->
+                    when {
+                        msg.mediaKind == AttachmentMeta.KIND_VOICE -> Unit
+                        msg.mediaTransferStatus == ChatMessage.MEDIA_FAILED &&
+                            msg.mediaKind != AttachmentMeta.KIND_ALBUM ->
+                            onAction(RoomAction.DismissFailedMedia)
+                        else -> onAction(RoomAction.OpenMediaViewer(msg.id, albumIndex))
                     }
                 },
+                albumsById = uiState.outgoingAlbums.associateBy { it.id },
                 scrollToMessageId = uiState.scrollToMessageId,
                 highlightMessageId = uiState.highlightMessageId,
                 wallpaperPath = uiState.room?.wallpaperLocalPath,
@@ -620,9 +581,7 @@ private fun RoomContent(
                 isSending = uiState.isSending,
                 isSendingMedia = uiState.isSendingMedia,
                 onOpenMore = onOpenMore,
-                onVoicePressStart = onVoicePressStart,
-                onVoiceDrag = onVoiceDrag,
-                onVoicePressEnd = onVoicePressEnd,
+                onOpenVoice = onOpenVoice,
                 onPickGallery = onPickGallery,
                 locked = isHandshakeWaiting,
                 replySnippet = replySnippet,
@@ -755,7 +714,27 @@ private fun RoomContent(
         uiState.messages.firstOrNull { it.id == id }
     }
     val mediaViewerMessage = uiState.mediaViewerMessageId?.let { id ->
-        uiState.messages.firstOrNull { it.id == id && it.isMedia }
+        val msg = uiState.messages.firstOrNull { it.id == id && it.isMedia } ?: return@let null
+        if (msg.mediaKind == AttachmentMeta.KIND_ALBUM) {
+            val album = uiState.outgoingAlbums.firstOrNull { it.id == id } ?: return@let null
+            val index = uiState.mediaViewerAlbumIndex ?: 0
+            val item = album.items.getOrNull(index) ?: return@let null
+            ChatMessage(
+                id = item.sentMessageId ?: "${msg.id}_$index",
+                roomId = msg.roomId,
+                body = "",
+                sentAt = msg.sentAt,
+                expiresAt = msg.expiresAt,
+                direction = msg.direction,
+                mediaKind = item.kind,
+                mediaMime = item.mime,
+                mediaFileName = item.displayName,
+                mediaLocalPath = item.previewPath,
+                mediaTransferStatus = item.status,
+            )
+        } else {
+            msg
+        }
     }
     if (mediaViewerMessage != null) {
         if (mediaViewerMessage.mediaKind == AttachmentMeta.KIND_FILE) {

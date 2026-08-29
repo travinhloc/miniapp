@@ -57,7 +57,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vault.vanishx.R
+import com.vault.vanishx.domain.model.AttachmentMeta
 import com.vault.vanishx.domain.model.ChatMessage
+import com.vault.vanishx.domain.model.MediaAlbumState
 import com.vault.vanishx.presentation.theme.VanishXColors
 import kotlinx.coroutines.launch
 
@@ -77,8 +79,10 @@ internal fun RoomMessageBubble(
     isGroupTail: Boolean = true,
     showTimestamp: Boolean = true,
     onLongPress: (() -> Unit)? = null,
-    onMediaClick: (() -> Unit)? = null,
+    /** Null index = single media; non-null = album tile index. */
+    onMediaClick: ((albumIndex: Int?) -> Unit)? = null,
     onReplyQuoteClick: (() -> Unit)? = null,
+    album: MediaAlbumState? = null,
 ) {
     val mine = message.direction == ChatMessage.DIRECTION_OUT
     val tail = if (isGroupTail) RoomUiDimens.bubbleTailCorner else RoomUiDimens.bubbleCorner
@@ -150,12 +154,22 @@ internal fun RoomMessageBubble(
                     )
                     .pointerInput(message.id, message.sensitive, message.recalled, message.isMedia, onLongPress) {
                         if (message.isMedia) {
-                            if (message.mediaTransferStatus != ChatMessage.MEDIA_PENDING) {
+                            val isAlbum = message.mediaKind == AttachmentMeta.KIND_ALBUM
+                            val isVoice = message.mediaKind == AttachmentMeta.KIND_VOICE
+                            // Album / voice handle their own taps (collage / inline play).
+                            if (!isAlbum && !isVoice) {
                                 detectTapGestures(
-                                    onTap = { onMediaClick?.invoke() },
+                                    onTap = { onMediaClick?.invoke(null) },
                                     onLongPress = {
                                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                                         onLongPress?.invoke()
+                                    },
+                                )
+                            } else if (onLongPress != null) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                        onLongPress.invoke()
                                     },
                                 )
                             }
@@ -255,7 +269,13 @@ internal fun RoomMessageBubble(
                 message.isMedia -> {
                     // Anchor reactions to the media card (not MetaRow under it).
                     Box {
-                        MediaMessageBody(message = message, mine = mine)
+                        MediaMessageBody(
+                            message = message,
+                            mine = mine,
+                            album = album,
+                            onAlbumItemClick = { index -> onMediaClick?.invoke(index) },
+                            onLongPress = onLongPress,
+                        )
                         if (reactionCounts.isNotEmpty()) {
                             ReactionCountsRow(
                                 counts = reactionCounts,
@@ -354,17 +374,35 @@ internal fun RoomMessageBubble(
 }
 
 @Composable
-private fun MediaMessageBody(message: ChatMessage, mine: Boolean) {
+private fun MediaMessageBody(
+    message: ChatMessage,
+    mine: Boolean,
+    album: MediaAlbumState? = null,
+    onAlbumItemClick: (Int) -> Unit = {},
+    onLongPress: (() -> Unit)? = null,
+) {
     val pending = message.mediaTransferStatus == ChatMessage.MEDIA_PENDING
     val failed = message.mediaTransferStatus == ChatMessage.MEDIA_FAILED
     val mediaCorner = RoundedCornerShape(RoomUiDimens.mediaCorner)
+    if (message.mediaKind == AttachmentMeta.KIND_ALBUM && album != null) {
+        AlbumMediaCollage(
+            album = album,
+            onItemClick = onAlbumItemClick,
+        )
+        return
+    }
     Box {
         when (message.mediaKind) {
             "image" -> ImageMediaPreview(message = message)
             "video" -> VideoMediaPreview(message = message)
-            "voice" -> VoiceMediaPreview(message = message, mine = mine)
+            "voice" -> VoiceMediaPreview(
+                message = message,
+                mine = mine,
+                onLongPress = onLongPress,
+            )
             else -> DocumentMediaPreview(message = message, mine = mine)
         }
+        // Single-item pending overlay; album tiles handle their own spinners.
         if (pending) {
             MediaTransferOverlay(failed = false, modifier = Modifier.matchParentSize().clip(mediaCorner))
         } else if (failed) {

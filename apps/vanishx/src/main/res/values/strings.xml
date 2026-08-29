@@ -383,8 +383,14 @@
     <string name="room_attach_cd">Attach media</string>
     <string name="room_attach_more_cd">More attachments</string>
     <string name="room_attach_gallery_cd">Choose up to 9 photos</string>
-    <string name="room_voice_cd">Hold to record voice</string>
+    <string name="room_voice_cd">Record voice message</string>
     <string name="room_voice_bubble_label">Voice message</string>
+    <string name="room_voice_play_cd">Play or pause voice message</string>
+    <string name="room_voice_tap_or_hold">Tap or hold to record</string>
+    <string name="room_voice_tap_to_stop">Tap to stop</string>
+    <string name="room_voice_delete">Delete</string>
+    <string name="room_voice_send">Send</string>
+    <string name="room_voice_listen">Listen</string>
     <string name="room_voice_slide_cancel">Slide up to cancel</string>
     <string name="room_voice_release_cancel">Release to cancel</string>
     <string name="room_voice_recording_hint">Release to send · max 60s</string>
@@ -393,7 +399,7 @@
     <string name="room_voice_permission_rationale">Microphone is needed to record voice notes. You can enable it in Settings if you denied it.</string>
     <string name="room_voice_permission_allow">Allow microphone</string>
     <string name="room_voice_record_failed">Could not start recording. Try again.</string>
-    <string name="room_voice_too_short">Recording too short. Hold a little longer.</string>
+    <string name="room_voice_too_short">Recording too short. Try again.</string>
     <string name="room_attach_tray_title">More</string>
     <string name="room_attach_gallery">Photos (up to 9)</string>
     <string name="room_attach_document">Document</string>
@@ -401,6 +407,8 @@
     <string name="room_gallery_sheet_title">Photos</string>
     <string name="room_gallery_take_photo">Take photo</string>
     <string name="room_gallery_browse_all">Library</string>
+    <string name="room_gallery_library_title">All</string>
+    <string name="room_gallery_send_to">Send to %1$s</string>
     <string name="room_gallery_send">Send</string>
     <string name="room_gallery_selected_count">Selected %1$d/%2$d</string>
     <string name="room_gallery_permission_body">Allow access to show recent photos here, or open Library.</string>

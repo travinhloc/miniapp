@@ -18,5 +18,7 @@ data class AttachmentMeta(
         const val KIND_FILE = "file"
         const val KIND_VIDEO = "video"
         const val KIND_VOICE = "voice"
+        /** Local UI aggregation of multiple visual media (not a wire envelope kind). */
+        const val KIND_ALBUM = "album"
     }
 }
