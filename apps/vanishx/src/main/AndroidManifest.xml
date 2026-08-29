@@ -60,22 +60,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data
-                    android:host="${appLinkHost}"
-                    android:path="/join"
-                    android:scheme="https" />
-                <data
-                    android:host="${appLinkHost}"
-                    android:pathPrefix="/j/"
-                    android:scheme="https" />
-                <data
-                    android:host="${appLinkHostAlt}"
-                    android:path="/join"
-                    android:scheme="https" />
-                <data
-                    android:host="${appLinkHostAlt}"
-                    android:pathPrefix="/j/"
-                    android:scheme="https" />
+                <data android:scheme="https" />
+                <data android:host="${appLinkHost}" />
+                <data android:host="${appLinkHostAlt}" />
+                <data android:path="/join" />
+                <data android:pathPrefix="/j/" />
             </intent-filter>
         </activity>
 
