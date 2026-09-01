@@ -51,14 +51,86 @@ data class MediaAlbumState(
 }
 
 object MediaAlbumMerge {
+    /** Outgoing/incoming burst window for rebuilding album bubbles after sync. */
+    private const val ALBUM_BURST_MS = 5_000L
+
+    /** Client + reconstructed albums for merge and media viewer scoping. */
+    fun resolveAlbums(
+        messages: List<ChatMessage>,
+        outgoing: List<MediaAlbumState>,
+    ): List<MediaAlbumState> = outgoing + reconstructAlbumsFromMessages(messages, outgoing)
+
     /** Hide wire member messages covered by an album bubble; inject album chat rows. */
     fun merge(synced: List<ChatMessage>, albums: List<MediaAlbumState>, roomId: String): List<ChatMessage> {
-        if (albums.isEmpty()) return synced
-        val hidden = albums.flatMap { it.memberMessageIds }.toSet()
-        val albumRows = albums.map { it.toChatMessage(roomId) }
-        return (synced.filterNot { it.id in hidden } + albumRows)
+        val allAlbums = resolveAlbums(synced, albums)
+        if (allAlbums.isEmpty()) return synced
+        val hidden = allAlbums.flatMap { it.memberMessageIds }.toSet()
+        val albumRows = allAlbums.map { it.toChatMessage(roomId) }
+        return (synced.filterNot { it.id in hidden || it.mediaKind == AttachmentMeta.KIND_ALBUM } + albumRows)
             .distinctBy { it.id }
             .sortedBy { it.sentAt }
+    }
+
+    fun findAlbumForMessage(messageId: String, albums: List<MediaAlbumState>): MediaAlbumState? {
+        albums.firstOrNull { it.id == messageId }?.let { return it }
+        return albums.firstOrNull { messageId in it.memberMessageIds }
+    }
+
+    /**
+     * Re-group visual wire messages into album bubbles when [outgoingAlbums] was lost
+     * (e.g. after re-entering the room).
+     */
+    @Suppress("ComplexMethod", "NestedBlockDepth")
+    internal fun reconstructAlbumsFromMessages(
+        messages: List<ChatMessage>,
+        existing: List<MediaAlbumState>,
+    ): List<MediaAlbumState> {
+        val covered = existing.flatMap { it.memberMessageIds }.toSet()
+        val existingIds = existing.map { it.id }.toSet()
+        val visual = messages.filter { msg ->
+            (msg.mediaKind == AttachmentMeta.KIND_IMAGE || msg.mediaKind == AttachmentMeta.KIND_VIDEO) &&
+                msg.id !in covered &&
+                !msg.mediaLocalPath.isNullOrBlank()
+        }.sortedBy { it.sentAt }
+        if (visual.size < 2) return emptyList()
+        val groups = mutableListOf<List<ChatMessage>>()
+        var bucket = mutableListOf<ChatMessage>()
+        for (msg in visual) {
+            if (bucket.isEmpty()) {
+                bucket.add(msg)
+                continue
+            }
+            val last = bucket.last()
+            val sameBurst = last.direction == msg.direction &&
+                msg.sentAt - last.sentAt <= ALBUM_BURST_MS &&
+                bucket.size < MediaLimits.PHOTO_MULTI_SELECT_MAX
+            if (sameBurst) {
+                bucket.add(msg)
+            } else {
+                if (bucket.size > 1) groups += bucket.toList()
+                bucket = mutableListOf(msg)
+            }
+        }
+        if (bucket.size > 1) groups += bucket
+        return groups.mapNotNull { group ->
+            val albumId = "album_reconstructed_${group.first().id}"
+            if (albumId in existingIds) return@mapNotNull null
+            MediaAlbumState(
+                id = albumId,
+                sentAt = group.first().sentAt,
+                items = group.map { msg ->
+                    MediaAlbumItem(
+                        uri = msg.mediaLocalPath.orEmpty(),
+                        mime = msg.mediaMime,
+                        displayName = msg.mediaFileName,
+                        kind = msg.mediaKind ?: AttachmentMeta.KIND_IMAGE,
+                        status = msg.mediaTransferStatus ?: ChatMessage.MEDIA_READY,
+                        localPath = msg.mediaLocalPath,
+                        sentMessageId = msg.id,
+                    )
+                },
+            )
+        }
     }
 
     fun isVisualQueue(items: List<Pair<String?, String?>>): Boolean =

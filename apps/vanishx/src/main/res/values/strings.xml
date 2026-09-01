@@ -455,6 +455,7 @@
     <string name="room_media_on_device">Already on device</string>
     <string name="room_media_failed">Could not send. Tap to dismiss.</string>
     <string name="room_media_viewer_title">Attachment</string>
+    <string name="room_viewer_you">You</string>
     <string name="room_media_save">Save to device</string>
     <string name="room_media_save_pro">Save with Pro</string>
     <string name="room_media_saved">Saved to device</string>

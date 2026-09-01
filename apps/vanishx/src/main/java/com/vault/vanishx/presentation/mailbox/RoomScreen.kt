@@ -56,6 +56,7 @@ import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.AttachmentMeta
+import com.vault.vanishx.domain.model.MediaAlbumMerge
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.model.MediaLimits
@@ -87,6 +88,9 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomLeft
 import com.vault.vanishx.presentation.mailbox.chat.RoomLoading
 import com.vault.vanishx.presentation.mailbox.chat.RoomMessageActionSheet
 import com.vault.vanishx.presentation.mailbox.chat.MediaViewerDialog
+import com.vault.vanishx.presentation.mailbox.chat.PhotoViewerScreen
+import com.vault.vanishx.presentation.mailbox.chat.buildMediaViewerPages
+import com.vault.vanishx.presentation.mailbox.chat.findMediaViewerPageIndex
 import com.vault.vanishx.presentation.mailbox.chat.RoomMediaLibraryScreen
 import com.vault.vanishx.presentation.mailbox.chat.RoomOptionsScreen
 import com.vault.vanishx.presentation.mailbox.chat.RoomSearchBar
@@ -539,7 +543,10 @@ private fun RoomContent(
                         else -> onAction(RoomAction.OpenMediaViewer(msg.id, albumIndex))
                     }
                 },
-                albumsById = uiState.outgoingAlbums.associateBy { it.id },
+                albumsById = MediaAlbumMerge.resolveAlbums(
+                    uiState.messages,
+                    uiState.outgoingAlbums,
+                ).associateBy { it.id },
                 scrollToMessageId = uiState.scrollToMessageId,
                 highlightMessageId = uiState.highlightMessageId,
                 wallpaperPath = uiState.room?.wallpaperLocalPath,
@@ -737,32 +744,63 @@ private fun RoomContent(
         }
     }
     if (mediaViewerMessage != null) {
-        if (mediaViewerMessage.mediaKind == AttachmentMeta.KIND_FILE) {
-            DocumentViewerScreen(
-                message = mediaViewerMessage,
-                isPro = uiState.isPro,
-                onBack = { onAction(RoomAction.DismissMediaViewer) },
-                onSave = {
-                    if (uiState.isPro) {
-                        onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
-                    } else {
-                        showNeedPro = true
-                    }
-                },
-            )
-        } else {
-            MediaViewerDialog(
-                message = mediaViewerMessage,
-                isPro = uiState.isPro,
-                onDismiss = { onAction(RoomAction.DismissMediaViewer) },
-                onSave = {
-                    if (uiState.isPro) {
-                        onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
-                    } else {
-                        showNeedPro = true
-                    }
-                },
-            )
+        when (mediaViewerMessage.mediaKind) {
+            AttachmentMeta.KIND_FILE -> {
+                DocumentViewerScreen(
+                    message = mediaViewerMessage,
+                    isPro = uiState.isPro,
+                    onBack = { onAction(RoomAction.DismissMediaViewer) },
+                    onSave = {
+                        if (uiState.isPro) {
+                            onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+                        } else {
+                            showNeedPro = true
+                        }
+                    },
+                )
+            }
+            AttachmentMeta.KIND_IMAGE, AttachmentMeta.KIND_VIDEO -> {
+                val albums = MediaAlbumMerge.resolveAlbums(uiState.messages, uiState.outgoingAlbums)
+                val viewerPages = buildMediaViewerPages(
+                    messages = uiState.messages,
+                    albums = albums,
+                    focusMessageId = mediaViewerMessage.id,
+                )
+                PhotoViewerScreen(
+                    pages = viewerPages,
+                    initialPageIndex = findMediaViewerPageIndex(
+                        viewerPages,
+                        mediaViewerMessage.id,
+                    ),
+                    room = uiState.room,
+                    reactionsByMessage = uiState.reactionsByMessage,
+                    myReactionByMessage = uiState.myReactionByMessage,
+                    isPro = uiState.isPro,
+                    onDismiss = { onAction(RoomAction.DismissMediaViewer) },
+                    onSave = { messageId ->
+                        if (uiState.isPro) {
+                            onAction(RoomAction.SaveMedia(messageId))
+                        } else {
+                            showNeedPro = true
+                        }
+                    },
+                    onAction = onAction,
+                )
+            }
+            else -> {
+                MediaViewerDialog(
+                    message = mediaViewerMessage,
+                    isPro = uiState.isPro,
+                    onDismiss = { onAction(RoomAction.DismissMediaViewer) },
+                    onSave = {
+                        if (uiState.isPro) {
+                            onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+                        } else {
+                            showNeedPro = true
+                        }
+                    },
+                )
+            }
         }
     }
     if (actionMessage != null) {

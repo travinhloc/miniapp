@@ -455,6 +455,7 @@
     <string name="room_media_on_device">Đã có trên máy</string>
     <string name="room_media_failed">Gửi thất bại. Chạm để ẩn.</string>
     <string name="room_media_viewer_title">Tệp đính kèm</string>
+    <string name="room_viewer_you">Bạn</string>
     <string name="room_media_save">Lưu vào thiết bị</string>
     <string name="room_media_save_pro">Lưu với Pro</string>
     <string name="room_media_saved">Đã lưu vào máy</string>

@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -192,6 +194,8 @@ internal fun VoiceMediaPreview(
     val mediaCorner = RoundedCornerShape(RoomUiDimens.mediaCorner)
     val activeColor = if (mine) VanishXColors.OnPrimary else VanishXColors.Primary
     val inactiveColor = activeColor.copy(alpha = 0.35f)
+    val pending = message.mediaTransferStatus == ChatMessage.MEDIA_PENDING
+    val failed = message.mediaTransferStatus == ChatMessage.MEDIA_FAILED
     Row(
         modifier = Modifier
             .width(RoomUiDimens.voiceBubbleWidth)
@@ -200,8 +204,9 @@ internal fun VoiceMediaPreview(
                 if (mine) VanishXColors.Primary else VanishXColors.Surface.copy(alpha = 0.95f),
             )
             .combinedClickable(
-                enabled = !path.isNullOrBlank() || onLongPress != null,
+                enabled = (!pending && !path.isNullOrBlank()) || onLongPress != null,
                 onClick = {
+                    if (pending || failed) return@combinedClickable
                     val p = path ?: return@combinedClickable
                     VoicePlaybackBus.toggle(context, message.id, p)
                 },
@@ -226,26 +231,44 @@ internal fun VoiceMediaPreview(
             modifier = Modifier.size(40.dp),
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                if (playing) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_voice_pause),
-                        contentDescription = stringResource(R.string.room_voice_play_cd),
-                        tint = activeColor,
-                        modifier = Modifier.size(20.dp),
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = stringResource(R.string.room_voice_play_cd),
-                        tint = activeColor,
-                        modifier = Modifier.size(22.dp),
-                    )
+                when {
+                    pending -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            color = activeColor,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                    failed -> {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.room_media_failed),
+                            tint = activeColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    playing -> {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_voice_pause),
+                            contentDescription = stringResource(R.string.room_voice_play_cd),
+                            tint = activeColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(R.string.room_voice_play_cd),
+                            tint = activeColor,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
             }
         }
         VoiceWaveformBars(
             seed = message.id,
-            active = playing,
+            active = playing && !pending,
             activeColor = activeColor,
             inactiveColor = inactiveColor,
             modifier = Modifier.weight(1f),

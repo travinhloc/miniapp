@@ -434,11 +434,12 @@ private fun MediaMessageBody(
             )
             else -> DocumentMediaPreview(message = message, mine = mine)
         }
-        // Single-item pending overlay; album tiles handle their own spinners.
-        if (pending) {
-            MediaTransferOverlay(failed = false, modifier = Modifier.matchParentSize().clip(mediaCorner))
-        } else if (failed) {
-            MediaTransferOverlay(failed = true, modifier = Modifier.matchParentSize().clip(mediaCorner))
+        // Voice shows upload/failed state inline on the play button.
+        if ((pending || failed) && message.mediaKind != AttachmentMeta.KIND_VOICE) {
+            MediaTransferOverlay(
+                failed = failed,
+                modifier = Modifier.matchParentSize().clip(mediaCorner),
+            )
         }
     }
 }
