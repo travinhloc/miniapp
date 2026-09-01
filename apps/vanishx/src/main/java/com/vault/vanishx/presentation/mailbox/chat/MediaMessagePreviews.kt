@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -193,7 +194,7 @@ internal fun VoiceMediaPreview(
     val inactiveColor = activeColor.copy(alpha = 0.35f)
     Row(
         modifier = Modifier
-            .widthIn(min = 168.dp, max = RoomUiDimens.bubbleMaxWidth)
+            .width(RoomUiDimens.voiceBubbleWidth)
             .clip(mediaCorner)
             .background(
                 if (mine) VanishXColors.Primary else VanishXColors.Surface.copy(alpha = 0.95f),
@@ -211,7 +212,7 @@ internal fun VoiceMediaPreview(
                     }
                 },
             )
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

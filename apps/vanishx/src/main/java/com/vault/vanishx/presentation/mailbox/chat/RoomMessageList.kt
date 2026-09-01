@@ -188,7 +188,7 @@ internal fun RoomMessageList(
                     horizontal = RoomUiDimens.spacingMedium,
                     vertical = RoomUiDimens.spacingSmall,
                 ),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 if (showTtl) {
                     val ttlAt = expiresAt!!
@@ -236,7 +236,7 @@ internal fun RoomMessageList(
                                 isMessageAtOrBeforeWatermark(msg.id, peerReadWatermarkId, messages)
                             Box(
                                 modifier = (if (item.isGroupTail) {
-                                    Modifier.padding(bottom = 6.dp)
+                                    Modifier.padding(bottom = 8.dp)
                                 } else {
                                     Modifier
                                 }).then(

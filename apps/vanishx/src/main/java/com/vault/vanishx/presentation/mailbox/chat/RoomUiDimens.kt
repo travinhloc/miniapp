@@ -7,15 +7,19 @@ internal object RoomUiDimens {
     val spacingSmall = 8.dp
     val spacingMedium = 16.dp
     val composerGap = 8.dp
+    /** Hard cap for bubble content width (phones / tablets). */
     val bubbleMaxWidth = 280.dp
-    const val bubbleMaxFraction = 0.75f
-    val bubbleCorner = 16.dp
-    val mediaCorner = 16.dp
+    /** Soft cap as a fraction of the chat list width. */
+    const val bubbleMaxFraction = 0.78f
+    val bubbleCorner = 18.dp
+    val mediaCorner = 14.dp
+    /** Compact fixed width for voice notes (wrap-content parent + weighted waveform). */
+    val voiceBubbleWidth = 212.dp
     /** Reaction pill hangs this far past the bubble/media bottom edge. */
     val reactionHangOffset = 10.dp
     /** End inset for media timestamp so it does not sit under the reaction pill. */
     val reactionMetaEndClearance = 40.dp
-    val bubbleTailCorner = 4.dp
+    val bubbleTailCorner = 6.dp
     val cardCorner = 16.dp
     val topBarHeight = 56.dp
     val avatarSize = 36.dp
