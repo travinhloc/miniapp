@@ -18,6 +18,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +26,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.min
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,7 +61,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vault.vanishx.R
+import com.vault.vanishx.domain.model.AttachmentMeta
 import com.vault.vanishx.domain.model.ChatMessage
+import com.vault.vanishx.domain.model.MediaAlbumState
 import com.vault.vanishx.presentation.theme.VanishXColors
 import kotlinx.coroutines.launch
 
@@ -77,8 +83,10 @@ internal fun RoomMessageBubble(
     isGroupTail: Boolean = true,
     showTimestamp: Boolean = true,
     onLongPress: (() -> Unit)? = null,
-    onMediaClick: (() -> Unit)? = null,
+    /** Null index = single media; non-null = album tile index. */
+    onMediaClick: ((albumIndex: Int?) -> Unit)? = null,
     onReplyQuoteClick: (() -> Unit)? = null,
+    album: MediaAlbumState? = null,
 ) {
     val mine = message.direction == ChatMessage.DIRECTION_OUT
     val tail = if (isGroupTail) RoomUiDimens.bubbleTailCorner else RoomUiDimens.bubbleCorner
@@ -106,7 +114,7 @@ internal fun RoomMessageBubble(
     val burnFlash = remember(message.id) { Animatable(1f) }
     val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer { alpha = burnFlash.value }
@@ -129,74 +137,109 @@ internal fun RoomMessageBubble(
                     Modifier
                 },
             ),
-        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(RoomUiDimens.bubbleMaxFraction)
-                .padding(bottom = if (reactionCounts.isNotEmpty()) 12.dp else 0.dp),
+        val maxBubbleWidth: Dp = min(
+            maxWidth * RoomUiDimens.bubbleMaxFraction,
+            RoomUiDimens.bubbleMaxWidth,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = RoomUiDimens.bubbleMaxWidth)
-                    .then(if (message.isMedia) Modifier else Modifier.clip(bubbleShape))
-                    .background(
-                        when {
-                            message.isMedia -> Color.Transparent
-                            mine -> VanishXColors.Primary
-                            else -> RoomUiDimens.bubbleInColor
-                        },
-                    )
-                    .pointerInput(message.id, message.sensitive, message.recalled, message.isMedia, onLongPress) {
-                        if (message.isMedia) {
-                            if (message.mediaTransferStatus != ChatMessage.MEDIA_PENDING) {
+            Box(
+                modifier = Modifier.padding(
+                    bottom = if (reactionCounts.isNotEmpty()) 12.dp else 0.dp,
+                ),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = maxBubbleWidth)
+                        .wrapContentWidth(
+                            align = if (mine) Alignment.End else Alignment.Start,
+                        )
+                        .then(if (message.isMedia) Modifier else Modifier.clip(bubbleShape))
+                        .background(
+                            when {
+                                message.isMedia -> Color.Transparent
+                                mine -> VanishXColors.Primary
+                                else -> RoomUiDimens.bubbleInColor
+                            },
+                        )
+                        .pointerInput(
+                            message.id,
+                            message.sensitive,
+                            message.recalled,
+                            message.isMedia,
+                            onLongPress,
+                        ) {
+                            if (message.isMedia) {
+                                val isAlbum = message.mediaKind == AttachmentMeta.KIND_ALBUM
+                                val isVoice = message.mediaKind == AttachmentMeta.KIND_VOICE
+                                // Album / voice handle their own taps (collage / inline play).
+                                if (!isAlbum && !isVoice) {
+                                    detectTapGestures(
+                                        onTap = { onMediaClick?.invoke(null) },
+                                        onLongPress = {
+                                            view.performHapticFeedback(
+                                                HapticFeedbackConstants.LONG_PRESS,
+                                            )
+                                            onLongPress?.invoke()
+                                        },
+                                    )
+                                } else if (onLongPress != null) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            view.performHapticFeedback(
+                                                HapticFeedbackConstants.LONG_PRESS,
+                                            )
+                                            onLongPress.invoke()
+                                        },
+                                    )
+                                }
+                            } else if (message.sensitive && !message.recalled) {
+                                // Hold-to-read only. Do not set onLongPress here — Compose cancels
+                                // onPress after longPressTimeout when onLongPress is registered,
+                                // so users could only peek ~500ms before the action sheet stole focus.
                                 detectTapGestures(
-                                    onTap = { onMediaClick?.invoke() },
+                                    onPress = {
+                                        view.performHapticFeedback(
+                                            HapticFeedbackConstants.KEYBOARD_TAP,
+                                        )
+                                        revealed = true
+                                        try {
+                                            tryAwaitRelease()
+                                        } finally {
+                                            revealed = false
+                                        }
+                                    },
+                                )
+                            } else {
+                                detectTapGestures(
                                     onLongPress = {
-                                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                        view.performHapticFeedback(
+                                            HapticFeedbackConstants.LONG_PRESS,
+                                        )
                                         onLongPress?.invoke()
+                                    },
+                                    onDoubleTap = {
+                                        view.performHapticFeedback(
+                                            HapticFeedbackConstants.KEYBOARD_TAP,
+                                        )
+                                        scope.launch {
+                                            burnFlash.snapTo(0.35f)
+                                            burnFlash.animateTo(1f, tween(450))
+                                        }
                                     },
                                 )
                             }
-                        } else if (message.sensitive && !message.recalled) {
-                            // Hold-to-read only. Do not set onLongPress here — Compose cancels
-                            // onPress after longPressTimeout when onLongPress is registered,
-                            // so users could only peek ~500ms before the action sheet stole focus.
-                            detectTapGestures(
-                                onPress = {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    revealed = true
-                                    try {
-                                        tryAwaitRelease()
-                                    } finally {
-                                        revealed = false
-                                    }
-                                },
-                            )
-                        } else {
-                            detectTapGestures(
-                                onLongPress = {
-                                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                                    onLongPress?.invoke()
-                                },
-                                onDoubleTap = {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    scope.launch {
-                                        burnFlash.snapTo(0.35f)
-                                        burnFlash.animateTo(1f, tween(450))
-                                    }
-                                },
-                            )
                         }
-                    }
-                    .padding(
-                        start = if (message.isMedia) 0.dp else 12.dp,
-                        end = if (message.isMedia) 0.dp else 10.dp,
-                        top = if (message.isMedia) 0.dp else 8.dp,
-                        bottom = if (message.isMedia) 4.dp else 6.dp,
-                    ),
-            ) {
+                        .padding(
+                            start = if (message.isMedia) 0.dp else 12.dp,
+                            end = if (message.isMedia) 0.dp else 12.dp,
+                            top = if (message.isMedia) 0.dp else 8.dp,
+                            bottom = if (message.isMedia) 4.dp else 8.dp,
+                        ),
+                ) {
             if (replyQuote != null && !message.recalled) {
                 Text(
                     text = if (replyQuote.parentExists) {
@@ -255,7 +298,13 @@ internal fun RoomMessageBubble(
                 message.isMedia -> {
                     // Anchor reactions to the media card (not MetaRow under it).
                     Box {
-                        MediaMessageBody(message = message, mine = mine)
+                        MediaMessageBody(
+                            message = message,
+                            mine = mine,
+                            album = album,
+                            onAlbumItemClick = { index -> onMediaClick?.invoke(index) },
+                            onLongPress = onLongPress,
+                        )
                         if (reactionCounts.isNotEmpty()) {
                             ReactionCountsRow(
                                 counts = reactionCounts,
@@ -322,8 +371,8 @@ internal fun RoomMessageBubble(
                     Text(
                         text = message.body,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
+                            fontSize = 15.sp,
+                            lineHeight = 21.sp,
                         ),
                         color = if (mine) VanishXColors.OnPrimary else VanishXColors.OnSurface,
                     )
@@ -332,7 +381,9 @@ internal fun RoomMessageBubble(
                             mine = mine,
                             sentAt = message.sentAt,
                             readReceipt = readReceipt,
-                            modifier = Modifier.align(Alignment.End),
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .padding(top = 2.dp),
                         )
                     }
                 }
@@ -349,25 +400,46 @@ internal fun RoomMessageBubble(
                         ),
                 )
             }
+            }
         }
     }
 }
 
 @Composable
-private fun MediaMessageBody(message: ChatMessage, mine: Boolean) {
+private fun MediaMessageBody(
+    message: ChatMessage,
+    mine: Boolean,
+    album: MediaAlbumState? = null,
+    onAlbumItemClick: (Int) -> Unit = {},
+    onLongPress: (() -> Unit)? = null,
+) {
     val pending = message.mediaTransferStatus == ChatMessage.MEDIA_PENDING
     val failed = message.mediaTransferStatus == ChatMessage.MEDIA_FAILED
     val mediaCorner = RoundedCornerShape(RoomUiDimens.mediaCorner)
+    if (message.mediaKind == AttachmentMeta.KIND_ALBUM && album != null) {
+        AlbumMediaCollage(
+            album = album,
+            onItemClick = onAlbumItemClick,
+        )
+        return
+    }
     Box {
         when (message.mediaKind) {
             "image" -> ImageMediaPreview(message = message)
             "video" -> VideoMediaPreview(message = message)
+            "voice" -> VoiceMediaPreview(
+                message = message,
+                mine = mine,
+                onLongPress = onLongPress,
+            )
             else -> DocumentMediaPreview(message = message, mine = mine)
         }
-        if (pending) {
-            MediaTransferOverlay(failed = false, modifier = Modifier.matchParentSize().clip(mediaCorner))
-        } else if (failed) {
-            MediaTransferOverlay(failed = true, modifier = Modifier.matchParentSize().clip(mediaCorner))
+        // Voice shows upload/failed state inline on the play button.
+        if ((pending || failed) && message.mediaKind != AttachmentMeta.KIND_VOICE) {
+            MediaTransferOverlay(
+                failed = failed,
+                modifier = Modifier.matchParentSize().clip(mediaCorner),
+            )
         }
     }
 }

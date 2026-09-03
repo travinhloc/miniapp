@@ -1,24 +1,31 @@
 @file:Suppress("MagicNumber", "LongMethod", "ComplexMethod")
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.vault.vanishx.presentation.mailbox.chat
 
 import android.graphics.Bitmap
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,19 +43,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.vault.vanishx.R
 import com.vault.vanishx.data.media.MediaPreviewLoader
+import com.vault.vanishx.data.media.VoicePlaybackBus
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.presentation.theme.VanishXColors
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 private val DocFooterColor = Color(0xFFE8F1FF)
@@ -137,6 +150,140 @@ internal fun VideoMediaPreview(message: ChatMessage) {
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             )
         }
+    }
+}
+
+@Composable
+internal fun VoiceMediaPreview(
+    message: ChatMessage,
+    mine: Boolean,
+    onLongPress: (() -> Unit)? = null,
+) {
+    val path = message.mediaLocalPath
+    val context = LocalContext.current
+    val view = LocalView.current
+    val loader = rememberMediaPreviewLoader()
+    var durationMs by remember(path) { mutableStateOf(0L) }
+    val playback by VoicePlaybackBus.state.collectAsStateWithLifecycle()
+    val isThis = playback.messageId == message.id
+    val playing = isThis && playback.playing
+    val progress = when {
+        !isThis || playback.durationMs <= 0L -> 0f
+        else -> (playback.positionMs.toFloat() / playback.durationMs.toFloat()).coerceIn(0f, 1f)
+    }
+    val displayMs = when {
+        isThis && playback.durationMs > 0L && playing ->
+            (playback.durationMs - playback.positionMs).coerceAtLeast(0L)
+        isThis && playback.durationMs > 0L -> playback.durationMs
+        else -> durationMs
+    }
+    LaunchedEffect(path) {
+        if (path.isNullOrBlank()) {
+            durationMs = 0L
+            return@LaunchedEffect
+        }
+        durationMs = withContext(Dispatchers.IO) { loader.mediaDurationMs(context, path) }
+    }
+    LaunchedEffect(playing, isThis) {
+        if (!playing || !isThis) return@LaunchedEffect
+        while (isActive) {
+            VoicePlaybackBus.pollPosition()
+            delay(48L)
+        }
+    }
+    val mediaCorner = RoundedCornerShape(RoomUiDimens.mediaCorner)
+    val activeColor = if (mine) VanishXColors.OnPrimary else VanishXColors.Primary
+    val inactiveColor = activeColor.copy(alpha = 0.35f)
+    val pending = message.mediaTransferStatus == ChatMessage.MEDIA_PENDING
+    val failed = message.mediaTransferStatus == ChatMessage.MEDIA_FAILED
+    Row(
+        modifier = Modifier
+            .width(RoomUiDimens.voiceBubbleWidth)
+            .clip(mediaCorner)
+            .background(
+                if (mine) VanishXColors.Primary else VanishXColors.Surface.copy(alpha = 0.95f),
+            )
+            .combinedClickable(
+                enabled = (!pending && !path.isNullOrBlank()) || onLongPress != null,
+                onClick = {
+                    if (pending || failed) return@combinedClickable
+                    val p = path ?: return@combinedClickable
+                    VoicePlaybackBus.toggle(context, message.id, p)
+                },
+                onLongClick = onLongPress?.let { action ->
+                    {
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        action()
+                    }
+                },
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = if (mine) {
+                VanishXColors.OnPrimary.copy(alpha = 0.22f)
+            } else {
+                VanishXColors.Primary.copy(alpha = 0.16f)
+            },
+            modifier = Modifier.size(40.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                when {
+                    pending -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            color = activeColor,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                    failed -> {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.room_media_failed),
+                            tint = activeColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    playing -> {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_voice_pause),
+                            contentDescription = stringResource(R.string.room_voice_play_cd),
+                            tint = activeColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(R.string.room_voice_play_cd),
+                            tint = activeColor,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
+            }
+        }
+        VoiceWaveformBars(
+            seed = message.id,
+            active = playing && !pending,
+            activeColor = activeColor,
+            inactiveColor = inactiveColor,
+            modifier = Modifier.weight(1f),
+            progress = progress,
+            barCount = 26,
+            height = 26.dp,
+        )
+        Text(
+            text = MediaPreviewLoader.formatDuration(displayMs),
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = FontFamily.Monospace,
+            ),
+            color = activeColor,
+        )
     }
 }
 

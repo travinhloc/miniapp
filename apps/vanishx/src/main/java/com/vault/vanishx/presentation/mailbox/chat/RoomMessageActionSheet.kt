@@ -2,6 +2,7 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -148,8 +149,11 @@ internal fun RoomMessageActionSheet(
 }
 
 @Composable
-private fun ReactionBar(onPick: (String) -> Unit) {
-    Surface(
+internal fun ReactionPickerBar(
+    onPick: (String) -> Unit,
+    selected: String? = null,
+) {
+    androidx.compose.material3.Surface(
         shape = RoundedCornerShape(24.dp),
         color = VanishXColors.Surface2,
         modifier = Modifier.fillMaxWidth(),
@@ -166,11 +170,26 @@ private fun ReactionBar(onPick: (String) -> Unit) {
                     fontSize = 26.sp,
                     modifier = Modifier
                         .clickable { onPick(emoji) }
-                        .padding(6.dp),
+                        .padding(6.dp)
+                        .then(
+                            if (emoji == selected) {
+                                Modifier.background(
+                                    VanishXColors.Primary.copy(alpha = 0.18f),
+                                    RoundedCornerShape(12.dp),
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
                 )
             }
         }
     }
+}
+
+@Composable
+private fun ReactionBar(onPick: (String) -> Unit) {
+    ReactionPickerBar(onPick = onPick)
 }
 
 @Composable

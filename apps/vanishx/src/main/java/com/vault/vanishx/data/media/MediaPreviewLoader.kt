@@ -2,11 +2,13 @@
 
 package com.vault.vanishx.data.media
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.os.ParcelFileDescriptor
 import java.io.File
 import javax.inject.Inject
@@ -63,6 +65,27 @@ class MediaPreviewLoader @Inject constructor() {
         } finally {
             runCatching { renderer?.close() }
             runCatching { pfd?.close() }
+        }
+    }
+
+    /** Duration for voice/video from absolute path or content URI string. */
+    fun mediaDurationMs(context: Context, path: String): Long {
+        if (path.isBlank()) return 0L
+        val retriever = MediaMetadataRetriever()
+        return try {
+            val file = File(path)
+            if (file.exists()) {
+                retriever.setDataSource(file.absolutePath)
+            } else {
+                retriever.setDataSource(context, Uri.parse(path))
+            }
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull()
+                ?: 0L
+        } catch (_: Exception) {
+            0L
+        } finally {
+            runCatching { retriever.release() }
         }
     }
 
@@ -129,7 +152,6 @@ class MediaPreviewLoader @Inject constructor() {
                 m.contains("sheet") || m.contains("excel") -> "XLS"
                 m.contains("markdown") -> "MD"
                 m.startsWith("text/") -> "TXT"
-                m.contains("zip") -> "ZIP"
                 else -> "FILE"
             }
         }

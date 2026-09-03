@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,16 +37,18 @@ import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.vanishxSheetInsets
 
 private val DocumentCircleColor = Color(0xFF1B4F9C)
+private val CameraCircleColor = Color(0xFF0D7377)
 
 /**
  * Extensible “more” tray from composer `…`.
- * MVP: Document. Later: transfer, bank account, card, GIF, …
+ * E16-9: Document · Camera (Photo|Video).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AttachTraySheet(
     enabled: Boolean,
     onPickDocument: () -> Unit,
+    onOpenCamera: () -> Unit,
     onAction: (RoomAction) -> Unit,
 ) {
     ModalBottomSheet(
@@ -80,13 +83,17 @@ internal fun AttachTraySheet(
                         onPickDocument()
                     },
                 )
+                AttachTrayItem(
+                    icon = Icons.Filled.Add,
+                    label = stringResource(R.string.room_attach_camera),
+                    circleColor = CameraCircleColor,
+                    enabled = enabled,
+                    onClick = {
+                        onAction(RoomAction.DismissAttachTray)
+                        onOpenCamera()
+                    },
+                )
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.room_attach_tray_soon),
-                style = MaterialTheme.typography.labelSmall,
-                color = VanishXColors.Muted,
-            )
             Spacer(modifier = Modifier.height(24.dp))
         }
     }

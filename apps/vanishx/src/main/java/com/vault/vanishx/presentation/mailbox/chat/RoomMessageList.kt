@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.ChatMessage
+import com.vault.vanishx.domain.model.MediaAlbumState
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.util.formatRemainingMs
 import kotlinx.coroutines.delay
@@ -73,7 +74,8 @@ internal fun RoomMessageList(
     reactionsByMessage: Map<String, Map<String, Int>> = emptyMap(),
     peerReadWatermarkId: String? = null,
     onLongPressMessage: (ChatMessage) -> Unit = {},
-    onMediaClick: (ChatMessage) -> Unit = {},
+    onMediaClick: (ChatMessage, Int?) -> Unit = { _, _ -> },
+    albumsById: Map<String, MediaAlbumState> = emptyMap(),
     scrollToMessageId: String? = null,
     highlightMessageId: String? = null,
     wallpaperPath: String? = null,
@@ -186,7 +188,7 @@ internal fun RoomMessageList(
                     horizontal = RoomUiDimens.spacingMedium,
                     vertical = RoomUiDimens.spacingSmall,
                 ),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 if (showTtl) {
                     val ttlAt = expiresAt!!
@@ -234,7 +236,7 @@ internal fun RoomMessageList(
                                 isMessageAtOrBeforeWatermark(msg.id, peerReadWatermarkId, messages)
                             Box(
                                 modifier = (if (item.isGroupTail) {
-                                    Modifier.padding(bottom = 6.dp)
+                                    Modifier.padding(bottom = 8.dp)
                                 } else {
                                     Modifier
                                 }).then(
@@ -261,7 +263,8 @@ internal fun RoomMessageList(
                                     isGroupTail = item.isGroupTail,
                                     showTimestamp = item.showTimestamp,
                                     onLongPress = { onLongPressMessage(msg) },
-                                    onMediaClick = { onMediaClick(msg) },
+                                    onMediaClick = { index -> onMediaClick(msg, index) },
+                                    album = albumsById[msg.id],
                                     onReplyQuoteClick = msg.replyToId?.let { id ->
                                         {
                                             val index = messageIndexById[id]
@@ -471,7 +474,8 @@ internal fun RoomActiveBody(
     reactionsByMessage: Map<String, Map<String, Int>> = emptyMap(),
     peerReadWatermarkId: String? = null,
     onLongPressMessage: (ChatMessage) -> Unit = {},
-    onMediaClick: (ChatMessage) -> Unit = {},
+    onMediaClick: (ChatMessage, Int?) -> Unit = { _, _ -> },
+    albumsById: Map<String, MediaAlbumState> = emptyMap(),
     scrollToMessageId: String? = null,
     highlightMessageId: String? = null,
     wallpaperPath: String? = null,
@@ -488,6 +492,7 @@ internal fun RoomActiveBody(
             peerReadWatermarkId = peerReadWatermarkId,
             onLongPressMessage = onLongPressMessage,
             onMediaClick = onMediaClick,
+            albumsById = albumsById,
             scrollToMessageId = scrollToMessageId,
             highlightMessageId = highlightMessageId,
             wallpaperPath = wallpaperPath,

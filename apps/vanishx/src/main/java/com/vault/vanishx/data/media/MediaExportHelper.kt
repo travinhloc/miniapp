@@ -27,6 +27,7 @@ class MediaExportHelper @Inject constructor(
         val collection = when (message.mediaKind) {
             AttachmentMeta.KIND_IMAGE -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
             AttachmentMeta.KIND_VIDEO -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            AttachmentMeta.KIND_VOICE -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
             else -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     MediaStore.Downloads.EXTERNAL_CONTENT_URI
@@ -63,8 +64,11 @@ class MediaExportHelper @Inject constructor(
     private fun extension(mime: String, kind: String?): String = when {
         mime.contains("jpeg") || mime.contains("jpg") -> "jpg"
         mime.contains("png") -> "png"
+        mime.contains("mp4") && kind == AttachmentMeta.KIND_VOICE -> "m4a"
+        mime.contains("aac") || mime.contains("m4a") -> "m4a"
         mime.contains("mp4") -> "mp4"
         mime.contains("pdf") -> "pdf"
+        kind == AttachmentMeta.KIND_VOICE -> "m4a"
         kind == AttachmentMeta.KIND_VIDEO -> "mp4"
         kind == AttachmentMeta.KIND_IMAGE -> "jpg"
         else -> "bin"

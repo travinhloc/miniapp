@@ -258,6 +258,6 @@ class LockViewModel @Inject constructor(
 
     companion object {
         /** Pause after 4th digit before auto-verify (OEM lock-screen style). */
-        const val AUTO_SUBMIT_DELAY_MS = 1_500L
+        const val AUTO_SUBMIT_DELAY_MS = 1_000L
     }
 }

@@ -111,13 +111,15 @@ Không commit `google-services.json` prod.
 
 `signing.properties` và `config/release.keystore` **gitignored**. Copy `signing.properties.example` → `signing.properties`. Thiếu file → `productionRelease` minify nhưng không ký (CI). Version: `gradle/libs.versions.toml` `androidVersionCode` / `androidVersionName` (`1` / `1.0.0`) — bump có chủ đích mỗi Play upload.
 
-## Media attachments (Epic 11)
+## Media attachments (Epic 11 + **Epic 16**)
 
 RTDB `messages/*/ciphertext` may hold envelope **`v:2`** (metadata only). Blob bytes live on Firebase Storage:
 
 ```
 /rooms/{roomId}/att/{messageId}/{attId}   // AES-GCM ciphertext (RoomBlobCipher)
 ```
+
+**Epic 16** (2026-08-23): document viewer · camera Photo|Video · voice 60s · video 60s · gallery multi photo ≤9. Local wipe: `LocalMediaStore` / `WipeRoomMediaUseCase` on leave · purge · Panic. QA checklist: `vanishx-docs/tmp/epic-16-qa.md`.
 
 See [`STORAGE.md`](STORAGE.md) · [`CRYPTO.md`](CRYPTO.md) · product spec `vanishx-media-spec-vi.md`.
 

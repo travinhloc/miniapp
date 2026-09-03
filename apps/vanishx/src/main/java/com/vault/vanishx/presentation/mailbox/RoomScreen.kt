@@ -1,4 +1,11 @@
-@file:Suppress("TooManyFunctions", "ComplexMethod", "ComplexCondition", "ModifierMissing")
+@file:Suppress(
+    "TooManyFunctions",
+    "ComplexMethod",
+    "ComplexCondition",
+    "ModifierMissing",
+    "ReturnCount",
+    "MagicNumber",
+)
 
 package com.vault.vanishx.presentation.mailbox
 
@@ -7,11 +14,16 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import com.vault.vanishx.presentation.util.appDetailsSettingsIntent
+import androidx.compose.runtime.saveable.rememberSaveable
+import android.provider.Settings
+import android.net.Uri
+import android.Manifest
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -36,16 +48,32 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseScreen
 import com.vault.vanishx.R
+import com.vault.vanishx.domain.model.AttachmentMeta
+import com.vault.vanishx.domain.model.MediaAlbumMerge
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
+import com.vault.vanishx.domain.model.MediaLimits
 import com.vault.vanishx.domain.model.RoomInvite
 import com.vault.vanishx.presentation.components.VanishXAlertDialog
 import com.vault.vanishx.presentation.components.VanishXAlertTone
 import com.vault.vanishx.presentation.extensions.collectAsEffect
+import com.vault.vanishx.data.media.ImagePrepareHelper
+import com.vault.vanishx.data.media.VideoPrepareHelper
+import com.vault.vanishx.data.media.VoicePlaybackBus
+import com.vault.vanishx.data.media.VoiceRecorder
 import com.vault.vanishx.presentation.mailbox.chat.AttachTraySheet
+import com.vault.vanishx.presentation.mailbox.chat.CameraCaptureScreen
+import com.vault.vanishx.presentation.mailbox.chat.CameraCaptureTab
+import com.vault.vanishx.presentation.mailbox.chat.DocumentViewerScreen
+import com.vault.vanishx.presentation.mailbox.chat.GalleryAttachSheet
+import com.vault.vanishx.presentation.mailbox.chat.GalleryLibraryScreen
 import com.vault.vanishx.presentation.mailbox.chat.FeedbackMessages
 import com.vault.vanishx.presentation.mailbox.chat.REPORT_REASON_MAX_LINES
 import com.vault.vanishx.presentation.mailbox.chat.RoomActiveBody
@@ -60,6 +88,9 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomLeft
 import com.vault.vanishx.presentation.mailbox.chat.RoomLoading
 import com.vault.vanishx.presentation.mailbox.chat.RoomMessageActionSheet
 import com.vault.vanishx.presentation.mailbox.chat.MediaViewerDialog
+import com.vault.vanishx.presentation.mailbox.chat.PhotoViewerScreen
+import com.vault.vanishx.presentation.mailbox.chat.buildMediaViewerPages
+import com.vault.vanishx.presentation.mailbox.chat.findMediaViewerPageIndex
 import com.vault.vanishx.presentation.mailbox.chat.RoomMediaLibraryScreen
 import com.vault.vanishx.presentation.mailbox.chat.RoomOptionsScreen
 import com.vault.vanishx.presentation.mailbox.chat.RoomSearchBar
@@ -67,15 +98,16 @@ import com.vault.vanishx.presentation.mailbox.chat.RoomSafetySheet
 import com.vault.vanishx.presentation.mailbox.chat.RoomScreenshotBanner
 import com.vault.vanishx.presentation.mailbox.chat.RoomUiDimens
 import com.vault.vanishx.presentation.mailbox.chat.RoomWallpaperSheet
-import com.vault.vanishx.presentation.mailbox.chat.VoiceRecordTray
+import com.vault.vanishx.presentation.mailbox.chat.VoiceRecordSheet
 import com.vault.vanishx.presentation.mailbox.chat.WaitingStage
 import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
 import com.vault.vanishx.presentation.mailbox.chat.isMessageAtOrBeforeWatermark
+import com.vault.vanishx.presentation.mailbox.chat.resolveRoomTitle
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import dagger.hilt.android.EntryPointAccessors
 import timber.log.Timber
-
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RoomScreen(
     viewModel: RoomViewModel = hiltViewModel(),
@@ -83,24 +115,69 @@ fun RoomScreen(
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var showVoiceTray by remember { mutableStateOf(false) }
+    var showCameraCapture by remember { mutableStateOf(false) }
+    var showGallerySheet by remember { mutableStateOf(false) }
+    var showGalleryLibrary by remember { mutableStateOf(false) }
+    var cameraInitialTab by remember { mutableStateOf(CameraCaptureTab.Photo) }
+    var showVoicePermission by remember { mutableStateOf(false) }
+    var voicePermissionRequested by rememberSaveable { mutableStateOf(false) }
+    var showVoiceSheet by remember { mutableStateOf(false) }
+    val voicePermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
+    val voiceRecorder = remember(context) { VoiceRecorder(context.applicationContext) }
+    val imagePrepareHelper = remember(context) {
+        ImagePrepareHelper(context.applicationContext)
+    }
+    val videoPrepareHelper = remember(context) {
+        VideoPrepareHelper(context.applicationContext)
+    }
     val appLockSession = remember(context) {
         EntryPointAccessors.fromActivity(
             context as Activity,
             AppLockEntryPoint::class.java,
         ).appLockSession()
     }
-    val galleryPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia(),
-    ) { uri ->
+
+    val appSettingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
         appLockSession.endExternalUi()
-        if (uri != null) {
-            onAttachmentSelected(
-                context = context,
+    }
+
+    DisposableEffect(voiceRecorder) {
+        onDispose {
+            VoicePlaybackBus.stop()
+            voiceRecorder.release()
+        }
+    }
+
+    fun openVoiceSheet() {
+        if (uiState.isSendingMedia || showVoiceSheet) return
+        if (!voicePermission.status.isGranted) {
+            showVoicePermission = true
+            return
+        }
+        showVoiceSheet = true
+    }
+    fun sendGallerySelection(uris: List<android.net.Uri>) {
+        val items = MediaLimits.clampPhotoMultiSelect(uris).map { uri ->
+            RoomAction.SendMedia(
                 uri = uri,
-                onAction = viewModel::onAction,
+                mime = resolveAttachmentMime(context, uri),
+                displayName = resolveAttachmentDisplayName(context, uri),
             )
         }
+        viewModel.onAction(RoomAction.SendMediaQueue(items))
+    }
+
+    fun gallerySelectionLimitToast() {
+        Toast.makeText(
+            context,
+            context.getString(
+                R.string.room_gallery_max_selected,
+                MediaLimits.PHOTO_MULTI_SELECT_MAX,
+            ),
+            Toast.LENGTH_SHORT,
+        ).show()
     }
     val avatarPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
@@ -172,11 +249,21 @@ fun RoomScreen(
 
     LaunchedEffect(uiState.toastMessage) {
         val key = uiState.toastMessage ?: return@LaunchedEffect
-        val message = when (key) {
-            "peer_joined" -> context.getString(R.string.room_peer_joined)
-            "sensitive_copy_blocked" -> context.getString(R.string.room_copy_blocked_sensitive)
-            "media_saved" -> context.getString(R.string.room_media_saved)
-            "media_save_failed" -> context.getString(R.string.room_media_save_failed)
+        val message = when {
+            key == "peer_joined" -> context.getString(R.string.room_peer_joined)
+            key == "sensitive_copy_blocked" -> context.getString(R.string.room_copy_blocked_sensitive)
+            key == "media_saved" -> context.getString(R.string.room_media_saved)
+            key == "media_save_failed" -> context.getString(R.string.room_media_save_failed)
+            key.startsWith("media_sending|") -> {
+                val parts = key.split('|')
+                val current = parts.getOrNull(1)?.toIntOrNull()
+                val total = parts.getOrNull(2)?.toIntOrNull()
+                if (current != null && total != null) {
+                    context.getString(R.string.room_media_sending_progress, current, total)
+                } else {
+                    context.getString(R.string.room_media_uploading)
+                }
+            }
             else -> key
         }
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -207,31 +294,49 @@ fun RoomScreen(
             onOpenMore = {
                 viewModel.onAction(RoomAction.AttachClicked)
             },
-            onOpenVoice = { showVoiceTray = true },
+            onOpenVoice = { openVoiceSheet() },
             onPickGallery = {
-                appLockSession.beginExternalUi()
-                galleryPicker.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
-                )
+                showGallerySheet = true
             },
             onPickDocument = {
                 appLockSession.beginExternalUi()
-                documentPicker.launch(
-                    arrayOf(
-                        "application/pdf",
-                        "text/plain",
-                        "text/markdown",
-                        "text/x-markdown",
-                        "application/zip",
-                        "application/msword",
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        "application/vnd.ms-excel",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        "*/*",
-                    ),
-                )
+                documentPicker.launch(MediaLimits.DOCUMENT_PICKER_MIME)
+            },
+            onOpenCamera = {
+                cameraInitialTab = CameraCaptureTab.Photo
+                showCameraCapture = true
             },
         )
+        if (showVoiceSheet) {
+            VoiceRecordSheet(
+                voiceRecorder = voiceRecorder,
+                enabled = !uiState.isSendingMedia,
+                onDismiss = { showVoiceSheet = false },
+                onSend = { uri, displayName ->
+                    viewModel.onAction(
+                        RoomAction.SendMedia(
+                            uri = uri,
+                            mime = "audio/mp4",
+                            displayName = displayName,
+                        ),
+                    )
+                },
+                onRecordFailed = {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.room_voice_record_failed),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                },
+                onTooShort = {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.room_voice_too_short),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                },
+            )
+        }
         if (uiState.showRoomOptions) {
             RoomOptionsScreen(
                 uiState = uiState,
@@ -272,8 +377,80 @@ fun RoomScreen(
         )
     }
 
-    if (showVoiceTray) {
-        VoiceRecordTray(onDismiss = { showVoiceTray = false })
+    if (showVoicePermission) {
+        val permanentlyDenied = !voicePermission.status.isGranted &&
+            !voicePermission.status.shouldShowRationale &&
+            voicePermissionRequested
+        VoicePermissionDialog(
+            showRationale = voicePermission.status.shouldShowRationale,
+            permanentlyDenied = permanentlyDenied,
+            onAllow = {
+                showVoicePermission = false
+                if (permanentlyDenied) {
+                    appLockSession.beginExternalUi()
+                    appSettingsLauncher.launch(appDetailsSettingsIntent(context))
+                } else {
+                    voicePermissionRequested = true
+                    voicePermission.launchPermissionRequest()
+                }
+            },
+            onDismiss = { showVoicePermission = false },
+        )
+    }
+    if (showGallerySheet) {
+        GalleryAttachSheet(
+            enabled = !uiState.isSendingMedia,
+            onDismiss = { showGallerySheet = false },
+            onTakePhoto = {
+                cameraInitialTab = CameraCaptureTab.Photo
+                showCameraCapture = true
+            },
+            onOpenLibrary = { showGalleryLibrary = true },
+            onSendSelected = { uris ->
+                sendGallerySelection(uris)
+            },
+            onSelectionLimitReached = { gallerySelectionLimitToast() },
+        )
+    }
+    if (showGalleryLibrary) {
+        val recipient = resolveRoomTitle(uiState.room).ifBlank {
+            context.getString(R.string.room_rename_placeholder)
+        }
+        GalleryLibraryScreen(
+            recipientName = recipient,
+            enabled = !uiState.isSendingMedia,
+            onBack = { showGalleryLibrary = false },
+            onTakePhoto = {
+                showGalleryLibrary = false
+                cameraInitialTab = CameraCaptureTab.Photo
+                showCameraCapture = true
+            },
+            onSendSelected = { uris ->
+                showGalleryLibrary = false
+                sendGallerySelection(uris)
+            },
+            onSelectionLimitReached = { gallerySelectionLimitToast() },
+        )
+    }
+    if (showCameraCapture) {
+        CameraCaptureScreen(
+            imagePrepareHelper = imagePrepareHelper,
+            videoPrepareHelper = videoPrepareHelper,
+            onDismiss = { showCameraCapture = false },
+            initialTab = cameraInitialTab,
+            onPhotoReady = { uri, displayName ->
+                showCameraCapture = false
+                viewModel.onAction(
+                    RoomAction.SendMedia(uri, "image/jpeg", displayName),
+                )
+            },
+            onVideoReady = { uri, displayName ->
+                showCameraCapture = false
+                viewModel.onAction(
+                    RoomAction.SendMedia(uri, "video/mp4", displayName),
+                )
+            },
+        )
     }
 }
 
@@ -287,6 +464,7 @@ private fun RoomContent(
     onOpenVoice: () -> Unit,
     onPickGallery: () -> Unit,
     onPickDocument: () -> Unit,
+    onOpenCamera: () -> Unit,
 ) {
     var showNeedPro by remember { mutableStateOf(false) }
     val showComposer = !uiState.isLoading &&
@@ -356,13 +534,19 @@ private fun RoomContent(
                 reactionsByMessage = uiState.reactionsByMessage,
                 peerReadWatermarkId = uiState.peerReadWatermarkId,
                 onLongPressMessage = { onAction(RoomAction.OpenMessageActions(it.id)) },
-                onMediaClick = { msg ->
-                    when (msg.mediaTransferStatus) {
-                        ChatMessage.MEDIA_FAILED -> onAction(RoomAction.DismissFailedMedia)
-                        ChatMessage.MEDIA_PENDING -> Unit
-                        else -> onAction(RoomAction.OpenMediaViewer(msg.id))
+                onMediaClick = { msg, albumIndex ->
+                    when {
+                        msg.mediaKind == AttachmentMeta.KIND_VOICE -> Unit
+                        msg.mediaTransferStatus == ChatMessage.MEDIA_FAILED &&
+                            msg.mediaKind != AttachmentMeta.KIND_ALBUM ->
+                            onAction(RoomAction.DismissFailedMedia)
+                        else -> onAction(RoomAction.OpenMediaViewer(msg.id, albumIndex))
                     }
                 },
+                albumsById = MediaAlbumMerge.resolveAlbums(
+                    uiState.messages,
+                    uiState.outgoingAlbums,
+                ).associateBy { it.id },
                 scrollToMessageId = uiState.scrollToMessageId,
                 highlightMessageId = uiState.highlightMessageId,
                 wallpaperPath = uiState.room?.wallpaperLocalPath,
@@ -372,6 +556,22 @@ private fun RoomContent(
         }
 
         FeedbackMessages(uiState = uiState)
+
+        val attachErrorRes = when (uiState.errorMessage) {
+            "media_unsupported" -> R.string.room_media_unsupported_type
+            "media_too_large" -> R.string.room_media_too_large
+            else -> null
+        }
+        if (attachErrorRes != null) {
+            VanishXAlertDialog(
+                title = stringResource(R.string.room_attach_error_title),
+                body = stringResource(attachErrorRes),
+                confirmLabel = stringResource(R.string.action_back),
+                tone = VanishXAlertTone.Warn,
+                onConfirm = { onAction(RoomAction.ClearFeedback) },
+                onDismiss = { onAction(RoomAction.ClearFeedback) },
+            )
+        }
 
         if (showComposer) {
             val replySnippet = uiState.replyToMessageId?.let { id ->
@@ -401,6 +601,7 @@ private fun RoomContent(
         AttachTraySheet(
             enabled = !uiState.isSendingMedia,
             onPickDocument = onPickDocument,
+            onOpenCamera = onOpenCamera,
             onAction = onAction,
         )
     }
@@ -520,21 +721,87 @@ private fun RoomContent(
         uiState.messages.firstOrNull { it.id == id }
     }
     val mediaViewerMessage = uiState.mediaViewerMessageId?.let { id ->
-        uiState.messages.firstOrNull { it.id == id && it.isMedia }
+        val msg = uiState.messages.firstOrNull { it.id == id && it.isMedia } ?: return@let null
+        if (msg.mediaKind == AttachmentMeta.KIND_ALBUM) {
+            val album = uiState.outgoingAlbums.firstOrNull { it.id == id } ?: return@let null
+            val index = uiState.mediaViewerAlbumIndex ?: 0
+            val item = album.items.getOrNull(index) ?: return@let null
+            ChatMessage(
+                id = item.sentMessageId ?: "${msg.id}_$index",
+                roomId = msg.roomId,
+                body = "",
+                sentAt = msg.sentAt,
+                expiresAt = msg.expiresAt,
+                direction = msg.direction,
+                mediaKind = item.kind,
+                mediaMime = item.mime,
+                mediaFileName = item.displayName,
+                mediaLocalPath = item.previewPath,
+                mediaTransferStatus = item.status,
+            )
+        } else {
+            msg
+        }
     }
     if (mediaViewerMessage != null) {
-        MediaViewerDialog(
-            message = mediaViewerMessage,
-            isPro = uiState.isPro,
-            onDismiss = { onAction(RoomAction.DismissMediaViewer) },
-            onSave = {
-                if (uiState.isPro) {
-                    onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
-                } else {
-                    showNeedPro = true
-                }
-            },
-        )
+        when (mediaViewerMessage.mediaKind) {
+            AttachmentMeta.KIND_FILE -> {
+                DocumentViewerScreen(
+                    message = mediaViewerMessage,
+                    isPro = uiState.isPro,
+                    onBack = { onAction(RoomAction.DismissMediaViewer) },
+                    onSave = {
+                        if (uiState.isPro) {
+                            onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+                        } else {
+                            showNeedPro = true
+                        }
+                    },
+                )
+            }
+            AttachmentMeta.KIND_IMAGE, AttachmentMeta.KIND_VIDEO -> {
+                val albums = MediaAlbumMerge.resolveAlbums(uiState.messages, uiState.outgoingAlbums)
+                val viewerPages = buildMediaViewerPages(
+                    messages = uiState.messages,
+                    albums = albums,
+                    focusMessageId = mediaViewerMessage.id,
+                )
+                PhotoViewerScreen(
+                    pages = viewerPages,
+                    initialPageIndex = findMediaViewerPageIndex(
+                        viewerPages,
+                        mediaViewerMessage.id,
+                    ),
+                    room = uiState.room,
+                    reactionsByMessage = uiState.reactionsByMessage,
+                    myReactionByMessage = uiState.myReactionByMessage,
+                    isPro = uiState.isPro,
+                    onDismiss = { onAction(RoomAction.DismissMediaViewer) },
+                    onSave = { messageId ->
+                        if (uiState.isPro) {
+                            onAction(RoomAction.SaveMedia(messageId))
+                        } else {
+                            showNeedPro = true
+                        }
+                    },
+                    onAction = onAction,
+                )
+            }
+            else -> {
+                MediaViewerDialog(
+                    message = mediaViewerMessage,
+                    isPro = uiState.isPro,
+                    onDismiss = { onAction(RoomAction.DismissMediaViewer) },
+                    onSave = {
+                        if (uiState.isPro) {
+                            onAction(RoomAction.SaveMedia(mediaViewerMessage.id))
+                        } else {
+                            showNeedPro = true
+                        }
+                    },
+                )
+            }
+        }
     }
     if (actionMessage != null) {
         RoomMessageActionSheet(
@@ -640,10 +907,10 @@ private fun resolveAttachmentMime(context: Context, uri: android.net.Uri): Strin
         "mp4", "m4v" -> "video/mp4"
         "webm" -> "video/webm"
         "3gp", "3gpp" -> "video/3gpp"
+        "m4a", "aac" -> "audio/mp4"
         "pdf" -> "application/pdf"
         "txt" -> "text/plain"
         "md", "markdown" -> "text/markdown"
-        "zip" -> "application/zip"
         "doc" -> "application/msword"
         "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         "xls" -> "application/vnd.ms-excel"
@@ -684,4 +951,34 @@ private fun Context.findActivity(): ComponentActivity? {
         current = current.baseContext
     }
     return null
+}
+
+@Composable
+private fun VoicePermissionDialog(
+    showRationale: Boolean,
+    permanentlyDenied: Boolean,
+    onAllow: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    VanishXAlertDialog(
+        title = stringResource(R.string.room_voice_permission_title),
+        body = stringResource(
+            when {
+                permanentlyDenied -> R.string.room_voice_permission_denied_body
+                showRationale -> R.string.room_voice_permission_rationale
+                else -> R.string.room_voice_permission_body
+            },
+        ),
+        confirmLabel = stringResource(
+            if (permanentlyDenied) {
+                R.string.room_permission_open_settings
+            } else {
+                R.string.room_voice_permission_allow
+            },
+        ),
+        dismissLabel = stringResource(R.string.action_back),
+        tone = VanishXAlertTone.Accent,
+        onConfirm = onAllow,
+        onDismiss = onDismiss,
+    )
 }

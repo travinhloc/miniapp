@@ -1,4 +1,4 @@
-@file:Suppress("ComplexMethod", "NestedBlockDepth", "ReturnCount", "MagicNumber")
+@file:Suppress("ComplexMethod", "NestedBlockDepth", "ReturnCount", "MagicNumber", "LongMethod")
 
 package com.vault.vanishx.data.media
 
@@ -55,12 +55,35 @@ class MediaContentLoader @Inject constructor(
                 )
             }
             AttachmentMeta.KIND_VIDEO -> {
-                validateVideo(uri)
+                validateDuration(
+                    uri = uri,
+                    maxMs = MediaLimits.VIDEO_MAX_DURATION_MS,
+                    label = "Video",
+                )
                 val bytes = readBytes(uri, MediaLimits.VIDEO_MAX_BYTES)
                 LoadedMedia(
                     kind = kind,
                     bytes = bytes,
                     mime = resolvedMime,
+                    fileName = displayName,
+                )
+            }
+            AttachmentMeta.KIND_VOICE -> {
+                validateDuration(
+                    uri = uri,
+                    maxMs = MediaLimits.VOICE_MAX_DURATION_MS,
+                    label = "Voice",
+                )
+                val bytes = readBytes(uri, MediaLimits.VOICE_MAX_BYTES)
+                val voiceMime = when {
+                    resolvedMime in MediaLimits.VOICE_MIME -> resolvedMime
+                    resolvedMime == "application/octet-stream" -> "audio/mp4"
+                    else -> "audio/mp4"
+                }
+                LoadedMedia(
+                    kind = kind,
+                    bytes = bytes,
+                    mime = voiceMime,
                     fileName = displayName,
                 )
             }
@@ -76,14 +99,14 @@ class MediaContentLoader @Inject constructor(
         }
     }
 
-    private fun validateVideo(uri: Uri) {
+    private fun validateDuration(uri: Uri, maxMs: Long, label: String) {
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(context, uri)
             val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 ?.toLongOrNull() ?: 0L
-            require(duration in 1..MediaLimits.VIDEO_MAX_DURATION_MS) {
-                "Video duration must be ≤ ${MediaLimits.VIDEO_MAX_DURATION_MS / MS_PER_SEC}s"
+            require(duration in 1..maxMs) {
+                "$label duration must be ≤ ${maxMs / MS_PER_SEC}s"
             }
         } finally {
             retriever.release()

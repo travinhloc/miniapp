@@ -49,9 +49,7 @@ import com.vault.vanishx.presentation.theme.VanishXColors
  * Composer bar (Zalo-like):
  * - empty draft → `[input] […] [mic] [gallery]`
  * - has text → `[input] [send]`
- * - `…` → more tray (documents + stubs)
- * - gallery → system Photo Picker (images/videos)
- * - mic → voice tray stub
+ * - mic → opens voice record sheet (tap/hold inside sheet)
  */
 @Composable
 internal fun RoomComposer(
@@ -71,6 +69,7 @@ internal fun RoomComposer(
     val view = LocalView.current
     val sendCd = stringResource(R.string.room_send_cd)
     val sendSensitiveCd = stringResource(R.string.room_send_sensitive_cd)
+    val voiceCd = stringResource(R.string.room_voice_cd)
 
     Column(
         modifier = Modifier
@@ -188,10 +187,11 @@ internal fun RoomComposer(
                         IconButton(
                             onClick = onOpenVoice,
                             enabled = canAttach,
+                            modifier = Modifier.semantics { contentDescription = voiceCd },
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_composer_mic),
-                                contentDescription = stringResource(R.string.room_voice_cd),
+                                contentDescription = null,
                                 tint = VanishXColors.Muted,
                             )
                         }
