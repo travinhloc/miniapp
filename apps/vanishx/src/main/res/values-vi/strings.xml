@@ -458,13 +458,14 @@
     <string name="room_viewer_you">Bạn</string>
     <string name="room_media_save">Lưu vào thiết bị</string>
     <string name="room_media_save_pro">Lưu với Pro</string>
-    <string name="room_media_saved">Đã lưu vào máy</string>
+    <string name="room_media_saved">Đã lưu bản mã hóa vào Download/VanishX</string>
     <string name="room_media_save_failed">Không lưu được tệp đính kèm</string>
     <string name="room_media_missing">Không có tệp đính kèm</string>
     <string name="room_doc_open_system">Mở bằng app khác</string>
     <string name="room_doc_open_system_cd">Mở bằng app khác</string>
     <string name="room_doc_office_hint">Loại tệp này mở bằng ứng dụng khác trên máy bạn.</string>
     <string name="room_doc_loading">Đang tải tài liệu…</string>
+    <string name="room_doc_empty">Tệp trống.</string>
     <string name="room_doc_pdf_page_cd">Trang PDF</string>
     <string name="room_doc_prev_page">Trước</string>
     <string name="room_doc_next_page">Sau</string>

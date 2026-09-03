@@ -84,6 +84,7 @@ Plaintext never leaves the device. Free has **no recall**. Pro recall (4.2) = st
 | Wire | Raw IV‖ciphertext‖tag bytes on Firebase Storage |
 | Envelope | RTDB message plaintext `v:2` JSON (meta only) via `MessagePlaintextCodec` |
 | Local cache | `noBackupFilesDir/media` |
+| Pro Save (export) | Ciphertext via `RoomBlobCipher` → public **`Download/VanishX/*.vxenc`** (not Gallery plaintext) |
 
 ## 7. Block & Report (story 3.3)
 

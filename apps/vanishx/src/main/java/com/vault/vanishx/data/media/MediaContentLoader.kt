@@ -40,6 +40,12 @@ class MediaContentLoader @Inject constructor(
         val resolvedMime = when {
             kind == AttachmentMeta.KIND_IMAGE && mime == "application/octet-stream" -> "image/jpeg"
             kind == AttachmentMeta.KIND_VIDEO && mime == "application/octet-stream" -> "video/mp4"
+            kind == AttachmentMeta.KIND_FILE &&
+                mime == "application/octet-stream" &&
+                MediaLimits.isPlainTextDocument(mime, displayName) -> {
+                val ext = displayName?.substringAfterLast('.', "")?.lowercase()
+                if (ext == "md" || ext == "markdown") "text/markdown" else "text/plain"
+            }
             else -> mime
         }
         return when (kind) {

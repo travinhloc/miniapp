@@ -458,13 +458,14 @@
     <string name="room_viewer_you">You</string>
     <string name="room_media_save">Save to device</string>
     <string name="room_media_save_pro">Save with Pro</string>
-    <string name="room_media_saved">Saved to device</string>
+    <string name="room_media_saved">Encrypted copy saved to Download/VanishX</string>
     <string name="room_media_save_failed">Could not save attachment</string>
     <string name="room_media_missing">Attachment unavailable</string>
     <string name="room_doc_open_system">Open with another app</string>
     <string name="room_doc_open_system_cd">Open with another app</string>
     <string name="room_doc_office_hint">This file type opens in another app on your device.</string>
     <string name="room_doc_loading">Loading document…</string>
+    <string name="room_doc_empty">This file is empty.</string>
     <string name="room_doc_pdf_page_cd">PDF page</string>
     <string name="room_doc_prev_page">Previous</string>
     <string name="room_doc_next_page">Next</string>

@@ -1366,8 +1366,11 @@ class RoomViewModel @Inject constructor(
             onAction(RoomAction.OpenPaywall)
             return
         }
+        val room = _uiState.value.room ?: return
         val message = _uiState.value.messages.firstOrNull { it.id == messageId } ?: return
-        flow { emit(mediaExportHelper.saveToDevice(message)) }
+        val roomKey = room.roomKey
+        if (roomKey.isBlank()) return
+        flow { emit(mediaExportHelper.saveToDevice(message, roomKey)) }
             .flowOn(dispatchersProvider.io)
             .onEach { ok ->
                 _uiState.update {
