@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.conversation
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,9 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -107,7 +106,7 @@ fun ConversationRow(
                 )
                 if (model.isFavorite) {
                     Icon(
-                        imageVector = Icons.Filled.Star,
+                        imageVector = VanishXIcons.Star,
                         contentDescription = stringResource(R.string.room_options_favorite),
                         tint = VanishXColors.NeonAmber,
                         modifier = Modifier.size(14.dp),
@@ -149,7 +148,7 @@ fun ConversationRow(
                         modifier = Modifier.size(36.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Share,
+                            imageVector = VanishXIcons.Share,
                             contentDescription = stringResource(R.string.home_invite_qr),
                             tint = VanishXColors.Primary,
                             modifier = Modifier.size(20.dp),

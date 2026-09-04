@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -25,8 +27,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -193,7 +193,7 @@ internal fun WaitingStage(
                             ),
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Share,
+                                imageVector = VanishXIcons.Share,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                             )

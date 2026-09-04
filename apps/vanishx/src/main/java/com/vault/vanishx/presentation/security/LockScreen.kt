@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.security
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,8 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -258,7 +258,7 @@ private fun BurnOverlay(isBusy: Boolean) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                imageVector = Icons.Filled.Warning,
+                imageVector = VanishXIcons.Alert,
                 contentDescription = null,
                 tint = VanishXColors.Error,
                 modifier = Modifier.size(BurnIconSize),

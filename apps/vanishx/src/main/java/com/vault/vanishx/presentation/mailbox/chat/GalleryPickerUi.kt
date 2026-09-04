@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -21,10 +23,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -141,14 +139,14 @@ internal fun GalleryTakePhotoTile(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (useCameraIcon) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_gallery_camera),
+                    imageVector = VanishXIcons.Camera,
                     contentDescription = null,
                     tint = VanishXColors.OnSurface,
                     modifier = Modifier.size(32.dp),
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Filled.Add,
+                    imageVector = VanishXIcons.Plus,
                     contentDescription = null,
                     tint = VanishXColors.OnSurface,
                     modifier = Modifier.size(28.dp),
@@ -283,7 +281,7 @@ internal fun GallerySendFab(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.Send,
+            imageVector = VanishXIcons.Send,
             contentDescription = stringResource(R.string.room_gallery_send),
             tint = VanishXColors.OnPrimary,
             modifier = Modifier.size(26.dp),

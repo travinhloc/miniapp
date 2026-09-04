@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,12 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -91,7 +87,7 @@ internal fun RoomMessageActionSheet(
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 ActionCell(
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    icon = VanishXIcons.ArrowBack,
                     label = stringResource(R.string.room_action_reply),
                     onClick = {
                         onAction(RoomAction.ReplyToMessage(message.id))
@@ -100,7 +96,7 @@ internal fun RoomMessageActionSheet(
                 )
                 if (canRecall || showRecallPaywall) {
                     ActionCell(
-                        icon = Icons.Filled.Refresh,
+                        icon = VanishXIcons.Refresh,
                         label = stringResource(R.string.room_action_recall),
                         onClick = {
                             if (canRecall) {
@@ -113,7 +109,7 @@ internal fun RoomMessageActionSheet(
                     )
                 }
                 ActionCell(
-                    icon = Icons.Filled.Share,
+                    icon = VanishXIcons.Share,
                     label = stringResource(R.string.room_action_copy),
                     enabled = canCopy,
                     onClick = {
@@ -122,7 +118,7 @@ internal fun RoomMessageActionSheet(
                     },
                 )
                 ActionCell(
-                    icon = Icons.Filled.Info,
+                    icon = VanishXIcons.Information,
                     label = stringResource(R.string.room_action_details),
                     onClick = {
                         onAction(RoomAction.OpenMessageDetails(message.id))
@@ -134,7 +130,7 @@ internal fun RoomMessageActionSheet(
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
                     ActionCell(
-                        icon = Icons.Filled.Delete,
+                        icon = VanishXIcons.Delete,
                         label = stringResource(R.string.room_action_delete),
                         danger = true,
                         onClick = {

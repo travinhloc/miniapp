@@ -58,6 +58,7 @@
     <string name="home_pro_stub_hint">Stub MVP — IAP thật sau. Chỉ staging debug.</string>
 
     <string name="action_cancel">Hủy</string>
+    <string name="action_ok">Ok</string>
 
     <!-- Badges -->
     <string name="badge_remaining">Còn %1$s</string>
@@ -323,17 +324,29 @@
     <string name="security_unlock_pin_confirm">Xác nhận PIN mở khóa</string>
     <string name="security_panic_pin">Panic PIN mới</string>
     <string name="security_panic_pin_confirm">Xác nhận Panic PIN</string>
-    <string name="security_panic_hint">Phải khác PIN mở khóa. Dùng khi bị ép — reset như máy mới cài.</string>
+    <string name="security_panic_hint">Dùng khi bị ép — reset như máy mới cài.</string>
     <string name="security_save_unlock">Lưu PIN mở khóa</string>
     <string name="security_save_panic">Lưu Panic PIN</string>
     <string name="security_clear_unlock">Xóa PIN mở khóa</string>
     <string name="security_clear_panic">Xóa Panic PIN</string>
+    <string name="security_pin_mismatch_error">PIN không khớp. Thử lại.</string>
+    <string name="security_pin_length_error">Nhập PIN 4 số và xác nhận lại.</string>
+    <string name="security_panic_pin_rejected">Không lưu được PIN này. Hãy thử mã khác.</string>
+    <string name="security_clear_unlock_confirm_title">Xóa PIN mở khóa?</string>
+    <string name="security_clear_unlock_confirm_body">Nhập PIN mở khóa hiện tại để xác nhận xóa. Ứng dụng sẽ không còn yêu cầu PIN khi mở.</string>
+    <string name="security_clear_panic_confirm_title">Xóa Panic PIN?</string>
+    <string name="security_clear_panic_confirm_body">Nhập Panic PIN hiện tại để xác nhận xóa. Xóa khẩn cấp bằng Panic PIN sẽ không còn hoạt động cho đến khi bạn đặt lại.</string>
+    <string name="security_clear_pin_current_label">PIN hiện tại</string>
+    <string name="security_clear_pin_wrong">PIN sai. Thử lại.</string>
     <string name="settings_section_identity">Danh tính</string>
     <string name="settings_section_security">Bảo mật</string>
     <string name="settings_section_pro">Pro (staging)</string>
     <string name="settings_section_privacy">Riêng tư</string>
     <string name="settings_bio_title">Vân tay / khuôn mặt</string>
     <string name="settings_bio_sub">Mở khóa không cần gõ PIN khi máy hỗ trợ</string>
+    <string name="settings_bio_enable_title">Xác nhận vân tay / khuôn mặt</string>
+    <string name="settings_bio_enable_subtitle">Xác thực một lần để bật mở khóa sinh trắc học</string>
+    <string name="settings_bio_unavailable">Máy này không hỗ trợ sinh trắc học</string>
     <string name="settings_blocked_row_title">Đã chặn</string>
     <string name="settings_blocked_row_sub">Người đã chặn trên máy này</string>
     <string name="settings_blocked_title">Đã chặn</string>

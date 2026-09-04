@@ -1,13 +1,12 @@
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +34,7 @@ internal fun RoomScreenshotBanner(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Icon(
-            imageVector = Icons.Filled.Warning,
+            imageVector = VanishXIcons.Alert,
             contentDescription = null,
             tint = VanishXColors.NeonAmber,
         )
@@ -47,7 +46,7 @@ internal fun RoomScreenshotBanner(
         )
         IconButton(onClick = onDismiss) {
             Icon(
-                imageVector = Icons.Filled.Close,
+                imageVector = VanishXIcons.Close,
                 contentDescription = stringResource(R.string.room_screenshot_dismiss_cd),
                 tint = VanishXColors.Muted,
             )

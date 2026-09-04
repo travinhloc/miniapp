@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -34,9 +36,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -373,7 +372,7 @@ internal fun RoomMessageList(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            imageVector = VanishXIcons.ChevronDown,
                             contentDescription = null,
                             tint = VanishXColors.Primary,
                             modifier = Modifier.size(18.dp),
@@ -464,7 +463,7 @@ internal fun E2eEmptyCard(onClick: () -> Unit) {
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
         ) {
             Icon(
-                imageVector = Icons.Filled.Lock,
+                imageVector = VanishXIcons.Lock,
                 contentDescription = null,
                 tint = RoomUiDimens.e2eLockTint,
                 modifier = Modifier.size(28.dp),

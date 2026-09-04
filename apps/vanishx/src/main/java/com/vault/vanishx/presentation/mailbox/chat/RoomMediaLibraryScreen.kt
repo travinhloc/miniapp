@@ -2,7 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
-import androidx.compose.foundation.Image
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,10 +25,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,20 +39,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import java.util.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.AttachmentMeta
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.vanishxScreenInsets
-import java.io.File
 
 private enum class MediaLibraryTab {
     Photos,
@@ -111,7 +105,7 @@ private fun MediaLibraryTopBar(onBack: () -> Unit) {
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = VanishXIcons.ArrowBack,
                 contentDescription = stringResource(R.string.action_back),
                 tint = VanishXColors.OnSurface,
             )
@@ -209,57 +203,13 @@ private fun MediaLibraryBody(
 
 @Composable
 private fun MediaLibraryCell(message: ChatMessage, onClick: () -> Unit) {
-    val path = message.mediaLocalPath ?: return
-    val isVisual = message.isPhotoOrVideo()
-    Box(
+    MediaThumbnail(
+        message = message,
         modifier = Modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(10.dp))
-            .background(VanishXColors.Surface2)
             .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (isVisual) {
-            Image(
-                painter = rememberAsyncImagePainter(File(path)),
-                contentDescription = message.mediaFileName,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            if (message.mediaKind == AttachmentMeta.KIND_VIDEO) {
-                Text(
-                    text = "▶",
-                    color = VanishXColors.OnPrimary,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .background(VanishXColors.Bg.copy(alpha = 0.45f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                )
-            }
-        } else {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Info,
-                    contentDescription = null,
-                    tint = VanishXColors.Primary,
-                    modifier = Modifier.size(28.dp),
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = message.mediaFileName
-                        ?: message.mediaKind?.uppercase()
-                        ?: "DOC",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = VanishXColors.OnSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
+    )
 }
 
 @Composable
@@ -282,7 +232,7 @@ private fun VoiceLibraryRow(message: ChatMessage, onClick: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = Icons.Filled.PlayArrow,
+                imageVector = VanishXIcons.Play,
                 contentDescription = null,
                 tint = VanishXColors.Primary,
                 modifier = Modifier.size(28.dp),

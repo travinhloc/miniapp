@@ -21,6 +21,7 @@ internal class PhotoViewerPagerLayout(
     private var pages: List<MediaViewerPage> = emptyList()
     private var callbacks = Callbacks()
     private var dismissOffsetPx = 0f
+    private var chromeVisible: Boolean = true
 
     init {
         addView(
@@ -43,6 +44,11 @@ internal class PhotoViewerPagerLayout(
         this.callbacks = callbacks
     }
 
+    fun setChromeVisible(visible: Boolean) {
+        chromeVisible = visible
+        (viewPager.adapter as? PhotoViewerPagerAdapter)?.setChromeVisible(visible)
+    }
+
     fun setContent(pages: List<MediaViewerPage>, initialIndex: Int) {
         if (pagesContentEquals(this.pages, pages) && viewPager.adapter != null) return
         this.pages = pages
@@ -54,6 +60,9 @@ internal class PhotoViewerPagerLayout(
         viewPager.adapter = PhotoViewerPagerAdapter(
             pages = pages,
             onPhotoTap = { callbacks.onPhotoTap() },
+            onVideoControlsVisible = { controlsVisible ->
+                callbacks.onVideoControlsVisible(controlsVisible)
+            },
             onScaleChanged = { updatePagerInputEnabled() },
             onDismissPull = { deltaY ->
                 dismissOffsetPx = (dismissOffsetPx + deltaY).coerceAtLeast(0f)
@@ -70,7 +79,9 @@ internal class PhotoViewerPagerLayout(
                 updatePagerInputEnabled()
             },
             onHorizontalSwipe = { delta -> movePage(delta) },
-        )
+        ).also { adapter ->
+            adapter.setChromeVisible(chromeVisible)
+        }
         viewPager.offscreenPageLimit = 1
         viewPager.setCurrentItem(targetIndex, false)
         updatePagerInputEnabled()
@@ -94,6 +105,7 @@ internal class PhotoViewerPagerLayout(
         val onDismissRequested: () -> Unit = {},
         val onPageSelected: (Int) -> Unit = {},
         val onPhotoTap: () -> Unit = {},
+        val onVideoControlsVisible: (Boolean) -> Unit = {},
     )
 
     private companion object {

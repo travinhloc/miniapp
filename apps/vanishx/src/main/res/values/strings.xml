@@ -58,6 +58,7 @@
     <string name="home_pro_stub_hint">MVP stub — real IAP later. Staging debug only.</string>
 
     <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
 
     <!-- Badges -->
     <string name="badge_remaining">%1$s left</string>
@@ -323,17 +324,29 @@
     <string name="security_unlock_pin_confirm">Confirm unlock PIN</string>
     <string name="security_panic_pin">New Panic PIN</string>
     <string name="security_panic_pin_confirm">Confirm Panic PIN</string>
-    <string name="security_panic_hint">Must differ from unlock PIN. Use under coercion — resets the app like a fresh install.</string>
+    <string name="security_panic_hint">Use under coercion — resets the app like a fresh install.</string>
     <string name="security_save_unlock">Save unlock PIN</string>
     <string name="security_save_panic">Save Panic PIN</string>
     <string name="security_clear_unlock">Remove unlock PIN</string>
     <string name="security_clear_panic">Remove Panic PIN</string>
+    <string name="security_pin_mismatch_error">PINs don’t match. Try again.</string>
+    <string name="security_pin_length_error">Enter a 4-digit PIN and confirm it.</string>
+    <string name="security_panic_pin_rejected">Couldn’t save that PIN. Try a different one.</string>
+    <string name="security_clear_unlock_confirm_title">Remove unlock PIN?</string>
+    <string name="security_clear_unlock_confirm_body">Enter your current unlock PIN to confirm removal. The app will no longer ask for a PIN when you open it.</string>
+    <string name="security_clear_panic_confirm_title">Remove Panic PIN?</string>
+    <string name="security_clear_panic_confirm_body">Enter your current Panic PIN to confirm removal. Emergency wipe via Panic PIN will stop working until you set one again.</string>
+    <string name="security_clear_pin_current_label">Current PIN</string>
+    <string name="security_clear_pin_wrong">Wrong PIN. Try again.</string>
     <string name="settings_section_identity">Identity</string>
     <string name="settings_section_security">Security</string>
     <string name="settings_section_pro">Pro (staging)</string>
     <string name="settings_section_privacy">Privacy</string>
     <string name="settings_bio_title">Fingerprint / face</string>
     <string name="settings_bio_sub">Unlock without typing PIN when this device supports it</string>
+    <string name="settings_bio_enable_title">Confirm fingerprint / face</string>
+    <string name="settings_bio_enable_subtitle">Authenticate once to turn on biometric unlock</string>
+    <string name="settings_bio_unavailable">Biometrics aren’t available on this device</string>
     <string name="settings_blocked_row_title">Blocked</string>
     <string name="settings_blocked_row_sub">Peers blocked on this device</string>
     <string name="settings_blocked_title">Blocked</string>

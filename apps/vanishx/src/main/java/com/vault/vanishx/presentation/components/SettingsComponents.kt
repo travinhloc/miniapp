@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.components
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,11 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,7 +69,7 @@ fun SettingsTopBar(
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = VanishXIcons.ArrowBack,
                 contentDescription = stringResource(R.string.action_back),
                 tint = VanishXColors.OnSurface,
             )
@@ -129,7 +126,7 @@ fun SettingsNavRow(
     subtitle: String?,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
-    leadingIcon: ImageVector = Icons.Filled.Settings,
+    leadingIcon: ImageVector = VanishXIcons.Settings,
     leadingTone: SettingsLeadingTone = SettingsLeadingTone.Primary,
     trailingStatus: String? = null,
     trailingStatusAccent: Boolean = false,
@@ -206,7 +203,7 @@ fun SettingsSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    leadingIcon: ImageVector = Icons.Filled.Lock,
+    leadingIcon: ImageVector = VanishXIcons.Lock,
     leadingTone: SettingsLeadingTone = SettingsLeadingTone.Primary,
 ) {
     Row(
@@ -294,7 +291,7 @@ fun SettingsIdentityRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SettingsLeadingIcon(icon = Icons.Filled.Lock, tone = SettingsLeadingTone.Primary)
+        SettingsLeadingIcon(icon = VanishXIcons.Lock, tone = SettingsLeadingTone.Primary)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,

@@ -9,6 +9,8 @@ import android.net.Uri
 import com.miniapp.core.common.DispatchersProvider
 import com.miniapp.core.mvvm.BaseDestination
 import com.miniapp.core.mvvm.BaseViewModel
+import com.vault.vanishx.data.local.ComposerDraftStore
+import com.vault.vanishx.data.push.RoomForegroundTracker
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.data.remote.RemotePresence
 import com.vault.vanishx.data.remote.RemoteReaction
@@ -42,7 +44,6 @@ import com.vault.vanishx.domain.usecase.SyncRoomMailboxUseCase
 import com.vault.vanishx.domain.usecase.UpdateRoomLocalPrefsUseCase
 import com.vault.vanishx.domain.usecase.WipeRoomMediaUseCase
 import com.vault.vanishx.domain.usecase.WritePingSignalUseCase
-import com.vault.vanishx.data.push.RoomForegroundTracker
 import com.vault.vanishx.presentation.paywall.PaywallDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -243,6 +244,7 @@ class RoomViewModel @Inject constructor(
     private val identityRepository: IdentityRepository,
     private val proEntitlement: ProEntitlementRepository,
     private val remote: MailboxRemoteDataSource,
+    private val composerDraftStore: ComposerDraftStore,
     private val dispatchersProvider: DispatchersProvider,
 ) : BaseViewModel() {
 
@@ -262,6 +264,7 @@ class RoomViewModel @Inject constructor(
     private var expiryJob: Job? = null
     private var engagementJob: Job? = null
     private var mediaSendJob: Job? = null
+    private var draftPersistJob: Job? = null
     private var mediaSendGeneration: Int = 0
     private var lastPeerPingAtMs = 0L
     private var presenceDeviceId: String = ""
@@ -275,13 +278,16 @@ class RoomViewModel @Inject constructor(
 
     override fun onCleared() {
         cancelMediaQueue()
+        draftPersistJob?.cancel()
+        val draftToSave = _uiState.value.draft
         observeJob?.cancel()
         metaObserveJob?.cancel()
         expiryJob?.cancel()
         engagementJob?.cancel()
         val deviceId = presenceDeviceId.ifBlank { _uiState.value.myDeviceId }
-        if (deviceId.isNotBlank()) {
-            CoroutineScope(dispatchersProvider.io).launch {
+        CoroutineScope(dispatchersProvider.io).launch {
+            runCatching { composerDraftStore.set(roomId, draftToSave) }
+            if (deviceId.isNotBlank()) {
                 runCatching { remote.setPresence(roomId, deviceId, online = false) }
             }
         }
@@ -292,6 +298,7 @@ class RoomViewModel @Inject constructor(
         when (action) {
             RoomAction.Back -> {
                 cancelMediaQueue()
+                flushDraftNow(_uiState.value.draft)
                 launch { _navigator.emit(BaseDestination.Up()) }
             }
             RoomAction.Refresh -> sync(showLoading = true)
@@ -325,6 +332,7 @@ class RoomViewModel @Inject constructor(
                     it.copy(draft = action.value, errorMessage = null)
                 }
                 publishTyping(action.value)
+                scheduleDraftPersist(action.value)
             }
             RoomAction.RequestSensitiveSend -> {
                 if (_uiState.value.draft.isNotBlank() && !_uiState.value.isSending) {
@@ -420,7 +428,7 @@ class RoomViewModel @Inject constructor(
             }
             RoomAction.DismissRoomOptions -> _uiState.update { it.copy(showRoomOptions = false) }
             RoomAction.OpenMediaLibrary -> _uiState.update {
-                it.copy(showMediaLibrary = true, showRoomOptions = false)
+                it.copy(showMediaLibrary = true)
             }
             RoomAction.DismissMediaLibrary -> _uiState.update { it.copy(showMediaLibrary = false) }
             RoomAction.OpenWallpaperSheet -> _uiState.update {
@@ -807,7 +815,15 @@ class RoomViewModel @Inject constructor(
             } else {
                 emptyList()
             }
-            emit(BootstrapPayload(room = room, messages = localMessages))
+            val draft = if (room != null &&
+                room.status != MailboxRoom.STATUS_LEFT &&
+                room.status != MailboxRoom.STATUS_EXPIRED
+            ) {
+                composerDraftStore.get(roomId)
+            } else {
+                ""
+            }
+            emit(BootstrapPayload(room = room, messages = localMessages, draft = draft))
         }
             .flowOn(dispatchersProvider.io)
             .onEach { payload ->
@@ -828,6 +844,7 @@ class RoomViewModel @Inject constructor(
                             roomId,
                         ),
                         outgoingAlbums = albums,
+                        draft = if (expired) "" else payload.draft,
                         isExpired = expired,
                         errorMessage = if (room == null) "Room not found" else null,
                         showInviteSheet = state.showInviteSheet || openInvite,
@@ -836,7 +853,10 @@ class RoomViewModel @Inject constructor(
                 when {
                     room == null -> Unit
                     room.status == MailboxRoom.STATUS_LEFT -> Unit
-                    expired -> purgeAndShowExpired()
+                    expired -> {
+                        clearPersistedDraft()
+                        purgeAndShowExpired()
+                    }
                     else -> {
                         scheduleExpiry(room)
                         refreshMetaInBackground()
@@ -900,6 +920,7 @@ class RoomViewModel @Inject constructor(
     private data class BootstrapPayload(
         val room: MailboxRoom?,
         val messages: List<ChatMessage>,
+        val draft: String,
     )
 
     private fun scheduleExpiry(room: MailboxRoom) {
@@ -923,6 +944,7 @@ class RoomViewModel @Inject constructor(
         metaObserveJob?.cancel()
         engagementJob?.cancel()
         setPresenceOffline()
+        clearPersistedDraft()
         _uiState.update {
             it.copy(
                 isExpired = true,
@@ -1116,6 +1138,7 @@ class RoomViewModel @Inject constructor(
                 errorMessage = null,
             )
         }
+        clearPersistedDraft()
         publishTyping("")
         flow { emit(sendRoomMessage(roomId, draft, sensitive, _uiState.value.replyToMessageId)) }
             .flowOn(dispatchersProvider.io)
@@ -1139,6 +1162,7 @@ class RoomViewModel @Inject constructor(
                         errorMessage = friendlyError(e),
                     )
                 }
+                scheduleDraftPersist(_uiState.value.draft)
             }
             .launchIn(viewModelScope)
     }
@@ -1624,6 +1648,31 @@ class RoomViewModel @Inject constructor(
         }
     }
 
+    private fun scheduleDraftPersist(value: String) {
+        draftPersistJob?.cancel()
+        draftPersistJob = viewModelScope.launch(dispatchersProvider.io) {
+            delay(DRAFT_PERSIST_DEBOUNCE_MS)
+            runCatching { composerDraftStore.set(roomId, value) }
+                .onFailure { Timber.w(it, "Persist composer draft failed") }
+        }
+    }
+
+    private fun flushDraftNow(value: String) {
+        draftPersistJob?.cancel()
+        viewModelScope.launch(dispatchersProvider.io) {
+            runCatching { composerDraftStore.set(roomId, value) }
+                .onFailure { Timber.w(it, "Flush composer draft failed") }
+        }
+    }
+
+    private fun clearPersistedDraft() {
+        draftPersistJob?.cancel()
+        viewModelScope.launch(dispatchersProvider.io) {
+            runCatching { composerDraftStore.clear(roomId) }
+                .onFailure { Timber.w(it, "Clear composer draft failed") }
+        }
+    }
+
     private fun publishTyping(draft: String) {
         val deviceId = _uiState.value.myDeviceId.ifBlank { presenceDeviceId }
         if (deviceId.isBlank()) return
@@ -1724,6 +1773,7 @@ class RoomViewModel @Inject constructor(
         const val MS_PER_SEC = 1_000L
         const val PRESENCE_GRACE_MS = 60_000L
         const val TYPING_TTL_MS = 3_000L
+        const val DRAFT_PERSIST_DEBOUNCE_MS = 300L
         const val INFO_TTL_STUB = "ttl_stub"
     }
 }

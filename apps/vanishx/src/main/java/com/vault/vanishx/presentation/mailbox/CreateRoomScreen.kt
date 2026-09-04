@@ -1,5 +1,7 @@
 package com.vault.vanishx.presentation.mailbox
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,10 +17,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -85,7 +83,7 @@ private fun CreateRoomContent(
         ) {
             IconButton(onClick = { onAction(CreateRoomAction.Back) }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = VanishXIcons.ArrowBack,
                     contentDescription = stringResource(R.string.action_back),
                     tint = VanishXColors.OnSurface,
                 )
@@ -121,7 +119,7 @@ private fun CreateRoomContent(
             ) {
                 ModeChoiceCard(
                     selected = uiState.mode == CreateRoomMode.INSTANT,
-                    icon = Icons.Filled.PlayArrow,
+                    icon = VanishXIcons.Play,
                     title = stringResource(R.string.create_mode_instant_title),
                     description = stringResource(R.string.create_mode_instant_desc),
                     enabled = !uiState.isCreating,
@@ -129,7 +127,7 @@ private fun CreateRoomContent(
                 )
                 ModeChoiceCard(
                     selected = uiState.mode == CreateRoomMode.LATER,
-                    icon = Icons.Filled.DateRange,
+                    icon = VanishXIcons.Calendar,
                     title = stringResource(R.string.create_mode_later_title),
                     description = stringResource(R.string.create_mode_later_desc),
                     enabled = !uiState.isCreating,

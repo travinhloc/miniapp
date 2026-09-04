@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,9 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,7 +68,7 @@ internal fun RoomHeader(
         ) {
             IconButton(onClick = { onAction(RoomAction.Back) }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = VanishXIcons.ArrowBack,
                     contentDescription = stringResource(R.string.action_back),
                     tint = VanishXColors.OnSurface,
                 )
@@ -127,7 +126,7 @@ internal fun RoomHeader(
             if (showMenu) {
                 IconButton(onClick = { onAction(RoomAction.OpenRoomOptions) }) {
                     Icon(
-                        imageVector = Icons.Filled.MoreVert,
+                        imageVector = VanishXIcons.DotsVertical,
                         contentDescription = stringResource(R.string.room_menu_cd),
                         tint = VanishXColors.OnSurface,
                     )

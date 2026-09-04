@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -12,15 +14,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -125,9 +123,14 @@ internal fun PhotoViewerScreen(
                             dismissOffsetState.floatValue = 0f
                         },
                         onPhotoTap = { chromeVisible = !chromeVisible },
+                        // Seek visible ↔ hide reaction/toolbars (and the reverse).
+                        onVideoControlsVisible = { controlsVisible ->
+                            chromeVisible = !controlsVisible
+                        },
                     ),
                 )
                 layout.setContent(pages, startIndex)
+                layout.setChromeVisible(chromeVisible)
             },
         )
 
@@ -179,56 +182,56 @@ private fun PhotoViewerTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(RoomUiDimens.topBarHeight)
             .background(Color.Black.copy(alpha = 0.55f))
-            .statusBarsPadding()
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = VanishXIcons.ArrowBack,
                 contentDescription = stringResource(R.string.action_back),
                 tint = Color.White,
             )
         }
         RoomAvatar(
             letter = senderLetter,
-            size = 36.dp,
             imagePath = avatarPath,
         )
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 10.dp),
+                .padding(horizontal = 4.dp),
         ) {
             Text(
                 text = senderTitle,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.15.sp,
+                ),
                 color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = pageLabel,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 12.sp,
+                    letterSpacing = 0.25.sp,
+                ),
                 color = Color.White.copy(alpha = 0.65f),
+                maxLines = 1,
             )
         }
-        TextButton(onClick = onSave) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_download),
-                    contentDescription = stringResource(R.string.room_media_save),
-                    tint = Color.White,
-                    modifier = Modifier.padding(end = 4.dp),
-                )
-                Text(
-                    text = stringResource(
-                        if (isPro) R.string.room_media_save else R.string.room_media_save_pro,
-                    ),
-                    color = Color.White,
-                )
-            }
+        IconButton(onClick = onSave) {
+            Icon(
+                imageVector = VanishXIcons.Download,
+                contentDescription = stringResource(
+                    if (isPro) R.string.room_media_save else R.string.room_media_save_pro,
+                ),
+                tint = Color.White,
+            )
         }
     }
 }

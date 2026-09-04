@@ -3,6 +3,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.graphics.Bitmap
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.Image
@@ -22,9 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +43,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -127,7 +125,7 @@ internal fun VideoMediaPreview(message: ChatMessage) {
                 .size(48.dp),
         ) {
             Icon(
-                imageVector = Icons.Filled.PlayArrow,
+                imageVector = VanishXIcons.Play,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.padding(10.dp),
@@ -241,7 +239,7 @@ internal fun VoiceMediaPreview(
                     }
                     failed -> {
                         Icon(
-                            imageVector = Icons.Filled.Close,
+                            imageVector = VanishXIcons.Close,
                             contentDescription = stringResource(R.string.room_media_failed),
                             tint = activeColor,
                             modifier = Modifier.size(20.dp),
@@ -249,7 +247,7 @@ internal fun VoiceMediaPreview(
                     }
                     playing -> {
                         Icon(
-                            painter = painterResource(R.drawable.ic_voice_pause),
+                            imageVector = VanishXIcons.Pause,
                             contentDescription = stringResource(R.string.room_voice_play_cd),
                             tint = activeColor,
                             modifier = Modifier.size(20.dp),
@@ -257,7 +255,7 @@ internal fun VoiceMediaPreview(
                     }
                     else -> {
                         Icon(
-                            imageVector = Icons.Filled.PlayArrow,
+                            imageVector = VanishXIcons.Play,
                             contentDescription = stringResource(R.string.room_voice_play_cd),
                             tint = activeColor,
                             modifier = Modifier.size(22.dp),
@@ -430,7 +428,7 @@ private fun DocTypeBadge(typeLabel: String, large: Boolean) {
 }
 
 @Composable
-private fun rememberMediaPreviewLoader(): MediaPreviewLoader {
+internal fun rememberMediaPreviewLoader(): MediaPreviewLoader {
     val context = LocalContext.current
     return remember(context) {
         EntryPointAccessors.fromApplication(

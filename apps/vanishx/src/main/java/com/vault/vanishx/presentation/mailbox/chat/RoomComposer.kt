@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -18,8 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +33,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -179,7 +178,7 @@ internal fun RoomComposer(
                             enabled = canAttach,
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_composer_more),
+                                imageVector = VanishXIcons.DotsHorizontal,
                                 contentDescription = stringResource(R.string.room_attach_more_cd),
                                 tint = VanishXColors.Muted,
                             )
@@ -190,7 +189,7 @@ internal fun RoomComposer(
                             modifier = Modifier.semantics { contentDescription = voiceCd },
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_composer_mic),
+                                imageVector = VanishXIcons.Microphone,
                                 contentDescription = null,
                                 tint = VanishXColors.Muted,
                             )
@@ -200,7 +199,7 @@ internal fun RoomComposer(
                             enabled = canAttach,
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_composer_gallery),
+                                imageVector = VanishXIcons.Gallery,
                                 contentDescription = stringResource(R.string.room_attach_gallery_cd),
                                 tint = VanishXColors.Muted,
                             )
@@ -268,7 +267,7 @@ private fun ComposerSendButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.Send,
+            imageVector = VanishXIcons.Send,
             contentDescription = null,
             tint = VanishXColors.OnPrimary,
             modifier = Modifier.size(22.dp),

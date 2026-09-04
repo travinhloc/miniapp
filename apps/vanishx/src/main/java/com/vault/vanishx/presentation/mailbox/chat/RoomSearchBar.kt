@@ -1,5 +1,7 @@
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -7,10 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,7 +74,7 @@ internal fun RoomSearchBar(
             enabled = matchCount > 0,
         ) {
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowUp,
+                imageVector = VanishXIcons.ChevronUp,
                 contentDescription = stringResource(R.string.room_search_prev),
                 tint = VanishXColors.OnSurface,
             )
@@ -86,14 +84,14 @@ internal fun RoomSearchBar(
             enabled = matchCount > 0,
         ) {
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
+                imageVector = VanishXIcons.ChevronDown,
                 contentDescription = stringResource(R.string.room_search_next),
                 tint = VanishXColors.OnSurface,
             )
         }
         IconButton(onClick = { onAction(RoomAction.DismissRoomSearch) }) {
             Icon(
-                imageVector = Icons.Filled.Close,
+                imageVector = VanishXIcons.Close,
                 contentDescription = stringResource(R.string.action_back),
                 tint = VanishXColors.OnSurface,
             )

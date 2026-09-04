@@ -78,7 +78,11 @@ class RoomViewModelTest {
         activatedAt = 1L,
     )
 
-    private fun viewModel(room: MailboxRoom?): RoomViewModel {
+    private fun viewModel(
+        room: MailboxRoom?,
+        composerDraftStore: com.vault.vanishx.data.local.ComposerDraftStore = mockk(relaxed = true),
+        savedDraft: String = "",
+    ): RoomViewModel {
         coEvery { getRoom("room1") } returns room
         coEvery { syncRoomMailbox("room1") } returns SyncMailboxResult(
             messages = emptyList(),
@@ -94,6 +98,7 @@ class RoomViewModelTest {
         every { remote.observeReadWatermarks("room1") } returns emptyFlow()
         every { remote.observeTyping("room1") } returns emptyFlow()
         every { remote.observeReactions("room1") } returns emptyFlow()
+        coEvery { composerDraftStore.get("room1") } returns savedDraft
 
         val refreshRoomMeta: com.vault.vanishx.domain.usecase.RefreshRoomMetaUseCase = mockk(relaxed = true)
         return RoomViewModel(
@@ -121,8 +126,71 @@ class RoomViewModelTest {
             identityRepository = identityRepository,
             proEntitlement = proEntitlement,
             remote = remote,
+            composerDraftStore = composerDraftStore,
             dispatchersProvider = coroutinesRule.testDispatcherProvider,
         )
+    }
+
+    @Test
+    fun `bootstrap restores persisted composer draft`() = runTest {
+        val viewModel = viewModel(liveRoom(), savedDraft = "saved draft")
+        advanceUntilIdle()
+
+        viewModel.uiState.value.draft shouldBe "saved draft"
+    }
+
+    @Test
+    fun `media viewer opened from room options returns to room options on dismiss`() = runTest {
+        val viewModel = viewModel(liveRoom())
+        advanceUntilIdle()
+
+        viewModel.onAction(RoomAction.OpenRoomOptions)
+        viewModel.onAction(RoomAction.OpenMediaViewer("media-1"))
+        viewModel.uiState.value.showRoomOptions shouldBe true
+
+        viewModel.onAction(RoomAction.DismissMediaViewer)
+
+        viewModel.uiState.value.mediaViewerMessageId shouldBe null
+        viewModel.uiState.value.showRoomOptions shouldBe true
+    }
+
+    @Test
+    fun `media library opened from room options keeps room options as return surface`() = runTest {
+        val viewModel = viewModel(liveRoom())
+        advanceUntilIdle()
+
+        viewModel.onAction(RoomAction.OpenRoomOptions)
+        viewModel.onAction(RoomAction.OpenMediaLibrary)
+
+        viewModel.uiState.value.showMediaLibrary shouldBe true
+        viewModel.uiState.value.showRoomOptions shouldBe true
+
+        viewModel.onAction(RoomAction.DismissMediaLibrary)
+
+        viewModel.uiState.value.showMediaLibrary shouldBe false
+        viewModel.uiState.value.showRoomOptions shouldBe true
+    }
+
+    @Test
+    fun `Send clears persisted composer draft`() = runTest {
+        val drafts: com.vault.vanishx.data.local.ComposerDraftStore = mockk(relaxed = true)
+        coEvery { sendRoomMessage("room1", "hello", false, null) } returns ChatMessage(
+            id = "sent",
+            roomId = "room1",
+            body = "hello",
+            sentAt = 1L,
+            expiresAt = 2L,
+            direction = ChatMessage.DIRECTION_OUT,
+        )
+        val viewModel = viewModel(liveRoom(), drafts)
+        advanceUntilIdle()
+
+        viewModel.onAction(RoomAction.DraftChanged("hello"))
+        viewModel.onAction(RoomAction.Send)
+        advanceUntilIdle()
+
+        coVerify { drafts.clear("room1") }
+        viewModel.uiState.value.draft shouldBe ""
     }
 
     @Test

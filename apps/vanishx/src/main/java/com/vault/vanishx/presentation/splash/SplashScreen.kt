@@ -1,5 +1,7 @@
 package com.vault.vanishx.presentation.splash
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
@@ -25,8 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -345,7 +345,7 @@ private fun LogoMark(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.Filled.Lock,
+            imageVector = VanishXIcons.Lock,
             contentDescription = null,
             tint = VanishXColors.Primary,
             modifier = Modifier.size(LogoIconSize),

@@ -1,5 +1,7 @@
 package com.vault.vanishx.presentation.mailbox
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.Manifest
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,11 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -177,7 +174,7 @@ private fun MessageRequestSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Filled.Email,
+                    imageVector = VanishXIcons.Email,
                     contentDescription = null,
                     tint = VanishXColors.Primary,
                     modifier = Modifier.size(22.dp),
@@ -264,7 +261,7 @@ private fun IcebreakerCard(icebreaker: String) {
 private fun PrivacyLine() {
     Row(verticalAlignment = Alignment.Top) {
         Icon(
-            imageVector = Icons.Filled.Info,
+            imageVector = VanishXIcons.Information,
             contentDescription = null,
             tint = VanishXColors.Primary,
             modifier = Modifier.size(18.dp),
@@ -297,7 +294,7 @@ private fun NicknameRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Filled.Person,
+                imageVector = VanishXIcons.Account,
                 contentDescription = null,
                 tint = VanishXColors.Muted,
                 modifier = Modifier.size(20.dp),
@@ -361,7 +358,7 @@ private fun MessageRequestActions(
                 ),
             ) {
                 Icon(
-                    imageVector = Icons.Filled.CheckCircle,
+                    imageVector = VanishXIcons.Check,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
@@ -386,7 +383,7 @@ private fun MessageRequestActions(
                 ),
             ) {
                 Icon(
-                    imageVector = Icons.Filled.CheckCircle,
+                    imageVector = VanishXIcons.Check,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )

@@ -1,5 +1,7 @@
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,9 +13,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +73,7 @@ internal fun AttachTraySheet(
                 horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.Start),
             ) {
                 AttachTrayItem(
-                    icon = Icons.AutoMirrored.Filled.List,
+                    icon = VanishXIcons.List,
                     label = stringResource(R.string.room_attach_document),
                     circleColor = DocumentCircleColor,
                     enabled = enabled,
@@ -84,7 +83,7 @@ internal fun AttachTraySheet(
                     },
                 )
                 AttachTrayItem(
-                    icon = Icons.Filled.Add,
+                    icon = VanishXIcons.Plus,
                     label = stringResource(R.string.room_attach_camera),
                     circleColor = CameraCircleColor,
                     enabled = enabled,

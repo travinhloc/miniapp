@@ -1,5 +1,7 @@
 package com.vault.vanishx.presentation.paywall
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -13,9 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -92,7 +91,7 @@ private fun PaywallScreenContent(
             )
             IconButton(onClick = { onAction(PaywallAction.Back) }) {
                 Icon(
-                    imageVector = Icons.Filled.Close,
+                    imageVector = VanishXIcons.Close,
                     contentDescription = stringResource(R.string.action_back),
                     tint = VanishXColors.OnSurface,
                 )
@@ -203,7 +202,7 @@ private fun PaywallBenefitRow(text: String) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
-            imageVector = Icons.Filled.Lock,
+            imageVector = VanishXIcons.Lock,
             contentDescription = null,
             tint = VanishXColors.Accent,
             modifier = Modifier.height(22.dp),

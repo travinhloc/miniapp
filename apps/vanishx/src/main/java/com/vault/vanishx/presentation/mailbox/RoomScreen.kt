@@ -20,6 +20,7 @@ import android.provider.Settings
 import android.net.Uri
 import android.Manifest
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -781,6 +782,8 @@ private fun RoomContent(
         }
     }
     if (mediaViewerMessage != null) {
+        // Overlay is not a Nav destination — intercept system Back so we don't leave the room.
+        BackHandler { onAction(RoomAction.DismissMediaViewer) }
         when (mediaViewerMessage.mediaKind) {
             AttachmentMeta.KIND_FILE -> {
                 DocumentViewerScreen(

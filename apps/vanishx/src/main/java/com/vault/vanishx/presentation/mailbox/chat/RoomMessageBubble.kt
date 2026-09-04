@@ -8,6 +8,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.Animatable
@@ -30,8 +32,6 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.min
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -453,7 +453,7 @@ private fun MediaTransferOverlay(failed: Boolean, modifier: Modifier = Modifier)
         if (failed) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
-                    imageVector = Icons.Filled.Close,
+                    imageVector = VanishXIcons.Close,
                     contentDescription = stringResource(R.string.room_media_failed),
                     tint = Color.White,
                     modifier = Modifier.size(28.dp),

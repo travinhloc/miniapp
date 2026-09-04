@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.Manifest
 import android.net.Uri
 import android.os.Build
@@ -12,8 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -95,7 +95,7 @@ internal fun GalleryLibraryScreen(
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = VanishXIcons.ArrowBack,
                         contentDescription = stringResource(R.string.action_back),
                         tint = VanishXColors.OnSurface,
                     )

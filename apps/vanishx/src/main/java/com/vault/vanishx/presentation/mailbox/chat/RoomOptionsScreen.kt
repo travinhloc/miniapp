@@ -2,7 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
-import androidx.compose.foundation.Image
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,13 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,20 +33,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
 import com.vault.vanishx.R
 import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.presentation.mailbox.RoomAction
 import com.vault.vanishx.presentation.mailbox.RoomUiState
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.theme.vanishxScreenInsets
-import java.io.File
 
 @Composable
 internal fun RoomOptionsScreen(
@@ -83,7 +74,7 @@ internal fun RoomOptionsScreen(
         ) {
             IconButton(onClick = { onAction(RoomAction.DismissRoomOptions) }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = VanishXIcons.ArrowBack,
                     contentDescription = stringResource(R.string.action_back),
                     tint = VanishXColors.OnSurface,
                 )
@@ -159,7 +150,7 @@ internal fun RoomOptionsScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 QuickAction(
-                    icon = Icons.Filled.Search,
+                    icon = VanishXIcons.Search,
                     label = stringResource(R.string.room_options_search),
                     onClick = {
                         onAction(RoomAction.DismissRoomOptions)
@@ -167,12 +158,12 @@ internal fun RoomOptionsScreen(
                     },
                 )
                 QuickAction(
-                    icon = Icons.Filled.DateRange,
+                    icon = VanishXIcons.Calendar,
                     label = stringResource(R.string.room_options_wallpaper),
                     onClick = { onAction(RoomAction.OpenWallpaperSheet) },
                 )
                 QuickAction(
-                    icon = Icons.Filled.Warning,
+                    icon = VanishXIcons.Alert,
                     label = stringResource(
                         if (room?.muted == true) {
                             R.string.room_options_unmute
@@ -183,7 +174,7 @@ internal fun RoomOptionsScreen(
                     onClick = { onAction(RoomAction.ToggleRoomMuted) },
                 )
                 QuickAction(
-                    icon = Icons.Filled.Star,
+                    icon = VanishXIcons.Star,
                     label = stringResource(R.string.room_options_favorite),
                     onClick = { onAction(RoomAction.ToggleRoomFavorite) },
                 )
@@ -210,18 +201,9 @@ internal fun RoomOptionsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     mediaItems.take(MEDIA_STRIP_MAX).forEach { msg ->
-                        val path = msg.mediaLocalPath ?: return@forEach
-                        Image(
-                            painter = rememberAsyncImagePainter(File(path)),
-                            contentDescription = msg.mediaFileName,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(MediaStripTile)
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    onAction(RoomAction.DismissRoomOptions)
-                                    onAction(RoomAction.OpenMediaViewer(msg.id))
-                                },
+                        MediaStripItem(
+                            message = msg,
+                            onClick = { onAction(RoomAction.OpenMediaViewer(msg.id)) },
                         )
                     }
                     MediaSeeAllButton(
@@ -296,6 +278,17 @@ internal fun RoomOptionsScreen(
 }
 
 @Composable
+private fun MediaStripItem(message: ChatMessage, onClick: () -> Unit) {
+    MediaThumbnail(
+        message = message,
+        modifier = Modifier
+            .size(MediaStripTile)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+    )
+}
+
+@Composable
 private fun MediaSeeAllButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
@@ -306,7 +299,7 @@ private fun MediaSeeAllButton(onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            imageVector = VanishXIcons.ArrowForward,
             contentDescription = stringResource(R.string.room_options_media_see_all),
             tint = VanishXColors.Primary,
             modifier = Modifier.size(28.dp),
@@ -392,7 +385,7 @@ private fun OptionsRow(
         when {
             trailing != null -> trailing()
             onClick != null -> Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                imageVector = VanishXIcons.ArrowForward,
                 contentDescription = null,
                 tint = VanishXColors.Muted,
                 modifier = Modifier.size(18.dp),

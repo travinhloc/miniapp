@@ -8,6 +8,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import dagger.hilt.android.EntryPointAccessors
 import com.vault.vanishx.presentation.util.appDetailsSettingsIntent
 import com.vault.vanishx.presentation.mailbox.AppLockEntryPoint
@@ -52,11 +54,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -289,7 +286,7 @@ private fun CameraCaptureTopBar(onBack: () -> Unit) {
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = VanishXIcons.ArrowBack,
                 contentDescription = stringResource(R.string.action_back),
                 tint = Color.White,
             )
@@ -427,7 +424,7 @@ private fun PhotoCapturePane(
                 },
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Refresh,
+                    imageVector = VanishXIcons.Refresh,
                     contentDescription = stringResource(R.string.room_camera_flip_cd),
                     tint = Color.White,
                     modifier = Modifier.size(28.dp),
@@ -743,7 +740,7 @@ private fun VideoCapturePane(
                     enabled = !isRecording,
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Refresh,
+                        imageVector = VanishXIcons.Refresh,
                         contentDescription = stringResource(R.string.room_camera_flip_cd),
                         tint = if (isRecording) Color.White.copy(alpha = 0.35f) else Color.White,
                         modifier = Modifier.size(28.dp),
@@ -887,7 +884,7 @@ private fun VideoReviewPane(
         ) {
             IconButton(onClick = onCancel, enabled = !busy) {
                 Icon(
-                    Icons.Filled.Close,
+                    VanishXIcons.Close,
                     contentDescription = stringResource(R.string.action_back),
                     tint = Color.White,
                 )
@@ -918,7 +915,7 @@ private fun VideoReviewPane(
                 enabled = !busy,
             ) {
                 Icon(
-                    Icons.Filled.Check,
+                    VanishXIcons.Check,
                     contentDescription = stringResource(R.string.room_camera_video_send_cd),
                     tint = VanishXColors.Primary,
                     modifier = Modifier.size(32.dp),
@@ -1013,7 +1010,7 @@ private fun ImagePrepareEditor(
         ) {
             IconButton(onClick = onCancel, enabled = !busy) {
                 Icon(
-                    Icons.Filled.Close,
+                    VanishXIcons.Close,
                     contentDescription = stringResource(R.string.action_back),
                     tint = Color.White,
                 )
@@ -1034,7 +1031,7 @@ private fun ImagePrepareEditor(
                 enabled = !busy,
             ) {
                 Icon(
-                    Icons.Filled.Check,
+                    VanishXIcons.Check,
                     contentDescription = stringResource(R.string.room_camera_send_cd),
                     tint = VanishXColors.Primary,
                     modifier = Modifier.size(32.dp),

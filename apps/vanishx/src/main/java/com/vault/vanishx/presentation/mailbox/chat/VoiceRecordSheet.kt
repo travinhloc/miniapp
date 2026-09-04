@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import com.vault.vanishx.presentation.icons.VanishXIcons
+
 import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
@@ -19,11 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +44,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -237,7 +233,7 @@ internal fun VoiceRecordSheet(
                         VoiceReviewAction(
                             icon = {
                                 Icon(
-                                    Icons.Filled.Delete,
+                                    VanishXIcons.Delete,
                                     contentDescription = null,
                                     tint = VanishXColors.OnSurface,
                                     modifier = Modifier.size(26.dp),
@@ -262,7 +258,7 @@ internal fun VoiceRecordSheet(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    Icons.AutoMirrored.Filled.Send,
+                                    VanishXIcons.Send,
                                     contentDescription = stringResource(R.string.room_voice_send),
                                     tint = VanishXColors.OnPrimary,
                                     modifier = Modifier.size(28.dp),
@@ -282,14 +278,14 @@ internal fun VoiceRecordSheet(
                             icon = {
                                 if (previewPlaying) {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_voice_pause),
+                                        imageVector = VanishXIcons.Pause,
                                         contentDescription = null,
                                         tint = VanishXColors.OnSurface,
                                         modifier = Modifier.size(26.dp),
                                     )
                                 } else {
                                     Icon(
-                                        imageVector = Icons.Filled.PlayArrow,
+                                        imageVector = VanishXIcons.Play,
                                         contentDescription = null,
                                         tint = VanishXColors.OnSurface,
                                         modifier = Modifier.size(28.dp),
@@ -404,14 +400,14 @@ private fun VoiceBigMicButton(
     ) {
         if (recording) {
             Icon(
-                Icons.Filled.Close,
+                VanishXIcons.Close,
                 contentDescription = stringResource(R.string.room_voice_tap_to_stop),
                 tint = Color.White,
                 modifier = Modifier.size(36.dp),
             )
         } else {
             Icon(
-                painter = painterResource(R.drawable.ic_composer_mic),
+                imageVector = VanishXIcons.Microphone,
                 contentDescription = stringResource(R.string.room_voice_cd),
                 tint = VanishXColors.OnPrimary,
                 modifier = Modifier.size(36.dp),

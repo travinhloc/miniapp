@@ -12,6 +12,9 @@ interface MetaDao {
 
     @Query("SELECT * FROM meta WHERE `key` = :key LIMIT 1")
     suspend fun get(key: String): MetaEntity?
+
+    @Query("DELETE FROM meta WHERE `key` = :key")
+    suspend fun delete(key: String)
 }
 
 @Dao

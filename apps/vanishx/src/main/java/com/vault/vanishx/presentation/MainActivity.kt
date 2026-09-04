@@ -139,9 +139,9 @@ class MainActivity : FragmentActivity() {
                             )
                             AnimatedVisibility(
                                 visible = !isOnline && !showLock,
-                                modifier = Modifier.align(Alignment.BottomCenter),
-                                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                                exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
                             ) {
                                 OfflineBanner()
                             }

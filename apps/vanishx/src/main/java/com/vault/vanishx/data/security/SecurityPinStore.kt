@@ -45,7 +45,7 @@ class SecurityPinStore (
     fun setPanicPin(pin: String) {
         requireValidPin(pin)
         if (matchesStored(pin, KEY_UNLOCK_SALT, KEY_UNLOCK_HASH)) {
-            error("Panic PIN must differ from unlock PIN")
+            error(PANIC_SAME_AS_UNLOCK)
         }
         writePin(KEY_PANIC_SALT, KEY_PANIC_HASH, pin)
     }
@@ -63,6 +63,12 @@ class SecurityPinStore (
             .remove(KEY_PANIC_HASH)
             .apply()
     }
+
+    fun matchesUnlockPin(pin: String): Boolean =
+        pin.length == PIN_LENGTH && matchesStored(pin, KEY_UNLOCK_SALT, KEY_UNLOCK_HASH)
+
+    fun matchesPanicPin(pin: String): Boolean =
+        pin.length == PIN_LENGTH && matchesStored(pin, KEY_PANIC_SALT, KEY_PANIC_HASH)
 
     fun clearAll() {
         prefs.edit().clear().apply()
@@ -186,6 +192,8 @@ class SecurityPinStore (
         const val PIN_LENGTH = 4
         const val PIN_MIN_LENGTH = PIN_LENGTH
         const val PIN_MAX_LENGTH = PIN_LENGTH
+        /** Stable marker — UI must map to a non-revealing string. */
+        const val PANIC_SAME_AS_UNLOCK = "panic_same_as_unlock"
         const val MAX_UNLOCK_ATTEMPTS = 5
         /** Progressive lockout after each failed streak: 60s → 5m → 24h. */
         val COOLDOWN_DURATIONS_MS: LongArray = longArrayOf(

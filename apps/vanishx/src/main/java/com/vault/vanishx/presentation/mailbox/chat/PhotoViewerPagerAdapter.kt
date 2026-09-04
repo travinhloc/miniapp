@@ -2,6 +2,8 @@
 
 package com.vault.vanishx.presentation.mailbox.chat
 
+import android.annotation.SuppressLint
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.media3.common.MediaItem
@@ -11,14 +13,25 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.vault.vanishx.domain.model.AttachmentMeta
 
+@SuppressLint("UnsafeOptInUsageError")
 internal class PhotoViewerPagerAdapter(
     private val pages: List<MediaViewerPage>,
     private val onPhotoTap: () -> Unit,
+    private val onVideoControlsVisible: (Boolean) -> Unit,
     private val onScaleChanged: (scale: Float) -> Unit,
     private val onDismissPull: (deltaY: Float) -> Unit,
     private val onDismissRelease: () -> Unit,
     private val onHorizontalSwipe: (pageDelta: Int) -> Unit,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    private var chromeVisible: Boolean = true
+    private val attachedVideoHolders = mutableSetOf<VideoViewHolder>()
+
+    fun setChromeVisible(visible: Boolean) {
+        if (chromeVisible == visible) return
+        chromeVisible = visible
+        attachedVideoHolders.forEach { it.applyChromeVisible(visible) }
+    }
 
     override fun getItemCount(): Int = pages.size
 
@@ -39,8 +52,17 @@ internal class PhotoViewerPagerAdapter(
                         FrameLayout.LayoutParams.MATCH_PARENT,
                     )
                     useController = true
+                    // Tap uses PlayerView's own controller toggle; we sync Compose chrome.
+                    controllerAutoShow = false
+                    controllerHideOnTouch = true
+                    controllerShowTimeoutMs = 0
                 }
-                VideoViewHolder(playerView, onDismissPull, onDismissRelease)
+                VideoViewHolder(
+                    playerView = playerView,
+                    onDismissPull = onDismissPull,
+                    onDismissRelease = onDismissRelease,
+                    onControlsVisible = onVideoControlsVisible,
+                )
             }
             else -> {
                 val photoView = DismissablePhotoView(parent.context).apply {
@@ -75,12 +97,29 @@ internal class PhotoViewerPagerAdapter(
             is VideoViewHolder -> holder.bind(
                 path = page.mediaPath,
                 autoPlay = true,
+                chromeVisible = chromeVisible,
             )
         }
     }
 
+    override fun onViewAttachedToWindow(holder: RecyclerView.ViewHolder) {
+        super.onViewAttachedToWindow(holder)
+        if (holder is VideoViewHolder) {
+            attachedVideoHolders += holder
+            holder.applyChromeVisible(chromeVisible)
+        }
+    }
+
+    override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) {
+        if (holder is VideoViewHolder) {
+            attachedVideoHolders -= holder
+        }
+        super.onViewDetachedFromWindow(holder)
+    }
+
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         if (holder is VideoViewHolder) {
+            attachedVideoHolders -= holder
             holder.release()
         }
         super.onViewRecycled(holder)
@@ -116,12 +155,15 @@ internal class PhotoViewerPagerAdapter(
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private class VideoViewHolder(
         private val playerView: PlayerView,
         onDismissPull: (Float) -> Unit,
         onDismissRelease: () -> Unit,
+        onControlsVisible: (Boolean) -> Unit,
     ) : RecyclerView.ViewHolder(playerView) {
         private var player: ExoPlayer? = null
+        private var suppressControlsCallback = false
         private val dismissTracker = SwipeDownDismissTracker(
             context = playerView.context,
             onPull = onDismissPull,
@@ -129,12 +171,19 @@ internal class PhotoViewerPagerAdapter(
         )
 
         init {
+            playerView.setControllerVisibilityListener(
+                PlayerView.ControllerVisibilityListener { visibility ->
+                    if (!suppressControlsCallback) {
+                        onControlsVisible(visibility == View.VISIBLE)
+                    }
+                },
+            )
             playerView.setOnTouchListener { _, event ->
-                if (dismissTracker.handleTouchEvent(event)) true else false
+                dismissTracker.handleTouchEvent(event)
             }
         }
 
-        fun bind(path: String?, autoPlay: Boolean) {
+        fun bind(path: String?, autoPlay: Boolean, chromeVisible: Boolean) {
             dismissTracker.reset()
             release()
             val uri = resolveMediaPlaybackUri(path) ?: return
@@ -144,6 +193,21 @@ internal class PhotoViewerPagerAdapter(
                 playWhenReady = autoPlay
             }
             playerView.player = player
+            applyChromeVisible(chromeVisible)
+        }
+
+        fun applyChromeVisible(visible: Boolean) {
+            suppressControlsCallback = true
+            try {
+                if (visible) {
+                    playerView.hideController()
+                } else {
+                    playerView.showController()
+                }
+            } finally {
+                // Post so PlayerView finishes visibility dispatch first.
+                playerView.post { suppressControlsCallback = false }
+            }
         }
 
         fun release() {
