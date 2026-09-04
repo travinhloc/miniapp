@@ -5,9 +5,7 @@ package com.vault.vanishx.presentation.mailbox.chat
 import android.annotation.SuppressLint
 import android.content.Context
 import android.widget.FrameLayout
-import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
-import com.vault.vanishx.domain.model.AttachmentMeta
 
 /**
  * ViewPager2 + PhotoView gallery: pager · pinch-zoom · swipe-down dismiss.
@@ -56,7 +54,7 @@ internal class PhotoViewerPagerLayout(
         viewPager.adapter = PhotoViewerPagerAdapter(
             pages = pages,
             onPhotoTap = { callbacks.onPhotoTap() },
-            onScaleChanged = { scale -> onCurrentPageScaleChanged(scale) },
+            onScaleChanged = { updatePagerInputEnabled() },
             onDismissPull = { deltaY ->
                 dismissOffsetPx = (dismissOffsetPx + deltaY).coerceAtLeast(0f)
                 callbacks.onDismissOffsetChanged(dismissOffsetPx)
@@ -71,32 +69,24 @@ internal class PhotoViewerPagerLayout(
                 }
                 updatePagerInputEnabled()
             },
+            onHorizontalSwipe = { delta -> movePage(delta) },
         )
         viewPager.offscreenPageLimit = 1
         viewPager.setCurrentItem(targetIndex, false)
         updatePagerInputEnabled()
     }
 
-    private fun onCurrentPageScaleChanged(scale: Float) {
-        updatePagerInputEnabled(zoomedOverride = scale > MIN_SCALE + SCALE_EPSILON)
+    private fun updatePagerInputEnabled() {
+        // PhotoView and ViewPager2 both claim the same touch stream on several
+        // Android versions. DismissablePhotoView owns the complete gesture and
+        // requests a page change explicitly, so keep the native detector off.
+        viewPager.isUserInputEnabled = false
     }
 
-    private fun updatePagerInputEnabled(zoomedOverride: Boolean? = null) {
-        val zoomed = zoomedOverride ?: isCurrentPageZoomed()
-        viewPager.isUserInputEnabled = !zoomed && dismissOffsetPx <= 0f
-    }
-
-    private fun isCurrentPageZoomed(): Boolean {
-        val photoView = currentPhotoView() ?: return false
-        return photoView.scale > MIN_SCALE + SCALE_EPSILON
-    }
-
-    private fun currentPhotoView(): DismissablePhotoView? {
-        val page = pages.getOrNull(viewPager.currentItem) ?: return null
-        if (page.mediaKind == AttachmentMeta.KIND_VIDEO) return null
-        val recycler = viewPager.getChildAt(0) as? RecyclerView ?: return null
-        val holder = recycler.findViewHolderForAdapterPosition(viewPager.currentItem) ?: return null
-        return holder.itemView as? DismissablePhotoView
+    private fun movePage(delta: Int) {
+        if (pages.isEmpty() || dismissOffsetPx > 0f) return
+        val target = (viewPager.currentItem + delta).coerceIn(0, pages.lastIndex)
+        if (target != viewPager.currentItem) viewPager.setCurrentItem(target, true)
     }
 
     internal data class Callbacks(
@@ -107,9 +97,6 @@ internal class PhotoViewerPagerLayout(
     )
 
     private companion object {
-        const val MIN_SCALE = 1f
-        const val SCALE_EPSILON = 0.01f
-
         private fun pagesContentEquals(
             left: List<MediaViewerPage>,
             right: List<MediaViewerPage>,

@@ -97,28 +97,46 @@ internal fun AlbumMediaCollage(
                         .fillMaxWidth()
                         .height(168.dp),
                 )
-                items.drop(1).chunked(3).forEachIndexed { rowIndex, row ->
-                    val baseIndex = 1 + rowIndex * 3
+                albumGridIndices(items.size).forEach { rowIndices ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(AlbumGutter),
                     ) {
-                        row.forEachIndexed { col, item ->
+                        rowIndices.forEach { itemIndex ->
                             AlbumTile(
-                                item = item,
-                                onClick = { onItemClick(baseIndex + col) },
+                                item = items[itemIndex],
+                                onClick = { onItemClick(itemIndex) },
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f),
                             )
                         }
-                        repeat(3 - row.size) {
-                            Box(modifier = Modifier.weight(1f))
-                        }
                     }
                 }
             }
         }
+    }
+}
+
+/** Balances tiles after the full-width hero without creating blank placeholders. */
+internal fun albumGridRowSizes(itemCount: Int): List<Int> {
+    val remaining = (itemCount - 1).coerceAtLeast(0)
+    if (remaining == 0) return emptyList()
+    val fullRows = remaining / 3
+    val remainder = remaining % 3
+    return when {
+        remainder == 0 -> List(fullRows) { 3 }
+        remainder == 2 -> List(fullRows) { 3 } + 2
+        fullRows == 0 -> listOf(1)
+        // Avoid a lone final tile: turn the final 3 + 1 into 2 + 2.
+        else -> List(fullRows - 1) { 3 } + listOf(2, 2)
+    }
+}
+
+internal fun albumGridIndices(itemCount: Int): List<List<Int>> {
+    var nextIndex = 1
+    return albumGridRowSizes(itemCount).map { rowSize ->
+        List(rowSize) { offset -> nextIndex + offset }.also { nextIndex += rowSize }
     }
 }
 

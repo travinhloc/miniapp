@@ -63,6 +63,10 @@ object MessagePlaintextCodec {
                 append(",\"fn\":")
                 append(quote(it))
             }
+            meta.albumId?.takeIf { it.isNotBlank() }?.let {
+                append(",\"g\":")
+                append(quote(it))
+            }
             append('}')
         }
     }
@@ -94,6 +98,7 @@ object MessagePlaintextCodec {
         val width = readIntField(raw, "\"w\":")
         val height = readIntField(raw, "\"h\":")
         val fileName = readQuotedField(raw, "\"fn\":")
+        val albumId = readQuotedField(raw, "\"g\":")
         return Decoded(
             text = "",
             sensitive = false,
@@ -106,6 +111,7 @@ object MessagePlaintextCodec {
                 width = width,
                 height = height,
                 fileName = fileName,
+                albumId = albumId,
             ),
         )
     }

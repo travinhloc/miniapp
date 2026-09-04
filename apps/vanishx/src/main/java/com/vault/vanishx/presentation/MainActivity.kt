@@ -8,12 +8,18 @@ import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -24,11 +30,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import com.vault.vanishx.data.network.NetworkConnectivityMonitor
 import com.vault.vanishx.data.security.AppLockSession
 import com.vault.vanishx.data.security.SecurityPinStore
 import com.vault.vanishx.domain.model.OpenRoomDeepLink
 import com.vault.vanishx.domain.usecase.CaptureClipboardInviteUseCase
 import com.vault.vanishx.domain.usecase.ConsumePendingInviteUseCase
+import com.vault.vanishx.presentation.components.OfflineBanner
 import com.vault.vanishx.presentation.invite.InviteBootstrapSession
 import com.vault.vanishx.presentation.mailbox.PendingOpenRoomStore
 import com.vault.vanishx.presentation.security.AuthSetupScreen
@@ -63,6 +71,9 @@ class MainActivity : FragmentActivity() {
     @Inject
     lateinit var pendingOpenRoom: PendingOpenRoomStore
 
+    @Inject
+    lateinit var networkConnectivityMonitor: NetworkConnectivityMonitor
+
     @Suppress("LongMethod", "ComplexMethod", "MagicNumber")
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -89,6 +100,9 @@ class MainActivity : FragmentActivity() {
                     )
                 }
                 val sessionUnlocked by appLockSession.isUnlockedFlow.collectAsStateWithLifecycle()
+                val isOnline by networkConnectivityMonitor.isOnline.collectAsStateWithLifecycle(
+                    initialValue = networkConnectivityMonitor.isOnlineNow(),
+                )
 
                 LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
                     if (!isChangingConfigurations &&
@@ -123,6 +137,14 @@ class MainActivity : FragmentActivity() {
                                 navController = rememberNavController(),
                                 pendingOpenRoom = pendingOpenRoom,
                             )
+                            AnimatedVisibility(
+                                visible = !isOnline && !showLock,
+                                modifier = Modifier.align(Alignment.BottomCenter),
+                                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                            ) {
+                                OfflineBanner()
+                            }
                             // Lock overlay is the auth gate (story 14.4): pending Join sits underneath
                             // until PIN/bio; no Login screen. Setup runs before Main on first run.
                             if (showLock) {

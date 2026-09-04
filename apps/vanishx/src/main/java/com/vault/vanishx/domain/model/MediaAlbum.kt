@@ -24,6 +24,7 @@ data class MediaAlbumState(
     val id: String,
     val sentAt: Long,
     val items: List<MediaAlbumItem>,
+    val direction: String = ChatMessage.DIRECTION_OUT,
 ) {
     val memberMessageIds: Set<String>
         get() = items.mapNotNull { it.sentMessageId }.toSet()
@@ -42,7 +43,7 @@ data class MediaAlbumState(
         body = "",
         sentAt = sentAt,
         expiresAt = sentAt,
-        direction = ChatMessage.DIRECTION_OUT,
+        direction = direction,
         mediaKind = AttachmentMeta.KIND_ALBUM,
         mediaTransferStatus = transferStatus,
         mediaLocalPath = items.firstOrNull()?.previewPath,
@@ -93,9 +94,17 @@ object MediaAlbumMerge {
                 !msg.mediaLocalPath.isNullOrBlank()
         }.sortedBy { it.sentAt }
         if (visual.size < 2) return emptyList()
-        val groups = mutableListOf<List<ChatMessage>>()
+
+        // New envelopes carry an exact encrypted album id. Keep the time-window
+        // reconstruction below only as backwards compatibility for older messages.
+        val exactGroups = visual
+            .filter { !it.mediaAlbumId.isNullOrBlank() }
+            .groupBy { checkNotNull(it.mediaAlbumId) }
+            .filterValues { it.size > 1 }
+        val legacyVisual = visual.filter { it.mediaAlbumId.isNullOrBlank() }
+        val legacyGroups = mutableListOf<List<ChatMessage>>()
         var bucket = mutableListOf<ChatMessage>()
-        for (msg in visual) {
+        for (msg in legacyVisual) {
             if (bucket.isEmpty()) {
                 bucket.add(msg)
                 continue
@@ -107,17 +116,19 @@ object MediaAlbumMerge {
             if (sameBurst) {
                 bucket.add(msg)
             } else {
-                if (bucket.size > 1) groups += bucket.toList()
+                if (bucket.size > 1) legacyGroups += bucket.toList()
                 bucket = mutableListOf(msg)
             }
         }
-        if (bucket.size > 1) groups += bucket
-        return groups.mapNotNull { group ->
-            val albumId = "album_reconstructed_${group.first().id}"
+        if (bucket.size > 1) legacyGroups += bucket
+        val groups = exactGroups.map { (albumId, group) -> albumId to group.sortedBy { it.sentAt } } +
+            legacyGroups.map { group -> "album_reconstructed_${group.first().id}" to group }
+        return groups.mapNotNull { (albumId, group) ->
             if (albumId in existingIds) return@mapNotNull null
             MediaAlbumState(
                 id = albumId,
                 sentAt = group.first().sentAt,
+                direction = group.first().direction,
                 items = group.map { msg ->
                     MediaAlbumItem(
                         uri = msg.mediaLocalPath.orEmpty(),

@@ -17,6 +17,7 @@ internal class PhotoViewerPagerAdapter(
     private val onScaleChanged: (scale: Float) -> Unit,
     private val onDismissPull: (deltaY: Float) -> Unit,
     private val onDismissRelease: () -> Unit,
+    private val onHorizontalSwipe: (pageDelta: Int) -> Unit,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     override fun getItemCount(): Int = pages.size
@@ -50,7 +51,10 @@ internal class PhotoViewerPagerAdapter(
                     maximumScale = MAX_ZOOM
                     mediumScale = MEDIUM_ZOOM
                     minimumScale = 1f
-                    setAllowParentInterceptOnEdge(true)
+                    // This view owns horizontal gallery gestures. Allowing the
+                    // attacher to hand the stream back at an edge cancels it
+                    // before ACTION_UP while ViewPager2 input is disabled.
+                    setAllowParentInterceptOnEdge(false)
                 }
                 PhotoViewHolder(photoView)
             }
@@ -66,6 +70,7 @@ internal class PhotoViewerPagerAdapter(
                 onScaleChanged = onScaleChanged,
                 onDismissPull = onDismissPull,
                 onDismissRelease = onDismissRelease,
+                onHorizontalSwipe = onHorizontalSwipe,
             )
             is VideoViewHolder -> holder.bind(
                 path = page.mediaPath,
@@ -90,10 +95,12 @@ internal class PhotoViewerPagerAdapter(
             onScaleChanged: (Float) -> Unit,
             onDismissPull: (Float) -> Unit,
             onDismissRelease: () -> Unit,
+            onHorizontalSwipe: (Int) -> Unit,
         ) {
             photoView.resetDismissGesture()
             photoView.onDismissPull = onDismissPull
             photoView.onDismissRelease = onDismissRelease
+            photoView.onHorizontalSwipe = onHorizontalSwipe
             photoView.setOnViewTapListener { _, _, _ -> onTap() }
             photoView.setOnScaleChangeListener { _, _, _ ->
                 onScaleChanged(photoView.scale)

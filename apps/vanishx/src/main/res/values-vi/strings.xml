@@ -3,6 +3,8 @@
     <string name="app_name">VanishX</string>
     <string name="error_generic">Đã xảy ra lỗi không mong muốn</string>
     <string name="action_back">Quay lại</string>
+    <string name="network_offline_title">Không có kết nối Internet</string>
+    <string name="network_offline_body">Bạn vẫn có thể xem dữ liệu đã lưu trên thiết bị.</string>
 
     <!-- Splash -->
     <string name="splash_tagline">Chat riêng tư · Tự hủy tức thì</string>

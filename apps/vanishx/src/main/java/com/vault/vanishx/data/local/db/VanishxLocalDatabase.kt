@@ -2,6 +2,8 @@ package com.vault.vanishx.data.local.db
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.miniapp.core.common.DispatchersProvider
 import com.vault.vanishx.domain.repository.LocalDatabaseWiper
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -57,6 +59,7 @@ class VanishxLocalDatabase @Inject constructor(
             VanishxDatabase.NAME,
         )
             .openHelperFactory(factory)
+            .addMigrations(MIGRATION_12_13)
             .fallbackToDestructiveMigration()
             .build()
             .also { database = it }
@@ -81,5 +84,10 @@ class VanishxLocalDatabase @Inject constructor(
     companion object {
         const val META_CRYPTO_SCHEME = "crypto_scheme_version"
         const val CRYPTO_SCHEME_VERSION = "1"
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE messages ADD COLUMN mediaAlbumId TEXT")
+            }
+        }
     }
 }

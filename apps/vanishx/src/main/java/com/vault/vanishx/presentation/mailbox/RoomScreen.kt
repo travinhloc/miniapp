@@ -28,9 +28,17 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +50,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -104,7 +114,6 @@ import com.vault.vanishx.presentation.mailbox.chat.formatMessageTime
 import com.vault.vanishx.presentation.mailbox.chat.isMessageAtOrBeforeWatermark
 import com.vault.vanishx.presentation.mailbox.chat.resolveRoomTitle
 import com.vault.vanishx.presentation.theme.VanishXColors
-import com.vault.vanishx.presentation.theme.vanishxScreenInsets
 import dagger.hilt.android.EntryPointAccessors
 import timber.log.Timber
 @OptIn(ExperimentalPermissionsApi::class)
@@ -115,6 +124,12 @@ fun RoomScreen(
 ) = BaseScreen {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    fun dismissRoomKeyboard() {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
     var showCameraCapture by remember { mutableStateOf(false) }
     var showGallerySheet by remember { mutableStateOf(false) }
     var showGalleryLibrary by remember { mutableStateOf(false) }
@@ -213,7 +228,10 @@ fun RoomScreen(
             )
         }
     }
-    viewModel.navigator.collectAsEffect { destination -> navigator(destination) }
+    viewModel.navigator.collectAsEffect { destination ->
+        dismissRoomKeyboard()
+        navigator(destination)
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, uiState.roomId) {
@@ -278,7 +296,8 @@ fun RoomScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         RoomContent(
             uiState = uiState,
-            onAction = viewModel::onAction,
+            dispatchAction = viewModel::onAction,
+            onTapOutsideComposer = ::dismissRoomKeyboard,
             onCopyInvite = { uri ->
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("VanishX invite", uri))
@@ -292,17 +311,24 @@ fun RoomScreen(
                 context.startActivity(Intent.createChooser(intent, context.getString(R.string.create_share)))
             },
             onOpenMore = {
+                dismissRoomKeyboard()
                 viewModel.onAction(RoomAction.AttachClicked)
             },
-            onOpenVoice = { openVoiceSheet() },
+            onOpenVoice = {
+                dismissRoomKeyboard()
+                openVoiceSheet()
+            },
             onPickGallery = {
+                dismissRoomKeyboard()
                 showGallerySheet = true
             },
             onPickDocument = {
+                dismissRoomKeyboard()
                 appLockSession.beginExternalUi()
                 documentPicker.launch(MediaLimits.DOCUMENT_PICKER_MIME)
             },
             onOpenCamera = {
+                dismissRoomKeyboard()
                 cameraInitialTab = CameraCaptureTab.Photo
                 showCameraCapture = true
             },
@@ -457,7 +483,8 @@ fun RoomScreen(
 @Composable
 private fun RoomContent(
     uiState: RoomUiState,
-    onAction: (RoomAction) -> Unit,
+    dispatchAction: (RoomAction) -> Unit,
+    onTapOutsideComposer: () -> Unit,
     onCopyInvite: (String) -> Unit,
     onShareInvite: (String) -> Unit,
     onOpenMore: () -> Unit,
@@ -466,6 +493,10 @@ private fun RoomContent(
     onPickDocument: () -> Unit,
     onOpenCamera: () -> Unit,
 ) {
+    val onAction: (RoomAction) -> Unit = { action ->
+        if (action.opensAnotherRoomSurface()) onTapOutsideComposer()
+        dispatchAction(action)
+    }
     var showNeedPro by remember { mutableStateOf(false) }
     val showComposer = !uiState.isLoading &&
         uiState.room?.status == MailboxRoom.STATUS_ACTIVE &&
@@ -484,7 +515,12 @@ private fun RoomContent(
         modifier = Modifier
             .fillMaxSize()
             .background(VanishXColors.Bg)
-            .vanishxScreenInsets(),
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(
+                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
+                ),
+            )
+            .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars)),
     ) {
         RoomHeader(
             uiState = uiState,
@@ -551,6 +587,7 @@ private fun RoomContent(
                 highlightMessageId = uiState.highlightMessageId,
                 wallpaperPath = uiState.room?.wallpaperLocalPath,
                 onScrollToMessageConsumed = { onAction(RoomAction.ConsumeScrollToMessage) },
+                onTapOutsideComposer = onTapOutsideComposer,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -761,17 +798,20 @@ private fun RoomContent(
             }
             AttachmentMeta.KIND_IMAGE, AttachmentMeta.KIND_VIDEO -> {
                 val albums = MediaAlbumMerge.resolveAlbums(uiState.messages, uiState.outgoingAlbums)
+                val focusedAlbum = uiState.mediaViewerMessageId?.let { id ->
+                    albums.firstOrNull { it.id == id }
+                }
                 val viewerPages = buildMediaViewerPages(
                     messages = uiState.messages,
                     albums = albums,
-                    focusMessageId = mediaViewerMessage.id,
+                    focusMessageId = focusedAlbum?.id ?: mediaViewerMessage.id,
                 )
                 PhotoViewerScreen(
                     pages = viewerPages,
-                    initialPageIndex = findMediaViewerPageIndex(
-                        viewerPages,
-                        mediaViewerMessage.id,
-                    ),
+                    initialPageIndex = focusedAlbum?.let {
+                        (uiState.mediaViewerAlbumIndex ?: 0)
+                            .coerceIn(0, viewerPages.lastIndex.coerceAtLeast(0))
+                    } ?: findMediaViewerPageIndex(viewerPages, mediaViewerMessage.id),
                     room = uiState.room,
                     reactionsByMessage = uiState.reactionsByMessage,
                     myReactionByMessage = uiState.myReactionByMessage,
@@ -865,6 +905,28 @@ private fun RoomContent(
             onDismiss = { showNeedPro = false },
         )
     }
+}
+
+private fun RoomAction.opensAnotherRoomSurface(): Boolean = when (this) {
+    RoomAction.Back,
+    RoomAction.AttachClicked,
+    RoomAction.OpenBlockConfirm,
+    RoomAction.OpenReport,
+    RoomAction.OpenPaywall,
+    RoomAction.OpenInviteSheet,
+    RoomAction.OpenRoomOptions,
+    RoomAction.OpenMediaLibrary,
+    RoomAction.OpenWallpaperSheet,
+    RoomAction.OpenBentoSheet,
+    RoomAction.OpenSafetySheet,
+    RoomAction.OpenBurnConfirm,
+    RoomAction.OpenRenameDialog,
+    RoomAction.OpenRoomSearch,
+    RoomAction.RequestSensitiveSend,
+    is RoomAction.OpenMediaViewer,
+    is RoomAction.OpenMessageActions,
+    -> true
+    else -> false
 }
 
 private fun onAttachmentSelected(

@@ -29,8 +29,7 @@ internal fun buildMediaViewerPages(
                     messageId = item.sentMessageId ?: "${focusAlbum.id}_$index",
                     mediaPath = item.previewPath,
                     mediaKind = item.kind,
-                    direction = messages.firstOrNull { it.id in focusAlbum.memberMessageIds }?.direction
-                        ?: ChatMessage.DIRECTION_OUT,
+                    direction = focusAlbum.direction,
                     sentAt = focusAlbum.sentAt,
                 )
             }

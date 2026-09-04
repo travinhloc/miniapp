@@ -48,6 +48,7 @@ data class MessageEntity(
     val mediaWidth: Int? = null,
     val mediaHeight: Int? = null,
     val mediaFileName: String? = null,
+    val mediaAlbumId: String? = null,
     val mediaLocalPath: String? = null,
     val mediaTransferStatus: String? = null,
 )

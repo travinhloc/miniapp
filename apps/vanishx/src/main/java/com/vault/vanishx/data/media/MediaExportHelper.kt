@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.annotation.RequiresApi
 import com.vault.vanishx.data.crypto.RoomBlobCipher
 import com.vault.vanishx.domain.model.ChatMessage
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -52,6 +53,7 @@ class MediaExportHelper @Inject constructor(
         return "$safe$ENCRYPTED_SUFFIX"
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun saveViaMediaStore(displayName: String, ciphertext: ByteArray): Boolean {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)

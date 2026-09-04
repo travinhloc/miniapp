@@ -3,6 +3,8 @@
     <string name="app_name">VanishX</string>
     <string name="error_generic">Unexpected error</string>
     <string name="action_back">Back</string>
+    <string name="network_offline_title">No internet connection</string>
+    <string name="network_offline_body">You can still view data saved on this device.</string>
 
     <!-- Splash -->
     <string name="splash_tagline">Private chat · vanishes instantly</string>

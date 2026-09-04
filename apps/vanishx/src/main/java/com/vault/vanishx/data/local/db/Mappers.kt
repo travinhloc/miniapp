@@ -60,6 +60,7 @@ fun MessageEntity.toDomain(): ChatMessage = ChatMessage(
     mediaWidth = mediaWidth,
     mediaHeight = mediaHeight,
     mediaFileName = mediaFileName,
+    mediaAlbumId = mediaAlbumId,
     mediaLocalPath = mediaLocalPath,
     mediaTransferStatus = mediaTransferStatus,
 )
@@ -81,6 +82,7 @@ fun ChatMessage.toEntity(): MessageEntity = MessageEntity(
     mediaWidth = mediaWidth,
     mediaHeight = mediaHeight,
     mediaFileName = mediaFileName,
+    mediaAlbumId = mediaAlbumId,
     mediaLocalPath = mediaLocalPath,
     mediaTransferStatus = mediaTransferStatus,
 )

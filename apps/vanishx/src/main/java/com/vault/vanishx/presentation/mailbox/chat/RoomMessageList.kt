@@ -12,15 +12,22 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,11 +49,15 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -60,8 +71,12 @@ import com.vault.vanishx.domain.model.MediaAlbumState
 import com.vault.vanishx.presentation.theme.VanishXColors
 import com.vault.vanishx.presentation.util.formatRemainingMs
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 @Suppress("UnstableCollections")
 internal fun RoomMessageList(
@@ -80,6 +95,7 @@ internal fun RoomMessageList(
     highlightMessageId: String? = null,
     wallpaperPath: String? = null,
     onScrollToMessageConsumed: () -> Unit = {},
+    onTapOutsideComposer: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -114,6 +130,7 @@ internal fun RoomMessageList(
     }
     var stickToBottom by remember { mutableStateOf(true) }
     var didInitialBottomScroll by remember { mutableStateOf(false) }
+    var allowStickUpdates by remember { mutableStateOf(false) }
 
     LaunchedEffect(showTtl, expiresAt) {
         if (!showTtl) return@LaunchedEffect
@@ -132,24 +149,43 @@ internal fun RoomMessageList(
         wasExpired = isExpired
     }
 
-    LaunchedEffect(listState.isScrollInProgress, isAtBottom) {
+    // New messages briefly make isAtBottom false before layout; do not sample stick
+    // from that. Wait until the open-at-bottom jump has landed, then only update
+    // stick when a user (or programmatic) scroll gesture finishes.
+    LaunchedEffect(didInitialBottomScroll, isAtBottom) {
+        if (didInitialBottomScroll && isAtBottom) {
+            allowStickUpdates = true
+            stickToBottom = true
+        }
+    }
+    LaunchedEffect(listState.isScrollInProgress, allowStickUpdates) {
+        if (!allowStickUpdates) return@LaunchedEffect
         if (!listState.isScrollInProgress) {
             stickToBottom = isAtBottom
         }
     }
 
-    LaunchedEffect(messages.size, messages.lastOrNull()?.id) {
-        val shouldStickToLatest = messages.isNotEmpty() &&
-            stickToBottom &&
-            scrollToMessageId == null
-        if (shouldStickToLatest) {
-            val target = ttlOffset + timeline.lastIndex
-            if (!didInitialBottomScroll) {
-                listState.scrollToItem(target)
-                didInitialBottomScroll = true
-            } else {
-                listState.animateScrollToItem(target)
-            }
+    LaunchedEffect(messages.size, messages.lastOrNull()?.id, timeline.size, ttlOffset, scrollToMessageId) {
+        if (messages.isEmpty() || timeline.isEmpty()) return@LaunchedEffect
+        // Search / deep-link scroll owns first paint; don't yank to bottom afterward.
+        if (scrollToMessageId != null) return@LaunchedEffect
+        val target = (ttlOffset + timeline.lastIndex).coerceAtLeast(0)
+        val minItems = ttlOffset + timeline.size
+        snapshotFlow { listState.layoutInfo.totalItemsCount }
+            .filter { it >= minItems }
+            .first()
+        val lastOutgoing = messages.lastOrNull()?.direction == ChatMessage.DIRECTION_OUT
+        if (!didInitialBottomScroll) {
+            listState.scrollToItem(target)
+            didInitialBottomScroll = true
+            stickToBottom = true
+            return@LaunchedEffect
+        }
+        if (lastOutgoing) {
+            stickToBottom = true
+        }
+        if (stickToBottom) {
+            listState.animateScrollToItem(target)
         }
     }
 
@@ -157,7 +193,27 @@ internal fun RoomMessageList(
         val targetId = scrollToMessageId ?: return@LaunchedEffect
         val index = messageIndexById[targetId] ?: return@LaunchedEffect
         listState.animateScrollToItem(ttlOffset + index)
+        didInitialBottomScroll = true
+        stickToBottom = false
         onScrollToMessageConsumed()
+    }
+
+    val density = LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    val lastItemIndex = rememberUpdatedState(
+        (ttlOffset + timeline.lastIndex).coerceAtLeast(0),
+    )
+    val hasTimeline = rememberUpdatedState(timeline.isNotEmpty())
+    LaunchedEffect(didInitialBottomScroll, density, imeInsets) {
+        if (!didInitialBottomScroll) return@LaunchedEffect
+        var previousIme = 0
+        snapshotFlow { imeInsets.getBottom(density) }
+            .collect { imeBottom ->
+                val opening = imeBottom > previousIme
+                previousIme = imeBottom
+                if (!opening || !hasTimeline.value) return@collect
+                listState.scrollToItem(lastItemIndex.value)
+            }
     }
 
     val expiryProgress = roomExpiryProgress(expiresAt, activatedAt, nowMs)
@@ -179,6 +235,15 @@ internal fun RoomMessageList(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .pointerInput(onTapOutsideComposer) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            if (waitForUpOrCancellation() != null) {
+                                onTapOutsideComposer()
+                            }
+                        }
+                    }
+                    .imeNestedScroll()
                     .graphicsLayer {
                         alpha = dissolve.value
                         scaleX = 0.96f + 0.04f * dissolve.value
@@ -480,6 +545,7 @@ internal fun RoomActiveBody(
     highlightMessageId: String? = null,
     wallpaperPath: String? = null,
     onScrollToMessageConsumed: () -> Unit = {},
+    onTapOutsideComposer: () -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         RoomMessageList(
@@ -497,6 +563,7 @@ internal fun RoomActiveBody(
             highlightMessageId = highlightMessageId,
             wallpaperPath = wallpaperPath,
             onScrollToMessageConsumed = onScrollToMessageConsumed,
+            onTapOutsideComposer = onTapOutsideComposer,
             modifier = Modifier.weight(1f),
         )
 

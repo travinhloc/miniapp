@@ -35,6 +35,7 @@ class SendRoomMediaUseCase @Inject constructor(
         uri: Uri,
         declaredMime: String?,
         displayName: String? = null,
+        albumId: String? = null,
     ): ChatMessage {
         val room = mailboxRepository.getRoom(roomId) ?: error("Room not found")
         val resolved = room.copy(status = room.resolvedStatus())
@@ -74,6 +75,7 @@ class SendRoomMediaUseCase @Inject constructor(
             width = loaded.width,
             height = loaded.height,
             fileName = loaded.fileName,
+            albumId = albumId,
         )
         val envelope = MessagePlaintextCodec.encodeAttachment(meta)
         val wire = cipher.encrypt(roomId, room.roomKey, envelope)
@@ -104,6 +106,7 @@ class SendRoomMediaUseCase @Inject constructor(
             mediaWidth = meta.width,
             mediaHeight = meta.height,
             mediaFileName = meta.fileName,
+            mediaAlbumId = meta.albumId,
             mediaLocalPath = localPath,
             mediaTransferStatus = ChatMessage.MEDIA_READY,
         )

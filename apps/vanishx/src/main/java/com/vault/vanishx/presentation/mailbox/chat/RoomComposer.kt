@@ -63,8 +63,8 @@ internal fun RoomComposer(
     replySnippet: String? = null,
     isSendingMedia: Boolean = false,
 ) {
-    val inputEnabled = !isSending && !locked
-    val canSend = inputEnabled && draft.isNotBlank()
+    val inputEnabled = !locked
+    val canSend = inputEnabled && !isSending && draft.isNotBlank()
     val canAttach = !isSending && !isSendingMedia && !locked
     val view = LocalView.current
     val sendCd = stringResource(R.string.room_send_cd)

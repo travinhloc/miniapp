@@ -20,6 +20,7 @@ data class ChatMessage(
     val mediaWidth: Int? = null,
     val mediaHeight: Int? = null,
     val mediaFileName: String? = null,
+    val mediaAlbumId: String? = null,
     /** App-private path to decrypted (or ready) local bytes. */
     val mediaLocalPath: String? = null,
     val mediaTransferStatus: String? = null,

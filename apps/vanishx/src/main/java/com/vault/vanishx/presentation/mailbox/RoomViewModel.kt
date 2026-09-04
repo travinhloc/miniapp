@@ -817,18 +817,20 @@ class RoomViewModel @Inject constructor(
                 val openInvite = openInviteOnLoad &&
                     room?.role == MailboxRoom.ROLE_CREATOR &&
                     !expired
-                _uiState.update {
-                    it.copy(
+                _uiState.update { state ->
+                    val albums = MediaAlbumMerge.resolveAlbums(payload.messages, state.outgoingAlbums)
+                    state.copy(
                         isLoading = false,
                         room = room,
                         messages = MediaAlbumMerge.merge(
                             payload.messages,
-                            it.outgoingAlbums,
+                            albums,
                             roomId,
                         ),
+                        outgoingAlbums = albums,
                         isExpired = expired,
                         errorMessage = if (room == null) "Room not found" else null,
-                        showInviteSheet = it.showInviteSheet || openInvite,
+                        showInviteSheet = state.showInviteSheet || openInvite,
                     )
                 }
                 when {
@@ -1008,15 +1010,17 @@ class RoomViewModel @Inject constructor(
                     }
                     return@onEach
                 }
-                _uiState.update {
-                    it.copy(
+                _uiState.update { state ->
+                    val albums = MediaAlbumMerge.resolveAlbums(result.messages, state.outgoingAlbums)
+                    state.copy(
                         isSyncing = false,
                         messages = MediaAlbumMerge.merge(
                             result.messages,
-                            it.outgoingAlbums,
+                            albums,
                             roomId,
                         ),
-                        room = roomNow ?: it.room,
+                        outgoingAlbums = albums,
+                        room = roomNow ?: state.room,
                         infoMessage = if (result.decryptFailures > 0) {
                             "Some messages could not be decrypted"
                         } else {
@@ -1065,18 +1069,20 @@ class RoomViewModel @Inject constructor(
                     }
                     return@onEach
                 }
-                _uiState.update {
-                    it.copy(
+                _uiState.update { state ->
+                    val albums = MediaAlbumMerge.resolveAlbums(result.messages, state.outgoingAlbums)
+                    state.copy(
                         messages = MediaAlbumMerge.merge(
                             result.messages,
-                            it.outgoingAlbums,
+                            albums,
                             roomId,
                         ),
-                        room = roomNow ?: it.room,
+                        outgoingAlbums = albums,
+                        room = roomNow ?: state.room,
                         infoMessage = if (result.decryptFailures > 0) {
                             "Some messages could not be decrypted"
                         } else {
-                            it.infoMessage
+                            state.infoMessage
                         },
                     )
                 }
@@ -1103,7 +1109,14 @@ class RoomViewModel @Inject constructor(
         if (_uiState.value.isExpired || _uiState.value.isSending) return
         val draft = _uiState.value.draft
         if (draft.isBlank()) return
-        _uiState.update { it.copy(isSending = true, errorMessage = null) }
+        _uiState.update {
+            it.copy(
+                isSending = true,
+                draft = "",
+                errorMessage = null,
+            )
+        }
+        publishTyping("")
         flow { emit(sendRoomMessage(roomId, draft, sensitive, _uiState.value.replyToMessageId)) }
             .flowOn(dispatchersProvider.io)
             .onEach { sent ->
@@ -1111,7 +1124,6 @@ class RoomViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         isSending = false,
-                        draft = "",
                         showSensitiveSendConfirm = false,
                         replyToMessageId = null,
                         messages = (state.messages + sent).distinctBy { it.id }.sortedBy { it.sentAt },
@@ -1123,6 +1135,7 @@ class RoomViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isSending = false,
+                        draft = it.draft.ifBlank { draft },
                         errorMessage = friendlyError(e),
                     )
                 }
@@ -1226,7 +1239,7 @@ class RoomViewModel @Inject constructor(
     ) {
         try {
             val sent = withContext(dispatchersProvider.io) {
-                sendRoomMedia(roomId, action.uri, action.mime, action.displayName)
+                sendRoomMedia(roomId, action.uri, action.mime, action.displayName, albumId)
             }
             _uiState.update { state ->
                 val albums = state.outgoingAlbums.map { album ->

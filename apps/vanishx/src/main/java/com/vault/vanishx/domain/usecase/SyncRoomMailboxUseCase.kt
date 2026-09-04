@@ -262,6 +262,7 @@ class SyncRoomMailboxUseCase @Inject constructor(
                 mediaWidth = attachment?.width,
                 mediaHeight = attachment?.height,
                 mediaFileName = attachment?.fileName,
+                mediaAlbumId = attachment?.albumId,
                 mediaLocalPath = localPath,
                 mediaTransferStatus = if (attachment == null || localPath != null) {
                     ChatMessage.MEDIA_READY

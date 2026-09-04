@@ -12,6 +12,8 @@ data class AttachmentMeta(
     val width: Int? = null,
     val height: Int? = null,
     val fileName: String? = null,
+    /** Shared opaque id for visual items selected and sent as one album. */
+    val albumId: String? = null,
 ) {
     companion object {
         const val KIND_IMAGE = "image"

@@ -81,6 +81,7 @@ class MessagePlaintextCodecTest {
             width = 1280,
             height = 720,
             fileName = "shot.jpg",
+            albumId = "album_batch_1",
         )
         val wire = MessagePlaintextCodec.encodeAttachment(meta)
         wire.startsWith("{\"v\":2,") shouldBe true

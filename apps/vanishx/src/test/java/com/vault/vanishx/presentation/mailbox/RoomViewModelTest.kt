@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.vault.vanishx.data.push.RoomForegroundTracker
 import com.vault.vanishx.data.remote.MailboxRemoteDataSource
 import com.vault.vanishx.domain.model.Identity
+import com.vault.vanishx.domain.model.ChatMessage
 import com.vault.vanishx.domain.model.MailboxRoom
 import com.vault.vanishx.domain.repository.IdentityRepository
 import com.vault.vanishx.domain.repository.MailboxRepository
@@ -28,9 +29,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
@@ -164,6 +167,37 @@ class RoomViewModelTest {
         viewModel.onAction(RoomAction.ConsumePingPeerEvent)
 
         viewModel.uiState.value.pingPeerEvent shouldBe null
+    }
+
+    @Test
+    fun `Send clears composer immediately and preserves next draft`() = runTest {
+        val sent = CompletableDeferred<ChatMessage>()
+        coEvery { sendRoomMessage("room1", "first", false, null) } coAnswers { sent.await() }
+        val viewModel = viewModel(liveRoom())
+        advanceUntilIdle()
+
+        viewModel.onAction(RoomAction.DraftChanged("first"))
+        viewModel.onAction(RoomAction.Send)
+        runCurrent()
+
+        viewModel.uiState.value.draft shouldBe ""
+        viewModel.uiState.value.isSending shouldBe true
+
+        viewModel.onAction(RoomAction.DraftChanged("next"))
+        sent.complete(
+            ChatMessage(
+                id = "sent",
+                roomId = "room1",
+                body = "first",
+                sentAt = 1L,
+                expiresAt = 2L,
+                direction = ChatMessage.DIRECTION_OUT,
+            ),
+        )
+        advanceUntilIdle()
+
+        viewModel.uiState.value.draft shouldBe "next"
+        viewModel.uiState.value.isSending shouldBe false
     }
 
     @Test
